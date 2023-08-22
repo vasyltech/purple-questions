@@ -10,9 +10,13 @@
       </v-app-bar-title>
 
       <template v-slot:append>
-        <v-btn icon>
-          <v-icon>mdi-plus-circle</v-icon>
-        </v-btn>
+        <v-tooltip text="Tooltip" location="bottom">
+          <template v-slot:activator="{ props }">
+            <v-btn icon v-bind="props">
+              <v-icon>mdi-plus-circle</v-icon>
+            </v-btn>
+          </template>
+        </v-tooltip>
 
         <v-btn icon @click="handleFileImport">
           <v-icon>mdi-import</v-icon>
@@ -117,7 +121,9 @@ export default {
   }),
   methods: {
     selectFolder(folder) {
-      console.log(folder);
+      this.$api.registry.getDocumentTree().then((response) => {
+        console.log(response);
+      });
     },
     handleFileImport() {
       this.isSelecting = true;

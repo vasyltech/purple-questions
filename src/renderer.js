@@ -27,7 +27,7 @@
  */
 
 import { createApp } from 'vue'
-import App from './App.vue'
+import App from './renderer/App.vue'
 
 // Vuetify
 import 'vuetify/styles'
@@ -87,4 +87,7 @@ const router = createRouter({
 createApp(App)
   .use(vuetify)
   .use(router)
+  .use({
+    install(app) { app.config.globalProperties.$api = window.purpleCore; }
+  })
   .mount('#app')
