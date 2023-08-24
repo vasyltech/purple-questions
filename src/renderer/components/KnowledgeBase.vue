@@ -1,147 +1,436 @@
 <template>
   <v-container class="fill-height">
     <v-app-bar>
+      <template v-slot:prepend>
+        <v-icon size="small" icon="mdi-tape-drive"></v-icon>
+      </template>
+
       <v-app-bar-title>
-        <v-breadcrumbs :items="breadcrumb" density="compact">
-          <template v-slot:prepend>
-            <v-icon size="small" icon="mdi-tape-drive"></v-icon>
+        <v-breadcrumbs :items="breadcrumb" density="compact" class="pl-0">
+          <template v-slot:title="{ item }">
+            <span class="clickable" @click="openFolder(item.node)">{{ item.title }}</span>
           </template>
         </v-breadcrumbs>
       </v-app-bar-title>
 
       <template v-slot:append>
-        <v-tooltip text="Tooltip" location="bottom">
+        <v-tooltip v-if="!currentFile" text="Add New Folder" location="bottom">
           <template v-slot:activator="{ props }">
-            <v-btn icon v-bind="props">
-              <v-icon>mdi-plus-circle</v-icon>
+            <v-btn icon v-bind="props" @click="createFolderModal = true">
+              <v-icon>mdi-folder-plus</v-icon>
             </v-btn>
           </template>
         </v-tooltip>
 
-        <v-btn icon @click="handleFileImport">
-          <v-icon>mdi-import</v-icon>
-        </v-btn>
+        <v-tooltip v-if="!currentFile" text="Add New File" location="bottom">
+          <template v-slot:activator="{ props }">
+            <v-btn icon v-bind="props" @click="createFileModal = true">
+              <v-icon>mdi-clipboard-plus-outline</v-icon>
+            </v-btn>
+          </template>
+        </v-tooltip>
 
-        <v-btn icon>
-          <v-icon>mdi-content-save</v-icon>
-        </v-btn>
+        <v-tooltip v-if="currentFile" text="Save Changes" location="bottom">
+          <template v-slot:activator="{ props }">
+            <v-btn icon v-bind="props" @click="saveFileChanges">
+              <v-icon>mdi-content-save</v-icon>
+            </v-btn>
+          </template>
+        </v-tooltip>
+
+        <v-tooltip v-if="currentFile" text="Reindex Content" location="bottom">
+          <template v-slot:activator="{ props }">
+            <v-btn icon v-bind="props" @click="reindexContent">
+              <v-icon>mdi-head-sync</v-icon>
+            </v-btn>
+          </template>
+        </v-tooltip>
+
+        <v-tooltip v-if="currentFile" text="Delete File" location="bottom">
+          <template v-slot:activator="{ props }">
+            <v-btn icon v-bind="props" @click="deleteCurrentFile">
+              <v-icon>mdi-trash-can</v-icon>
+            </v-btn>
+          </template>
+        </v-tooltip>
+
+        <v-tooltip v-if="!currentFile && currentFolder && currentFolder.children.length === 0" text="Delete Folder"
+          location="bottom">
+          <template v-slot:activator="{ props }">
+            <v-btn icon v-bind="props" @click="deleteCurrentFolder">
+              <v-icon>mdi-trash-can</v-icon>
+            </v-btn>
+          </template>
+        </v-tooltip>
+
+        <!--<v-btn icon @click="handleFileImport">
+          <v-icon>mdi-import</v-icon>
+        </v-btn>-->
       </template>
 
       <input ref="uploader" class="d-none" type="file" @change="onFileChanged">
     </v-app-bar>
 
-    <v-responsive class="align-left fill-height">
-      <v-item-group selected-class="bg-primary">
-        <v-container>
-          <div class="text-overline pb-2">Folders</div>
-          <v-row>
-            <v-col v-for="n in 3" :key="n" cols="12" md="3">
+    <v-responsive v-if="!currentFile" class="align-left fill-height">
+      <v-container>
+        <div class="text-overline pb-2">Folders</div>
+
+        <v-item-group>
+          <v-row v-if="currentFolderHasChildren('folder')">
+            <v-col v-for="folder in getCurrentFolderChildren('folder')" :key="folder.path" cols="12" md="3">
               <v-item>
-                <v-card class="d-flex pa-4 align-center" dark @click="selectFolder(n)">
-                  <div class="d-flex justify-start align-content-center w-100">
-                    <div>
+                <v-card class="d-flex pa-4 align-center" dark>
+                  <div class="d-flex justify-space-between align-content-center w-100">
+                    <div class="clickable" @click="openFolder(folder)">
                       <v-icon>mdi-folder</v-icon>
+                      <span class="ml-3">{{ folder.name }}</span>
                     </div>
-                    <div class="align-self-center ml-5">Folder Name {{ n }}</div>
+
+                    <div>
+                      <v-menu location="left">
+                        <template v-slot:activator="{ props }">
+                          <v-icon color="grey-lighten-1" v-bind="props">mdi-dots-vertical</v-icon>
+                        </template>
+                        <v-list>
+                          <v-list-item @click="openFolder(folder)">
+                            <v-list-item-title>Select</v-list-item-title>
+                          </v-list-item>
+                          <v-list-item @click="deleteFolder(folder)" :disabled="folder.children.length > 0">
+                            <v-list-item-title>Delete</v-list-item-title>
+                          </v-list-item>
+                        </v-list>
+                      </v-menu>
+                    </div>
                   </div>
                 </v-card>
               </v-item>
             </v-col>
           </v-row>
-        </v-container>
-      </v-item-group>
 
-      <v-container>
+          <v-sheet v-else class="d-flex align-center justify-center flex-wrap text-center mx-auto px-4" elevation="1"
+            height="200" rounded width="100%">
+            <div>
+              <p class="text-body-2 mb-4">
+                There are no folders in your knowledge directory.
+              </p>
+              <v-btn @click="createFolderModal = true">Create First Folder</v-btn>
+            </div>
+          </v-sheet>
+        </v-item-group>
+      </v-container>
+
+      <v-container v-if="currentFolder">
         <div class="text-overline pb-2">Files</div>
 
-        <v-list lines="two">
-          <v-list-item v-for="file in files" :key="file.title" :title="file.title" :subtitle="file.subtitle">
+        <v-list lines="two" v-if="currentFolderHasChildren('file')">
+          <v-list-item v-for="file in getCurrentFolderChildren('file')" :key="file.name" :title="file.name"
+            @click="openFile(file)" subtitle="Last Modified">
             <template v-slot:prepend>
-              <v-avatar :color="file.color">
-                <v-icon color="white">{{ file.icon }}</v-icon>
+              <v-avatar color="grey">
+                <v-icon color="white">mdi-clipboard-text</v-icon>
               </v-avatar>
             </template>
 
             <template v-slot:append>
-              <v-btn color="grey-lighten-1" icon="mdi-information" variant="text"></v-btn>
+              <v-menu location="left">
+                <template v-slot:activator="{ props }">
+                  <v-btn icon="mdi-dots-vertical" color="grey-lighten-1" variant="text" v-bind="props"></v-btn>
+                </template>
+
+                <v-list>
+                  <v-list-item @click="openFile(file)">
+                    <v-list-item-title>Edit</v-list-item-title>
+                  </v-list-item>
+                  <v-list-item @click="deleteFile(file)">
+                    <v-list-item-title>Delete</v-list-item-title>
+                  </v-list-item>
+                </v-list>
+              </v-menu>
             </template>
           </v-list-item>
         </v-list>
+
+        <v-sheet v-else class="d-flex align-center justify-center flex-wrap text-center mx-auto px-4" elevation="1"
+          height="200" rounded width="100%">
+          <div>
+            <p class="text-body-2 mb-4">
+              There are no files in the "{{ currentFolder.name }}" folder.
+            </p>
+            <v-btn @click="createFileModal = true">Create First File</v-btn>
+          </div>
+        </v-sheet>
+      </v-container>
+
+      <v-dialog v-model="createFolderModal" transition="dialog-bottom-transition" width="400">
+        <v-card>
+          <v-toolbar title="Create New Folder"></v-toolbar>
+          <v-card-text>
+            <v-text-field v-model="newFolderName"
+              :rules="[inputValidationRules.required, inputValidationRules.folderName]" variant="outlined"
+              label="Folder Name*">
+            </v-text-field>
+          </v-card-text>
+          <v-card-actions class="justify-end">
+            <v-btn variant="text" @click="createFolder">Create</v-btn>
+            <v-btn variant="text" @click="createFolderModal = false">Close</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
+      <v-dialog v-model="createFileModal" transition="dialog-bottom-transition" width="500">
+        <v-card>
+          <v-toolbar title="Create New File"></v-toolbar>
+          <v-card-text>
+            <v-text-field v-model="newFileName" :rules="[inputValidationRules.required]" variant="outlined"
+              label="File Name*">
+            </v-text-field>
+          </v-card-text>
+          <v-card-actions class="justify-end">
+            <v-btn variant="text" @click="createFile">Create</v-btn>
+            <v-btn variant="text" @click="createFileModal = false">Close</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
+      <v-dialog v-model="deleteFolderModal" transition="dialog-bottom-transition" width="400">
+        <v-card>
+          <v-toolbar title="Delete Folder"></v-toolbar>
+          <v-card-text>
+            <v-alert type="warning" prominent variant="outlined">
+              You are about to delete the <strong v-if="selectedFolder">"{{ selectedFolder.name }}"</strong> folder. Please confirm.
+            </v-alert>
+          </v-card-text>
+          <v-card-actions class="justify-end">
+            <v-btn variant="text" @click="deleteSelectedFolder">Delete</v-btn>
+            <v-btn variant="text" @click="deleteFolderModal = false">Close</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+    </v-responsive>
+
+    <v-responsive v-else class="align-left fill-height">
+      <v-container>
+        <div class="text-overline pb-2">File Name</div>
+
+        <v-text-field v-model="currentFileData.name" label="Document Title" variant="outlined"></v-text-field>
+      </v-container>
+
+      <v-container>
+        <div class="text-overline pb-2">Content</div>
+
+        <v-textarea v-model="currentFileData.content" auto-grow label="Content" variant="outlined"></v-textarea>
+      </v-container>
+
+      <v-container>
+        <v-expansion-panels>
+          <v-expansion-panel v-for="i in 3" :key="i" title="How are drafted transactions associated with license keys?"
+            text="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."></v-expansion-panel>
+        </v-expansion-panels>
       </v-container>
     </v-responsive>
   </v-container>
 </template>
 
-<script setup>
-  //
-</script>
-
-
 <script>
 export default {
   data: () => ({
-    isSelecting: false,
+    documentTree: {},
+    currentFolder: null,
+    currentFile: null,
+    currentFileData: {},
+    createFolderModal: false,
+    createFileModal: false,
+    deleteFolderModal: false,
+    newFolderName: null,
+    newFileName: null,
+    // The selected folder/file is the one that is selected from inline action
+    selectedFolder: null,
     selectedFile: null,
+
+    inputValidationRules: {
+      required: value => !!value || 'Required.',
+      folderName: value => {
+        return /^[a-zA-Z\s\d\-]+$/.test(value) || 'Only a-zA-Z0-9 and - allowed.'
+      }
+    },
     breadcrumb: [
       {
-        title: 'Documents'
-      },
-      {
-        title: 'Link 1',
-        disabled: false,
-        href: 'breadcrumbs_link_1',
-      },
-      {
-        title: 'Link 2',
-        disabled: true,
-        href: 'breadcrumbs_link_2',
-      },
+        title: '...'
+      }
     ],
-    files: [
-      {
-        color: 'blue',
-        icon: 'mdi-clipboard-text',
-        subtitle: 'Jan 20, 2014',
-        title: 'Vacation itinerary',
-      },
-      {
-        color: 'amber',
-        icon: 'mdi-gesture-tap-button',
-        subtitle: 'Jan 10, 2014',
-        title: 'Kitchen remodel',
-      },
-    ],
-    drawer: null,
-    links: [
-      ['mdi-inbox-arrow-down', 'Inbox'],
-      ['mdi-send', 'Send'],
-      ['mdi-delete', 'Trash'],
-      ['mdi-alert-octagon', 'Spam'],
-    ],
+    drawer: null
   }),
   methods: {
-    selectFolder(folder) {
-      this.$api.registry.getDocumentTree().then((response) => {
-        console.log(response);
-      });
-    },
-    handleFileImport() {
-      this.isSelecting = true;
+    currentFolderHasChildren(type) {
+      let response = false;
 
-      // After obtaining the focus when closing the FilePicker, return the button state to normal
-      window.addEventListener('focus', () => {
-        this.isSelecting = false
-      }, { once: true });
+      if (this.currentFolder) {
+        response = this.getCurrentFolderChildren(type).length > 0
+      }
 
-      // Trigger click on the FileInput
-      this.$refs.uploader.click();
+      return response
     },
-    onFileChanged(e) {
-      this.selectedFile = e.target.files[0];
+    getCurrentFolderChildren(type) {
+      const response = [];
 
-      // Do whatever you need with the file, liek reading it with FileReader
+      for (let i = 0; i < this.currentFolder.children.length; i++) {
+        if (this.currentFolder.children[i].type === type) {
+          response.push(this.currentFolder.children[i]);
+        }
+      }
+
+      return response;
     },
+    openFolder(folder) {
+      this.currentFolder = folder;
+      this.currentFile = null;
+      this.currentFileData = {};
+    },
+    openFile(file) {
+      const _this = this;
+      this.currentFile = file;
+
+      this.$api.directory
+        .readFile(file.path)
+        .then((response) => {
+          // Show the newly created file
+          _this.currentFileData = response;
+        });
+    },
+    deleteFolder(folder) {
+      this.selectedFolder    = folder;
+      this.deleteFolderModal = true;
+    },
+    deleteCurrentFolder() {
+      this.selectedFolder    = this.currentFolder;
+      this.deleteFolderModal = true;
+    },
+    deleteSelectedFolder() {
+      const _this = this;
+
+      this.$api.directory
+        .deleteFolder(this.selectedFolder.path)
+        .then(() => {
+          // Remove the folder from the list
+          const parent = _this.selectedFolder.parent;
+
+          parent.children = parent.children.filter(
+            f => f.path !== _this.selectedFolder.path
+          );
+
+          if (_this.currentFolder === _this.selectedFolder) {
+            _this.currentFolder = _this.selectedFolder.parent;
+          }
+
+          // Closing the modal & resetting the selecting
+          _this.deleteFolderModal = false;
+          _this.selectedFolder    = null;
+        });
+    },
+    deleteFile(file) {
+      console.log(file);
+    },
+    createFolder() {
+      const _this = this;
+      const name = this.newFolderName;
+
+      this.$api.directory
+        .createFolder(this.currentFolder.path, name)
+        .then((folder) => {
+          _this.currentFolder.children.push(folder);
+
+          // Set the parent node for the newly created file
+          folder.parent = _this.currentFolder;
+
+          // Closing the modal & resetting the form
+          _this.createFolderModal = false;
+          _this.newFolderName = null;
+        });
+    },
+    createFile() {
+      const _this = this;
+      const name = this.newFileName;
+
+      this.$api.directory
+        .createFile(this.currentFolder.path, name)
+        .then((file) => {
+          _this.currentFolder.children.push(file);
+
+          // Set the parent node for the newly created file
+          file.parent = _this.currentFolder;
+
+          // Closing the modal & resetting the form
+          _this.createFileModal = false;
+          _this.newFolderName = null;
+
+          // Show the newly created file
+          _this.currentFile = file;
+        });
+    },
+    prepareDocumentTree(tree, parent = null) {
+      if (tree.type === 'folder') {
+        for (let i = 0; i < tree.children.length; i++) {
+          this.prepareDocumentTree(tree.children[i], tree);
+        }
+      }
+
+      tree.parent = parent;
+
+      return tree;
+    },
+    assembleBreadcrumb() {
+      const response = [];
+      let bottom = this.currentFile ?? this.currentFolder;
+
+      do {
+        response.push({
+          title: bottom.name,
+          node: bottom
+        });
+
+        bottom = bottom.parent;
+      } while (bottom);
+
+      this.breadcrumb = response.reverse();
+    }
+    // handleFileImport() {
+    //   this.isSelecting = true;
+
+    //   // After obtaining the focus when closing the FilePicker, return the button state to normal
+    //   window.addEventListener('focus', () => {
+    //     this.isSelecting = false
+    //   }, { once: true });
+
+    //   // Trigger click on the FileInput
+    //   this.$refs.uploader.click();
+    // },
+    // onFileChanged(e) {
+    //   this.selectedFile = e.target.files[0];
+
+    //   // Do whatever you need with the file, like reading it with FileReader
+    // },
+  },
+  watch: {
+    currentFolder() {
+      this.assembleBreadcrumb();
+    },
+    currentFile() {
+      this.assembleBreadcrumb();
+    }
+  },
+  mounted() {
+    const _this = this;
+
+    this.$api.directory.getDocumentTree().then((response) => {
+      _this.documentTree = _this.prepareDocumentTree(response);
+      _this.currentFolder = response;
+    });
   }
 }
 </script>
 
+<style scoped>
+.clickable {
+  cursor: pointer;
+}
+</style>

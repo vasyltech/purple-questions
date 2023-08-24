@@ -76,6 +76,17 @@ const routes = [
         component: () => import(/* webpackChunkName: "home" */ '@/views/Messages.vue'),
       },
     ],
+  },
+  {
+    path: '/settings',
+    component: () => import('@/layouts/default/Default.vue'),
+    children: [
+      {
+        path: '',
+        name: 'Settings',
+        component: () => import(/* webpackChunkName: "home" */ '@/views/Settings.vue'),
+      },
+    ],
   }
 ];
 

@@ -1,6 +1,7 @@
 const { app, BrowserWindow, screen, ipcMain } = require('electron');
 const path = require('path');
-import Registry from './main/registry';
+import Directory from './main/directory';
+import Core from './main/core';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -26,10 +27,18 @@ const createWindow = () => {
     );
   }
 
-  ipcMain.handle('registry', (_, args) => {
+  ipcMain.handle('directory', (_, args) => {
     const method = args.shift();
+    const type   = typeof Directory[method];
 
-    return typeof Registry[method] === 'function' ? Registry[method](...args) : undefined;
+    return type === 'function' ? Directory[method](...args) : undefined;
+  });
+
+  ipcMain.handle('core', (_, args) => {
+    const method = args.shift();
+    const type   = typeof Core[method];
+
+    return type === 'function' ? Core[method](...args) : undefined;
   });
 
   // Open the DevTools.
