@@ -1,7 +1,6 @@
 const Fs      = require('fs');
 const Path    = require('path');
 const { app } = require('electron');
-const { v4: uuidv4 } = require('uuid');
 
 /**
  * Get the full path to the settings

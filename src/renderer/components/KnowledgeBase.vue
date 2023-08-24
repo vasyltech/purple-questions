@@ -30,6 +30,14 @@
           </template>
         </v-tooltip>
 
+        <v-tooltip v-if="!currentFile" text="Upload From Computer" location="bottom">
+          <template v-slot:activator="{ props }">
+            <v-btn icon v-bind="props" @click="uploadFileModal = true">
+              <v-icon>mdi-upload</v-icon>
+            </v-btn>
+          </template>
+        </v-tooltip>
+
         <v-tooltip v-if="currentFile" text="Save Changes" location="bottom">
           <template v-slot:activator="{ props }">
             <v-btn icon v-bind="props" @click="saveFileChanges">
@@ -62,10 +70,6 @@
             </v-btn>
           </template>
         </v-tooltip>
-
-        <!--<v-btn icon @click="handleFileImport">
-          <v-icon>mdi-import</v-icon>
-        </v-btn>-->
       </template>
 
       <input ref="uploader" class="d-none" type="file" @change="onFileChanged">
@@ -181,6 +185,8 @@
         <v-card>
           <v-toolbar title="Create New File"></v-toolbar>
           <v-card-text>
+
+            <div class="text-overline">Create Manually</div>
             <v-text-field v-model="newFileName" :rules="[inputValidationRules.required]" variant="outlined"
               label="File Name*">
             </v-text-field>
@@ -188,6 +194,24 @@
           <v-card-actions class="justify-end">
             <v-btn variant="text" @click="createFile">Create</v-btn>
             <v-btn variant="text" @click="createFileModal = false">Close</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
+      <v-dialog v-model="uploadFileModal" transition="dialog-bottom-transition" width="500">
+        <v-card>
+          <v-toolbar title="Upload From Computer"></v-toolbar>
+          <v-card-text>
+            <v-file-input
+              v-model="uploadFilePath"
+              label="Select File"
+              variant="outlined"
+              accept=".txt,.md"
+            ></v-file-input>
+          </v-card-text>
+          <v-card-actions class="justify-end">
+            <v-btn variant="text" @click="uploadFile">Upload</v-btn>
+            <v-btn variant="text" @click="uploadFileModal = false">Close</v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>
@@ -227,6 +251,21 @@
             text="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."></v-expansion-panel>
         </v-expansion-panels>
       </v-container>
+
+      <v-dialog v-model="deleteFileModal" transition="dialog-bottom-transition" width="400">
+        <v-card>
+          <v-toolbar title="Delete File"></v-toolbar>
+          <v-card-text>
+            <v-alert type="warning" prominent variant="outlined">
+              You are about to delete the <strong v-if="selectedFile">"{{ selectedFile.name }}"</strong> file. Please confirm.
+            </v-alert>
+          </v-card-text>
+          <v-card-actions class="justify-end">
+            <v-btn variant="text" @click="deleteSelectedFile">Delete</v-btn>
+            <v-btn variant="text" @click="deleteFileModal = false">Close</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
     </v-responsive>
   </v-container>
 </template>
@@ -237,10 +276,13 @@ export default {
     documentTree: {},
     currentFolder: null,
     currentFile: null,
+    uploadFilePath: null,
     currentFileData: {},
     createFolderModal: false,
     createFileModal: false,
     deleteFolderModal: false,
+    deleteFileModal: false,
+    uploadFileModal: false,
     newFolderName: null,
     newFileName: null,
     // The selected folder/file is the one that is selected from inline action
@@ -328,7 +370,36 @@ export default {
         });
     },
     deleteFile(file) {
-      console.log(file);
+      this.selectedFile    = file;
+      this.deleteFileModal = true;
+    },
+    deleteCurrentFile() {
+      this.selectedFile    = this.currentFile;
+      this.deleteFileModal = true;
+    },
+    deleteSelectedFile() {
+      const _this = this;
+
+      this.$api.directory
+        .deleteFile(this.selectedFile.path)
+        .then(() => {
+          // Remove the folder from the list
+          const parent = _this.selectedFile.parent;
+
+          parent.children = parent.children.filter(
+            f => f.path !== _this.selectedFile.path
+          );
+
+          // Are we deleting from the edit file view?
+          if (_this.currentFile === _this.selectedFile) {
+            _this.currentFolder = _this.selectedFile.parent;
+            _this.currentFile   = null;
+          }
+
+          // Closing the modal & resetting the selecting
+          _this.deleteFileModal = false;
+          _this.selectedFile    = null;
+        });
     },
     createFolder() {
       const _this = this;
@@ -365,6 +436,29 @@ export default {
 
           // Show the newly created file
           _this.currentFile = file;
+        });
+    },
+    uploadFile() {
+      const _this = this;
+      const name = this.newFileName;
+
+      this.$api.directory
+        .uploadFile(this.currentFolder.path, this.uploadFilePath[0].path)
+        .then((file) => {
+          if (file !== null) {
+            _this.currentFolder.children.push(file);
+
+            // Set the parent node for the newly created file
+            file.parent = _this.currentFolder;
+
+            // Closing the modal & resetting the form
+            _this.uploadFileModal = false;
+            _this.uploadFilePath  = null;
+
+            // Show the newly created file
+            _this.currentFile     = file;
+            _this.currentFileData = file;
+          }
         });
     },
     prepareDocumentTree(tree, parent = null) {

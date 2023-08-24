@@ -1,7 +1,10 @@
-const Fs      = require('fs');
-const Path    = require('path');
-const { app } = require('electron');
+const Fs             = require('fs');
+const Path           = require('path');
+const { app }        = require('electron');
 const { v4: uuidv4 } = require('uuid');
+const _              = require('lodash');
+
+import Parsers from './parser';
 
 /**
  * Get the base path to the documents directory
@@ -15,7 +18,7 @@ function GetDocumentsBasePath() {
         Fs.mkdirSync(basePath, { recursive: true});
         Fs.writeFileSync(Path.join(basePath, '.folder'), JSON.stringify({
             name: 'Documents',
-            createdAt: (new Date()).toTimeString()
+            createdAt: (new Date()).getTime()
         }));
     }
 
@@ -147,7 +150,7 @@ export default {
 
         Fs.writeFileSync(fullPath, JSON.stringify({
             name: fileName,
-            createdAt: (new Date()).toTimeString()
+            createdAt: (new Date()).getTime()
         }));
 
         return {
@@ -155,6 +158,44 @@ export default {
             path: Path.join(parentFolder, uuid),
             type: 'file'
         }
+    },
+
+    /**
+     *
+     * @param {*} parentFolder
+     * @param {*} filePath
+     * @returns
+     */
+    uploadFile: async (parentFolder, filePath) => {
+        let response = null;
+
+        const basePath = GetDocumentsBasePath();
+        const uuid     = uuidv4();
+        const fullPath = Path.join(basePath, parentFolder, uuid);
+
+        const attributes = Path.parse(filePath);
+        const extension  = attributes.ext.substring(1).toLowerCase();
+
+        if (!_.isUndefined(Parsers[extension])) {
+            const result = await Parsers[extension].parse(
+                Fs.readFileSync(filePath).toString()
+            );
+
+            const content = {
+                name: result.title || 'New File',
+                createdAt: (new Date()).getTime(),
+                content: result.content
+            };
+
+            Fs.writeFileSync(fullPath, JSON.stringify(content));
+
+            response = Object.assign({}, {
+                path: Path.join(parentFolder, uuid),
+                type: 'file',
+            }, content);
+        }
+
+        return response;
     },
 
     /**
@@ -170,6 +211,20 @@ export default {
         // Recreate the breadcrumb
 
         return response;
-    }
+    },
+
+    /**
+     *
+     * @param {*} path
+     * @returns
+     */
+    deleteFile: (path) => {
+        const basePath = GetDocumentsBasePath();
+        const fullPath = Path.join(basePath, path);
+
+        Fs.unlinkSync(fullPath);
+
+        return true;
+    },
 
 }
