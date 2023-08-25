@@ -15,7 +15,7 @@
 
         <template v-slot:append>
             <v-sheet color="grey-lighten-4" class="pa-4 text-center">
-                ttt
+                ---
             </v-sheet>
         </template>
     </v-navigation-drawer>

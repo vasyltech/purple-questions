@@ -68,7 +68,7 @@ export default {
                 }
             }
 
-            this.$api.core
+            this.$api.settings
                 .saveSettings(settings)
                 .then((response) => {
                     _this.successMessage     = 'Settings saved!'
@@ -80,7 +80,7 @@ export default {
     mounted() {
         const _this = this;
 
-        this.$api.core.readSettings().then((response) => {
+        this.$api.settings.readSettings().then((response) => {
             _this.settings  = response;
         });
     }

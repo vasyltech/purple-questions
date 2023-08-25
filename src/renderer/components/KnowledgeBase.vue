@@ -46,14 +46,6 @@
           </template>
         </v-tooltip>
 
-        <v-tooltip v-if="currentFile" text="Reindex Content" location="bottom">
-          <template v-slot:activator="{ props }">
-            <v-btn icon v-bind="props" @click="reindexContent">
-              <v-icon>mdi-head-sync</v-icon>
-            </v-btn>
-          </template>
-        </v-tooltip>
-
         <v-tooltip v-if="currentFile" text="Delete File" location="bottom">
           <template v-slot:activator="{ props }">
             <v-btn icon v-bind="props" @click="deleteCurrentFile">
@@ -128,7 +120,7 @@
 
         <v-list lines="two" v-if="currentFolderHasChildren('file')">
           <v-list-item v-for="file in getCurrentFolderChildren('file')" :key="file.name" :title="file.name"
-            @click="openFile(file)" subtitle="Last Modified">
+            @click="openFile(file)" :subtitle="getFileLastModified(file)">
             <template v-slot:prepend>
               <v-avatar color="grey">
                 <v-icon color="white">mdi-clipboard-text</v-icon>
@@ -245,28 +237,63 @@
         <v-textarea v-model="currentFileData.content" auto-grow label="Content" variant="outlined"></v-textarea>
       </v-container>
 
-      <v-container>
+      <v-container v-if="hasIndexedQuestions">
+        <div class="text-overline pb-2">Indexed Questions</div>
+
         <v-expansion-panels>
-          <v-expansion-panel v-for="i in 3" :key="i" title="How are drafted transactions associated with license keys?"
-            text="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."></v-expansion-panel>
+          <v-expansion-panel v-for="(question, index) in currentFileData.questions" :key="index" :title="question.text">
+            <v-expansion-panel-text>
+              <v-textarea :label="question.question" v-model="currentFileData.questions[index].answer" variant="underlined" class="mt-6"></v-textarea>
+            </v-expansion-panel-text>
+          </v-expansion-panel>
         </v-expansion-panels>
       </v-container>
+      <v-container v-else>
+        <v-sheet class="d-flex align-center justify-center flex-wrap text-center mx-auto px-4" elevation="1"
+          height="150" rounded width="100%">
+          <div v-if="!analyzingContent">
+            <p class="text-body-2 mb-4">
+              The next step is to analyze the content and index the data.
+            </p>
+            <v-btn @click="analyzeFileContent">Analyze Content</v-btn>
+          </div>
+          <div v-else>
+            <p class="text-body-2 mb-4">
+              Please wait a bit. Depending on the size of the document, it might take a couple of minutes to run
+            </p>
+            <v-progress-circular
+              indeterminate
+              color="grey"
+            ></v-progress-circular>
+          </div>
+        </v-sheet>
+      </v-container>
 
-      <v-dialog v-model="deleteFileModal" transition="dialog-bottom-transition" width="400">
-        <v-card>
-          <v-toolbar title="Delete File"></v-toolbar>
-          <v-card-text>
-            <v-alert type="warning" prominent variant="outlined">
-              You are about to delete the <strong v-if="selectedFile">"{{ selectedFile.name }}"</strong> file. Please confirm.
-            </v-alert>
-          </v-card-text>
-          <v-card-actions class="justify-end">
-            <v-btn variant="text" @click="deleteSelectedFile">Delete</v-btn>
-            <v-btn variant="text" @click="deleteFileModal = false">Close</v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
+      <v-snackbar v-model="showSuccessMessage">
+          {{ successMessage }}
+
+          <template v-slot:actions>
+              <v-btn variant="text" @click="showSuccessMessage = false">
+                  Close
+              </v-btn>
+          </template>
+      </v-snackbar>
     </v-responsive>
+
+    <v-dialog v-model="deleteFileModal" transition="dialog-bottom-transition" width="400">
+      <v-card>
+        <v-toolbar title="Delete File"></v-toolbar>
+        <v-card-text>
+          <v-alert type="warning" prominent variant="outlined">
+            You are about to delete the <strong v-if="selectedFile">"{{ selectedFile.name }}"</strong> file. Please confirm.
+          </v-alert>
+        </v-card-text>
+        <v-card-actions class="justify-end">
+          <v-btn variant="text" @click="deleteSelectedFile">Delete</v-btn>
+          <v-btn variant="text" @click="deleteFileModal = false">Close</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -285,6 +312,9 @@ export default {
     uploadFileModal: false,
     newFolderName: null,
     newFileName: null,
+    showSuccessMessage: false,
+    successMessage: null,
+    analyzingContent: false,
     // The selected folder/file is the one that is selected from inline action
     selectedFolder: null,
     selectedFile: null,
@@ -302,6 +332,13 @@ export default {
     ],
     drawer: null
   }),
+  computed: {
+    hasIndexedQuestions() {
+      return this.currentFileData
+        && this.currentFileData.questions
+        && this.currentFileData.questions.length > 0;
+    }
+  },
   methods: {
     currentFolderHasChildren(type) {
       let response = false;
@@ -435,12 +472,12 @@ export default {
           _this.newFolderName = null;
 
           // Show the newly created file
-          _this.currentFile = file;
+          _this.currentFile     = file;
+          _this.currentFileData = file;
         });
     },
     uploadFile() {
       const _this = this;
-      const name = this.newFileName;
 
       this.$api.directory
         .uploadFile(this.currentFolder.path, this.uploadFilePath[0].path)
@@ -459,6 +496,19 @@ export default {
             _this.currentFile     = file;
             _this.currentFileData = file;
           }
+        });
+    },
+    saveFileChanges() {
+      const _this = this;
+
+      this.$api.directory
+        .updateFile(this.currentFile.path, {
+          name: this.currentFileData.name,
+          content: this.currentFileData.content
+        })
+        .then(() => {
+          _this.successMessage     = 'Changes saved!';
+          _this.showSuccessMessage = true;
         });
     },
     prepareDocumentTree(tree, parent = null) {
@@ -486,23 +536,29 @@ export default {
       } while (bottom);
 
       this.breadcrumb = response.reverse();
+    },
+    getFileLastModified(file) {
+      const prefix = file.updatedAt ? 'Last Updated: ' : 'Created: ';
+
+      const time = file.updatedAt || file.createdAt;
+
+      return prefix + (new Date(time)).toLocaleDateString(
+        'en-us',
+        { weekday:"long", year:"numeric", month:"short", day:"numeric"}
+      );
+    },
+    analyzeFileContent() {
+      const _this = this;
+
+      this.analyzingContent = true;
+
+      this.$api.ai
+        .analyzeFileContent(this.currentFile.path)
+        .then((file) => {
+          _this.currentFileData  = file;
+          _this.analyzingContent = false;
+        });
     }
-    // handleFileImport() {
-    //   this.isSelecting = true;
-
-    //   // After obtaining the focus when closing the FilePicker, return the button state to normal
-    //   window.addEventListener('focus', () => {
-    //     this.isSelecting = false
-    //   }, { once: true });
-
-    //   // Trigger click on the FileInput
-    //   this.$refs.uploader.click();
-    // },
-    // onFileChanged(e) {
-    //   this.selectedFile = e.target.files[0];
-
-    //   // Do whatever you need with the file, like reading it with FileReader
-    // },
   },
   watch: {
     currentFolder() {

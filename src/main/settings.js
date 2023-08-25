@@ -1,6 +1,7 @@
 const Fs      = require('fs');
 const Path    = require('path');
 const { app } = require('electron');
+const _       = require('lodash');
 
 /**
  * Get the full path to the settings
@@ -22,7 +23,12 @@ function GetSettingsPath() {
     return filePath;
 }
 
-function prepareSettings(settings) {
+/**
+ *
+ * @param {*} settings
+ * @returns
+ */
+function PrepareSettings(settings) {
     // Mask the API key
     if (typeof settings.apiKey === 'string' && settings.apiKey.length) {
         settings.apiKey = `sk-${'•'.repeat(68)}`;
@@ -31,8 +37,24 @@ function prepareSettings(settings) {
     return settings;
 }
 
+/**
+ *
+ * @returns
+ */
+function ReadSettings() {
+    const fullPath = GetSettingsPath();
+    const response = JSON.parse(Fs.readFileSync(fullPath).toString());
+
+    return response;
+}
+
 export default {
 
+    /**
+     *
+     * @param {*} settings
+     * @returns
+     */
     saveSettings: (settings) => {
         const fullPath    = GetSettingsPath();
         const oldSettings = JSON.parse(Fs.readFileSync(fullPath).toString());
@@ -41,7 +63,7 @@ export default {
 
         Fs.writeFileSync(fullPath, JSON.stringify(newSettings));
 
-        return prepareSettings(newSettings);
+        return PrepareSettings(newSettings);
     },
 
     /**
@@ -49,11 +71,17 @@ export default {
      * @param {*} filePath
      * @returns
      */
-    readSettings: () => {
-        const fullPath = GetSettingsPath();
-        const response = JSON.parse(Fs.readFileSync(fullPath).toString());
+    readSettings: () => PrepareSettings(ReadSettings),
 
-        return prepareSettings(response);
+    /**
+     *
+     * @param {*} setting
+     * @returns
+     */
+    getSetting: (setting) => {
+        const settings = ReadSettings();
+
+        return _.get(settings, setting);
     }
 
 }

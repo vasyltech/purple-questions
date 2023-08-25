@@ -24,13 +24,21 @@ contextBridge.exposeInMainWorld(
             deleteFile: (path) => ipcRenderer.invoke(
                 'directory', ['deleteFile', path]
             ),
+            updateFile: (path, data) => ipcRenderer.invoke(
+                'directory', ['updateFile', path, data]
+            ),
         },
-        core: {
+        settings: {
             readSettings: () => ipcRenderer.invoke(
-                'core', ['readSettings']
+                'settings', ['readSettings']
             ),
             saveSettings: (settings) => ipcRenderer.invoke(
-                'core', ['saveSettings', settings]
+                'settings', ['saveSettings', settings]
+            )
+        },
+        ai: {
+            analyzeFileContent: (path) => ipcRenderer.invoke(
+                'ai', ['analyzeFileContent', path]
             )
         }
     }

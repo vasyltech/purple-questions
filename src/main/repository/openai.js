@@ -1,0 +1,186 @@
+const _          = require('lodash');
+const { OpenAI } = require('openai');
+
+import Document2QuestionsTool from'./openai-tools/document-to-questions';
+import Question2AnswerTool from './openai-tools/question-to-answer';
+import Message2QuestionsTool from'./openai-tools/message-to-questions';
+import Message2AnswerTool  from './openai-tools/message-to-answer';
+import Settings from '../settings';
+
+let Client = null;
+
+/**
+ * Get OpenAI client
+ *
+ * @returns OpenAI
+ */
+function GetClient() {
+    if (_.isNull(Client)) {
+        Client = new OpenAI({
+            apiKey: Settings.getSetting('apiKey')
+        });
+    }
+
+    return Client;
+}
+
+export default {
+
+    /**
+     * Preparing the list of questions from the provided document
+     *
+     * @param {Object} document
+     *
+     * @returns Promise<Object>
+     */
+    prepareQuestionListFromDocument: async (document) => {
+        const corpus = Document2QuestionsTool.getCorpus(document);
+        const result = await GetClient().chat.completions.create({
+            model: 'gpt-3.5-turbo',
+            messages: corpus
+        });
+
+        // Extract the list of questions and usage data
+        const usage = Object.assign({}, _.get(result, 'usage'), {
+            'purpose': 'Document2Questions'
+        });
+
+        const questions = JSON.parse(
+            _.get(result, 'choices[0].message.content', '[]')
+        );
+
+        return {
+            output: questions,
+            usage,
+            corpus: Document2QuestionsTool.getCorpus()
+        }
+    },
+
+    /**
+     * Prepare answer to the questions with provided information
+     *
+     * @param {String} question
+     * @param {Object} document
+     *
+     * @returns {Promise<Object>}
+     */
+    prepareAnswerFromDocument: async (question, document) => {
+        const corpus = Question2AnswerTool.getCorpus({
+            question,
+            document
+        });
+        const result = await GetClient().chat.completions.create({
+            model: 'gpt-3.5-turbo',
+            messages: corpus
+        });
+
+        // Extract the list of questions and usage data
+        const usage = Object.assign({}, _.get(result, 'usage'), {
+            'purpose': 'Question2Answer'
+        });
+
+        const answer = _.get(result, 'choices[0].message.content', '');
+
+        return {
+            output: answer,
+            usage,
+            corpus: Question2AnswerTool.getCorpus()
+        }
+    },
+
+    /**
+     * Prepare the list of embedding
+     *
+     * @param {Array<string>} questions
+     *
+     * @returns {Promise<Array>}
+     */
+    prepareQuestionListEmbedding: async (questions) => {
+        const result = await GetClient().embeddings.create({
+            model: 'text-embedding-ada-002',
+            input: questions
+        });
+
+        const response = {
+            output: [],
+            usage: Object.assign({}, _.get(result, 'usage'), {
+                'purpose': 'Embedding'
+            })
+        };
+
+        // Iterate of the list of results and compile the output
+        _.forEach(questions, (question, i) => {
+            response.output.push({
+                text: question,
+                embedding: _.first(
+                    _.filter(result.data, (d) => d.index === i)
+                ).embedding
+            });
+        });
+
+        return response;
+    },
+
+    /**
+     * Preparing the list of questions from the incoming user message
+     *
+     * @param {Object} message
+     *
+     * @returns Promise<Object>
+     */
+    prepareQuestionListFromMessage: async (message) => {
+        const corpus = Message2QuestionsTool.getCorpus(message);
+        const result = await GetClient().chat.completions.create({
+            model: 'gpt-3.5-turbo',
+            messages: corpus
+        });
+
+        // Extract the list of questions and usage data
+        const usage = Object.assign({}, _.get(result, 'usage'), {
+            'purpose': 'Message2Questions'
+        });
+
+        const questions = JSON.parse(
+            _.get(result, 'choices[0].message.content', '[]')
+        );
+
+        return {
+            output: questions,
+            usage,
+            corpus: Message2QuestionsTool.getCorpus()
+        }
+    },
+
+    /**
+     * Prepare answer to the provided user message
+     *
+     * @param {String}        message
+     * @param {Array<Object>} material
+     *
+     * @returns {Promise<Object>}
+     */
+    prepareAnswerForMessage: async (message, material) => {
+        const corpus = Message2AnswerTool.getCorpus({
+            message,
+            material
+        });
+        const result = await GetClient().chat.completions.create({
+            model: 'gpt-3.5-turbo',
+            messages: corpus
+        });
+
+        // Extract the list of questions and usage data
+        const usage = Object.assign({}, _.get(result, 'usage'), {
+            'purpose': 'Message2Answer'
+        });
+
+        const answer = _.get(result, 'choices[0].message.content', '');
+
+        return {
+            output: answer,
+            usage,
+            corpus
+        }
+    }
+
+}
