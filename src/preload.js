@@ -39,6 +39,20 @@ contextBridge.exposeInMainWorld(
         ai: {
             analyzeFileContent: (path) => ipcRenderer.invoke(
                 'ai', ['analyzeFileContent', path]
+            ),
+            analyzeMessageContent: (uuid) => ipcRenderer.invoke(
+                'ai', ['analyzeMessageContent', uuid]
+            )
+        },
+        messages: {
+            getMessages: (page, limit) => ipcRenderer.invoke(
+                'messages', ['getMessages', page, limit]
+            ),
+            createMessage: (message) => ipcRenderer.invoke(
+                'messages', ['createMessage', message]
+            ),
+            readMessage: (uuid) => ipcRenderer.invoke(
+                'messages', ['readMessage', uuid]
             )
         }
     }

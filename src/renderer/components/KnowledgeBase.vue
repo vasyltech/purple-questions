@@ -2,7 +2,7 @@
   <v-container class="fill-height">
     <v-app-bar>
       <template v-slot:prepend>
-        <v-icon size="small" icon="mdi-tape-drive"></v-icon>
+        <v-icon icon="mdi-tape-drive"></v-icon>
       </template>
 
       <v-app-bar-title>

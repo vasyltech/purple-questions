@@ -90,16 +90,16 @@ export default {
 
     /**
      *
-     * @param {Array<number>} question
+     * @param {Array<number>} vector
      * @param {Number}        limit
      * @param {Number}        minSimilarityScore
      *
      * @returns {Promise<Object|Array<Object>>}
      */
-    searchQuestion: async (question, limit = 2, minSimilarityScore = 0.25) => {
+    searchQuestion: async (vector, limit = 2, minSimilarityScore = 0.25) => {
         const db       = await GetTable('questions');
-        const results  = await db.search(question, limit);
-        const filtered = _.filter(results, (r) => r.score <= minSimilarityScore);
+        const results  = await db.search(vector).limit(limit).execute();
+        const filtered = _.filter(results, (r) => r._distance <= minSimilarityScore);
 
         return limit === 1 ? _.first(filtered) : filtered;
     },

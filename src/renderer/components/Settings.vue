@@ -2,7 +2,7 @@
     <v-container class="fill-height">
         <v-app-bar>
             <template v-slot:prepend>
-                <v-icon size="small" icon="mdi-cog-outline"></v-icon>
+                <v-icon icon="mdi-cog-outline"></v-icon>
             </template>
 
             <v-app-bar-title>Settings</v-app-bar-title>
@@ -81,7 +81,7 @@ export default {
         const _this = this;
 
         this.$api.settings.readSettings().then((response) => {
-            _this.settings  = response;
+            _this.settings = response;
         });
     }
 }

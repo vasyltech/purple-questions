@@ -71,7 +71,7 @@ export default {
      * @param {*} filePath
      * @returns
      */
-    readSettings: () => PrepareSettings(ReadSettings),
+    readSettings: () => PrepareSettings(ReadSettings()),
 
     /**
      *

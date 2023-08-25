@@ -4,6 +4,7 @@ const path = require('path');
 import Directory from './main/directory';
 import Settings from './main/settings';
 import Ai from './main/ai';
+import Messages from './main/messages';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -44,6 +45,7 @@ const createWindow = () => {
   RegisterHandler('directory', Directory);
   RegisterHandler('settings', Settings);
   RegisterHandler('ai', Ai);
+  RegisterHandler('messages', Messages);
 };
 
 // This method will be called when Electron has finished
