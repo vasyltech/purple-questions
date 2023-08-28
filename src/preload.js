@@ -2,30 +2,30 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld(
     'purpleCore', {
-        directory: {
+        documents: {
             getDocumentTree: () => ipcRenderer.invoke(
-                'directory', ['getDocumentTree']
+                'documents', ['getDocumentTree']
             ),
-            createFolder: (parentFolder, newFolderName) => ipcRenderer.invoke(
-                'directory', ['createFolder', parentFolder, newFolderName]
+            createFolder: (parentFolder, name) => ipcRenderer.invoke(
+                'documents', ['createFolder', parentFolder, name]
             ),
-            deleteFolder: (path) => ipcRenderer.invoke(
-                'directory', ['deleteFolder', path]
+            deleteFolder: (uuid) => ipcRenderer.invoke(
+                'documents', ['deleteFolder', uuid]
             ),
-            createFile: (parentFolder, newFileName) => ipcRenderer.invoke(
-                'directory', ['createFile', parentFolder, newFileName]
+            createDocument: (parentFolder, name) => ipcRenderer.invoke(
+                'documents', ['createDocument', parentFolder, name]
             ),
-            uploadFile: (parentFolder, filePath) => ipcRenderer.invoke(
-                'directory', ['uploadFile', parentFolder, filePath]
+            uploadDocument: (parentFolder, documentPath) => ipcRenderer.invoke(
+                'documents', ['uploadDocument', parentFolder, documentPath]
             ),
-            readFile: (filePath) => ipcRenderer.invoke(
-                'directory', ['readFile', filePath]
+            readDocument: (uuid) => ipcRenderer.invoke(
+                'documents', ['readDocument', uuid]
             ),
-            deleteFile: (path) => ipcRenderer.invoke(
-                'directory', ['deleteFile', path]
+            deleteDocument: (uuid) => ipcRenderer.invoke(
+                'documents', ['deleteDocument', uuid]
             ),
-            updateFile: (path, data) => ipcRenderer.invoke(
-                'directory', ['updateFile', path, data]
+            updateDocument: (uuid, data) => ipcRenderer.invoke(
+                'documents', ['updateDocument', uuid, data]
             ),
         },
         settings: {
@@ -37,11 +37,14 @@ contextBridge.exposeInMainWorld(
             )
         },
         ai: {
-            analyzeFileContent: (path) => ipcRenderer.invoke(
-                'ai', ['analyzeFileContent', path]
+            analyzeDocumentContent: (path) => ipcRenderer.invoke(
+                'ai', ['analyzeDocumentContent', path]
             ),
             analyzeMessageContent: (uuid) => ipcRenderer.invoke(
                 'ai', ['analyzeMessageContent', uuid]
+            ),
+            indexDocumentQuestion: (question, origin) => ipcRenderer.invoke(
+                'ai', ['indexDocumentQuestion', question, origin]
             )
         },
         messages: {

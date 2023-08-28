@@ -89,6 +89,30 @@ export default {
     },
 
     /**
+     * Prepare embedding for a text
+     *
+     * @param {String} text
+     *
+     * @returns {Promise<Object>}
+     */
+    prepareTextEmbedding: async (text) => {
+        const result = await GetClient().embeddings.create({
+            model: 'text-embedding-ada-002',
+            input: text
+        });
+
+        return {
+            output: {
+                text,
+                embedding: _.get(result, 'data[0].embedding', [])
+            },
+            usage: Object.assign({}, _.get(result, 'usage'), {
+                'purpose': 'Embedding'
+            })
+        };
+    },
+
+    /**
      * Prepare the list of embedding
      *
      * @param {Array<string>} questions

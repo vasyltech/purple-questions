@@ -62,7 +62,18 @@ const routes = [
       {
         path: '',
         name: 'Home',
-        component: () => import(/* webpackChunkName: "home" */ '@/views/Home.vue'),
+        component: () => import('@/views/Home.vue'),
+      },
+    ],
+  },
+  {
+    path: '/questions',
+    component: () => import('@/layouts/default/Default.vue'),
+    children: [
+      {
+        path: '',
+        name: 'Questions',
+        component: () => import('@/views/Questions.vue'),
       },
     ],
   },
@@ -73,7 +84,7 @@ const routes = [
       {
         path: '',
         name: 'Messages',
-        component: () => import(/* webpackChunkName: "home" */ '@/views/Messages.vue'),
+        component: () => import('@/views/Messages.vue'),
       },
     ],
   },
@@ -84,7 +95,7 @@ const routes = [
       {
         path: '',
         name: 'Settings',
-        component: () => import(/* webpackChunkName: "home" */ '@/views/Settings.vue'),
+        component: () => import('@/views/Settings.vue'),
       },
     ],
   }

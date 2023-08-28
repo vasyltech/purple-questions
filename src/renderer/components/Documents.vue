@@ -14,7 +14,7 @@
       </v-app-bar-title>
 
       <template v-slot:append>
-        <v-tooltip v-if="!currentFile" text="Add New Folder" location="bottom">
+        <v-tooltip v-if="!currentDocument" text="Add New Folder" location="bottom">
           <template v-slot:activator="{ props }">
             <v-btn icon v-bind="props" @click="createFolderModal = true">
               <v-icon>mdi-folder-plus</v-icon>
@@ -22,39 +22,39 @@
           </template>
         </v-tooltip>
 
-        <v-tooltip v-if="!currentFile" text="Add New File" location="bottom">
+        <v-tooltip v-if="!currentDocument" text="Add New Document" location="bottom">
           <template v-slot:activator="{ props }">
-            <v-btn icon v-bind="props" @click="createFileModal = true">
+            <v-btn icon v-bind="props" @click="createDocumentModal = true">
               <v-icon>mdi-clipboard-plus-outline</v-icon>
             </v-btn>
           </template>
         </v-tooltip>
 
-        <v-tooltip v-if="!currentFile" text="Upload From Computer" location="bottom">
+        <v-tooltip v-if="!currentDocument" text="Upload From Computer" location="bottom">
           <template v-slot:activator="{ props }">
-            <v-btn icon v-bind="props" @click="uploadFileModal = true">
+            <v-btn icon v-bind="props" @click="uploadDocumentModal = true">
               <v-icon>mdi-upload</v-icon>
             </v-btn>
           </template>
         </v-tooltip>
 
-        <v-tooltip v-if="currentFile" text="Save Changes" location="bottom">
+        <v-tooltip v-if="currentDocument" text="Save Changes" location="bottom">
           <template v-slot:activator="{ props }">
-            <v-btn icon v-bind="props" @click="saveFileChanges">
+            <v-btn icon v-bind="props" @click="saveDocumentChanges">
               <v-icon>mdi-content-save</v-icon>
             </v-btn>
           </template>
         </v-tooltip>
 
-        <v-tooltip v-if="currentFile" text="Delete File" location="bottom">
+        <v-tooltip v-if="currentDocument" text="Delete Document" location="bottom">
           <template v-slot:activator="{ props }">
-            <v-btn icon v-bind="props" @click="deleteCurrentFile">
+            <v-btn icon v-bind="props" @click="deleteCurrentDocument">
               <v-icon>mdi-trash-can</v-icon>
             </v-btn>
           </template>
         </v-tooltip>
 
-        <v-tooltip v-if="!currentFile && currentFolder && currentFolder.children.length === 0" text="Delete Folder"
+        <v-tooltip v-if="!currentDocument && currentFolder && currentFolder.children.length === 0" text="Delete Folder"
           location="bottom">
           <template v-slot:activator="{ props }">
             <v-btn icon v-bind="props" @click="deleteCurrentFolder">
@@ -63,17 +63,15 @@
           </template>
         </v-tooltip>
       </template>
-
-      <input ref="uploader" class="d-none" type="file" @change="onFileChanged">
     </v-app-bar>
 
-    <v-responsive v-if="!currentFile" class="align-left fill-height">
+    <v-responsive v-if="!currentDocument" class="align-left fill-height">
       <v-container>
         <div class="text-overline pb-2">Folders</div>
 
         <v-item-group>
           <v-row v-if="currentFolderHasChildren('folder')">
-            <v-col v-for="folder in getCurrentFolderChildren('folder')" :key="folder.path" cols="12" md="3">
+            <v-col v-for="folder in getCurrentFolderChildren('folder')" :key="folder.uuid" cols="12" md="3">
               <v-item>
                 <v-card class="d-flex pa-4 align-center" dark>
                   <div class="d-flex justify-space-between align-content-center w-100">
@@ -107,7 +105,7 @@
             height="200" rounded width="100%">
             <div>
               <p class="text-body-2 mb-4">
-                There are no folders in your knowledge directory.
+                There are no folders in your knowledge folder.
               </p>
               <v-btn @click="createFolderModal = true">Create First Folder</v-btn>
             </div>
@@ -116,11 +114,11 @@
       </v-container>
 
       <v-container v-if="currentFolder">
-        <div class="text-overline pb-2">Files</div>
+        <div class="text-overline pb-2">Documents</div>
 
-        <v-list lines="two" v-if="currentFolderHasChildren('file')">
-          <v-list-item v-for="file in getCurrentFolderChildren('file')" :key="file.name" :title="file.name"
-            @click="openFile(file)" :subtitle="getFileLastModified(file)">
+        <v-list lines="two" v-if="currentFolderHasChildren('document')">
+          <v-list-item v-for="document in getCurrentFolderChildren('document')" :key="document.uuid" :title="document.name"
+            @click="openDocument(document)" :subtitle="getDocumentLastModified(document)">
             <template v-slot:prepend>
               <v-avatar color="grey">
                 <v-icon color="white">mdi-clipboard-text</v-icon>
@@ -134,10 +132,10 @@
                 </template>
 
                 <v-list>
-                  <v-list-item @click="openFile(file)">
+                  <v-list-item @click="openDocument(document)">
                     <v-list-item-title>Edit</v-list-item-title>
                   </v-list-item>
-                  <v-list-item @click="deleteFile(file)">
+                  <v-list-item @click="deleteDocument(document)">
                     <v-list-item-title>Delete</v-list-item-title>
                   </v-list-item>
                 </v-list>
@@ -150,9 +148,9 @@
           height="200" rounded width="100%">
           <div>
             <p class="text-body-2 mb-4">
-              There are no files in the "{{ currentFolder.name }}" folder.
+              There are no documents in the "{{ currentFolder.name }}" folder.
             </p>
-            <v-btn @click="createFileModal = true">Create First File</v-btn>
+            <v-btn @click="createDocumentModal = true">Create First Document</v-btn>
           </div>
         </v-sheet>
       </v-container>
@@ -173,37 +171,38 @@
         </v-card>
       </v-dialog>
 
-      <v-dialog v-model="createFileModal" transition="dialog-bottom-transition" width="500">
+      <v-dialog v-model="createDocumentModal" transition="dialog-bottom-transition" width="500">
         <v-card>
-          <v-toolbar title="Create New File"></v-toolbar>
+          <v-toolbar title="Create New Document"></v-toolbar>
           <v-card-text>
 
             <div class="text-overline">Create Manually</div>
-            <v-text-field v-model="newFileName" :rules="[inputValidationRules.required]" variant="outlined"
-              label="File Name*">
+            <v-text-field v-model="newDocumentName" :rules="[inputValidationRules.required]" variant="outlined"
+              label="Document Name*">
             </v-text-field>
           </v-card-text>
           <v-card-actions class="justify-end">
-            <v-btn variant="text" @click="createFile">Create</v-btn>
-            <v-btn variant="text" @click="createFileModal = false">Close</v-btn>
+            <v-btn variant="text" @click="createDocument">Create</v-btn>
+            <v-btn variant="text" @click="createDocumentModal = false">Close</v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>
 
-      <v-dialog v-model="uploadFileModal" transition="dialog-bottom-transition" width="500">
+      <v-dialog v-model="uploadDocumentModal" transition="dialog-bottom-transition" width="500">
         <v-card>
           <v-toolbar title="Upload From Computer"></v-toolbar>
           <v-card-text>
             <v-file-input
-              v-model="uploadFilePath"
-              label="Select File"
+              v-model="uploadDocumentPath"
+              label="Select Document"
               variant="outlined"
               accept=".txt,.md"
+              hint="Current allowed only .txt and .md file formats"
             ></v-file-input>
           </v-card-text>
           <v-card-actions class="justify-end">
-            <v-btn variant="text" @click="uploadFile">Upload</v-btn>
-            <v-btn variant="text" @click="uploadFileModal = false">Close</v-btn>
+            <v-btn variant="text" @click="uploadDocument">Upload</v-btn>
+            <v-btn variant="text" @click="uploadDocumentModal = false">Close</v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>
@@ -226,24 +225,42 @@
 
     <v-responsive v-else class="align-left fill-height">
       <v-container>
-        <div class="text-overline pb-2">File Name</div>
+        <div class="text-overline pb-2">Document Name</div>
 
-        <v-text-field v-model="currentFileData.name" label="Document Title" variant="outlined"></v-text-field>
+        <v-text-field v-model="currentDocumentData.name" label="Document Title" variant="outlined"></v-text-field>
       </v-container>
 
       <v-container>
         <div class="text-overline pb-2">Content</div>
 
-        <v-textarea v-model="currentFileData.content" auto-grow label="Content" variant="outlined"></v-textarea>
+        <v-textarea v-model="currentDocumentData.text" auto-grow label="Content" variant="outlined"></v-textarea>
       </v-container>
 
       <v-container v-if="hasIndexedQuestions">
         <div class="text-overline pb-2">Indexed Questions</div>
 
         <v-expansion-panels>
-          <v-expansion-panel v-for="(question, index) in currentFileData.questions" :key="index" :title="question.text">
+          <v-expansion-panel v-for="(question, index) in currentDocumentData.questions" :key="index">
+            <v-expansion-panel-title>
+              <v-icon v-if="question.uuid">mdi-check</v-icon>
+              <v-icon v-else>mdi-information-symbol</v-icon>
+              <span class="ml-2">{{ question.text }}</span>
+            </v-expansion-panel-title>
             <v-expansion-panel-text>
-              <v-textarea :label="question.question" v-model="currentFileData.questions[index].answer" variant="underlined" class="mt-6"></v-textarea>
+              <v-textarea v-if="question.uuid" label="Answer" v-model="currentDocumentData.questions[index].answer" auto-grow variant="outlined" class="mt-6"></v-textarea>
+              <v-alert
+                v-else
+                color="grey-lighten-3"
+                title="Do you find this question useful?"
+                class="mt-2 mb-4"
+                text="Let's index it. The system will generate a concise answer to this question that you can adjust if necessary."
+              ></v-alert>
+
+              <div class="d-flex justify-end">
+                <v-btn variant="text" @click="deleteQuestion(question)">Delete</v-btn>
+                <v-btn variant="outlined" class="ml-2" v-if="question.uuid" @click="saveDocumentChanges()">Update</v-btn>
+                <v-btn variant="outlined" class="ml-2" v-else :disabled="isIndexingQuestion(question)" @click="indexQuestion(question)">{{ isIndexingQuestion(question) ? 'Indexing...' : 'Index' }}</v-btn>
+              </div>
             </v-expansion-panel-text>
           </v-expansion-panel>
         </v-expansion-panels>
@@ -255,7 +272,7 @@
             <p class="text-body-2 mb-4">
               The next step is to analyze the content and index the data.
             </p>
-            <v-btn @click="analyzeFileContent">Analyze Content</v-btn>
+            <v-btn @click="analyzeDocumentContent">Analyze Content</v-btn>
           </div>
           <div v-else>
             <p class="text-body-2 mb-4">
@@ -280,17 +297,17 @@
       </v-snackbar>
     </v-responsive>
 
-    <v-dialog v-model="deleteFileModal" transition="dialog-bottom-transition" width="400">
+    <v-dialog v-model="deleteDocumentModal" transition="dialog-bottom-transition" width="400">
       <v-card>
-        <v-toolbar title="Delete File"></v-toolbar>
+        <v-toolbar title="Delete Document"></v-toolbar>
         <v-card-text>
           <v-alert type="warning" prominent variant="outlined">
-            You are about to delete the <strong v-if="selectedFile">"{{ selectedFile.name }}"</strong> file. Please confirm.
+            You are about to delete the <strong v-if="selectedDocument">"{{ selectedDocument.name }}"</strong> document. Please confirm.
           </v-alert>
         </v-card-text>
         <v-card-actions class="justify-end">
-          <v-btn variant="text" @click="deleteSelectedFile">Delete</v-btn>
-          <v-btn variant="text" @click="deleteFileModal = false">Close</v-btn>
+          <v-btn variant="text" @click="deleteSelectedDocument">Delete</v-btn>
+          <v-btn variant="text" @click="deleteDocumentModal = false">Close</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -302,22 +319,23 @@ export default {
   data: () => ({
     documentTree: {},
     currentFolder: null,
-    currentFile: null,
-    uploadFilePath: null,
-    currentFileData: {},
+    currentDocument: null,
+    uploadDocumentPath: null,
+    currentDocumentData: {},
     createFolderModal: false,
-    createFileModal: false,
+    createDocumentModal: false,
     deleteFolderModal: false,
-    deleteFileModal: false,
-    uploadFileModal: false,
+    deleteDocumentModal: false,
+    uploadDocumentModal: false,
     newFolderName: null,
-    newFileName: null,
+    newDocumentName: null,
     showSuccessMessage: false,
     successMessage: null,
     analyzingContent: false,
-    // The selected folder/file is the one that is selected from inline action
+    // The selected folder/document is the one that is selected from inline action
     selectedFolder: null,
-    selectedFile: null,
+    selectedDocument: null,
+    indexingQuestions: [],
 
     inputValidationRules: {
       required: value => !!value || 'Required.',
@@ -325,18 +343,14 @@ export default {
         return /^[a-zA-Z\s\d\-]+$/.test(value) || 'Only a-zA-Z0-9 and - allowed.'
       }
     },
-    breadcrumb: [
-      {
-        title: '...'
-      }
-    ],
+    breadcrumb: [{ title: '...'}],
     drawer: null
   }),
   computed: {
     hasIndexedQuestions() {
-      return this.currentFileData
-        && this.currentFileData.questions
-        && this.currentFileData.questions.length > 0;
+      return this.currentDocumentData
+        && this.currentDocumentData.questions
+        && this.currentDocumentData.questions.length > 0;
     }
   },
   methods: {
@@ -361,19 +375,19 @@ export default {
       return response;
     },
     openFolder(folder) {
-      this.currentFolder = folder;
-      this.currentFile = null;
-      this.currentFileData = {};
+      this.currentFolder       = folder;
+      this.currentDocument     = null;
+      this.currentDocumentData = {};
     },
-    openFile(file) {
-      const _this = this;
-      this.currentFile = file;
+    openDocument(document) {
+      const _this          = this;
+      this.currentDocument = document;
 
-      this.$api.directory
-        .readFile(file.path)
+      this.$api.documents
+        .readDocument(document.uuid)
         .then((response) => {
-          // Show the newly created file
-          _this.currentFileData = response;
+          // Show the newly created document
+          _this.currentDocumentData = response;
         });
     },
     deleteFolder(folder) {
@@ -387,14 +401,14 @@ export default {
     deleteSelectedFolder() {
       const _this = this;
 
-      this.$api.directory
-        .deleteFolder(this.selectedFolder.path)
+      this.$api.documents
+        .deleteFolder(this.selectedFolder.uuid)
         .then(() => {
           // Remove the folder from the list
           const parent = _this.selectedFolder.parent;
 
           parent.children = parent.children.filter(
-            f => f.path !== _this.selectedFolder.path
+            f => f.uuid !== _this.selectedFolder.uuid
           );
 
           if (_this.currentFolder === _this.selectedFolder) {
@@ -406,107 +420,118 @@ export default {
           _this.selectedFolder    = null;
         });
     },
-    deleteFile(file) {
-      this.selectedFile    = file;
-      this.deleteFileModal = true;
+    deleteDocument(document) {
+      this.selectedDocument     = document;
+      this.deleteDocumentModal  = true;
     },
-    deleteCurrentFile() {
-      this.selectedFile    = this.currentFile;
-      this.deleteFileModal = true;
+    deleteCurrentDocument() {
+      this.selectedDocument    = this.currentDocument;
+      this.deleteDocumentModal = true;
     },
-    deleteSelectedFile() {
+    deleteSelectedDocument() {
       const _this = this;
 
-      this.$api.directory
-        .deleteFile(this.selectedFile.path)
+      this.$api.documents
+        .deleteDocument(this.selectedDocument.uuid)
         .then(() => {
           // Remove the folder from the list
-          const parent = _this.selectedFile.parent;
+          const parent = _this.selectedDocument.parent;
 
           parent.children = parent.children.filter(
-            f => f.path !== _this.selectedFile.path
+            f => f.uuid !== _this.selectedDocument.uuid
           );
 
-          // Are we deleting from the edit file view?
-          if (_this.currentFile === _this.selectedFile) {
-            _this.currentFolder = _this.selectedFile.parent;
-            _this.currentFile   = null;
+          // Are we deleting from the edit document view?
+          if (_this.currentDocument === _this.selectedDocument) {
+            _this.currentFolder   = _this.selectedDocument.parent;
+            _this.currentDocument = null;
           }
 
           // Closing the modal & resetting the selecting
-          _this.deleteFileModal = false;
-          _this.selectedFile    = null;
+          _this.deleteDocumentModal = false;
+          _this.selectedDocument    = null;
         });
+    },
+    deleteQuestion(question) {
+      this.currentDocumentData.questions = this.currentDocumentData.questions.filter(
+        q => q.text !== question.text
+      );
+
+      this.saveDocumentChanges();
     },
     createFolder() {
       const _this = this;
-      const name = this.newFolderName;
+      const name  = this.newFolderName;
 
-      this.$api.directory
-        .createFolder(this.currentFolder.path, name)
+      console.log(this.currentFolder);
+
+      this.$api.documents
+        .createFolder(this.currentFolder.uuid, name)
         .then((folder) => {
+          console.log(folder);
           _this.currentFolder.children.push(folder);
 
-          // Set the parent node for the newly created file
+          // Set the parent node for the newly created folder
           folder.parent = _this.currentFolder;
 
           // Closing the modal & resetting the form
           _this.createFolderModal = false;
-          _this.newFolderName = null;
+          _this.newFolderName     = null;
         });
     },
-    createFile() {
+    createDocument() {
       const _this = this;
-      const name = this.newFileName;
+      const name  = this.newDocumentName;
 
-      this.$api.directory
-        .createFile(this.currentFolder.path, name)
-        .then((file) => {
-          _this.currentFolder.children.push(file);
+      this.$api.documents
+        .createDocument(this.currentFolder.uuid, name)
+        .then((document) => {
+          _this.currentFolder.children.push(document);
 
-          // Set the parent node for the newly created file
-          file.parent = _this.currentFolder;
+          // Set the parent node for the newly created document
+          document.parent = _this.currentFolder;
 
           // Closing the modal & resetting the form
-          _this.createFileModal = false;
-          _this.newFolderName = null;
+          _this.createDocumentModal = false;
+          _this.newFolderName       = null;
 
-          // Show the newly created file
-          _this.currentFile     = file;
-          _this.currentFileData = file;
+          // Show the newly created document
+          _this.openDocument(document);
         });
     },
-    uploadFile() {
+    uploadDocument() {
       const _this = this;
 
-      this.$api.directory
-        .uploadFile(this.currentFolder.path, this.uploadFilePath[0].path)
-        .then((file) => {
-          if (file !== null) {
-            _this.currentFolder.children.push(file);
+      this.$api.documents
+        .uploadDocument(this.currentFolder.uuid, this.uploadDocumentPath[0].path)
+        .then((document) => {
+          if (document !== null) {
+            _this.currentFolder.children.push(document);
 
-            // Set the parent node for the newly created file
-            file.parent = _this.currentFolder;
+            // Set the parent node for the newly created document
+            document.parent = _this.currentFolder;
 
             // Closing the modal & resetting the form
-            _this.uploadFileModal = false;
-            _this.uploadFilePath  = null;
+            _this.uploadDocumentModal = false;
+            _this.uploadDocumentPath  = null;
 
-            // Show the newly created file
-            _this.currentFile     = file;
-            _this.currentFileData = file;
+            // Show the newly created document
+            _this.openDocument(document);
           }
         });
     },
-    saveFileChanges() {
+    saveDocumentChanges() {
       const _this = this;
 
-      this.$api.directory
-        .updateFile(this.currentFile.path, {
-          name: this.currentFileData.name,
-          content: this.currentFileData.content
+      this.$api.documents
+        .updateDocument(this.currentDocument.uuid, {
+          name: this.currentDocumentData.name,
+          text: this.currentDocumentData.text,
+          questions: JSON.parse(JSON.stringify(this.currentDocumentData.questions))
         })
-        .then(() => {
+        .then((document) => {
+          _this.currentDocument = Object.assign(_this.currentDocument, document);
+
           _this.successMessage     = 'Changes saved!';
           _this.showSuccessMessage = true;
         });
@@ -524,56 +549,85 @@ export default {
     },
     assembleBreadcrumb() {
       const response = [];
-      let bottom = this.currentFile ?? this.currentFolder;
+      let bottom = this.currentDocument ?? this.currentFolder;
 
-      do {
-        response.push({
-          title: bottom.name,
-          node: bottom
-        });
+      if (bottom) { // Did we select the root?
+        do {
+          response.push({
+            title: bottom.name,
+            node: bottom
+          });
 
-        bottom = bottom.parent;
-      } while (bottom);
+          bottom = bottom.parent;
+        } while (bottom);
+      }
 
       this.breadcrumb = response.reverse();
     },
-    getFileLastModified(file) {
-      const prefix = file.updatedAt ? 'Last Updated: ' : 'Created: ';
+    getDocumentLastModified(document) {
+      const prefix = document.updatedAt ? 'Last Updated: ' : 'Created: ';
 
-      const time = file.updatedAt || file.createdAt;
+      const time = document.updatedAt || document.createdAt;
 
       return prefix + (new Date(time)).toLocaleDateString(
         'en-us',
         { weekday:"long", year:"numeric", month:"short", day:"numeric"}
       );
     },
-    analyzeFileContent() {
+    analyzeDocumentContent() {
       const _this = this;
 
       this.analyzingContent = true;
 
       this.$api.ai
-        .analyzeFileContent(this.currentFile.path)
-        .then((file) => {
-          _this.currentFileData  = file;
-          _this.analyzingContent = false;
+        .analyzeDocumentContent(this.currentDocument.uuid)
+        .then((document) => {
+          _this.currentDocumentData = document;
+          _this.analyzingContent    = false;
         });
+    },
+    indexQuestion(question) {
+      this.indexingQuestions.push(question);
+
+      const _this = this;
+
+      this.$api.ai
+        .indexDocumentQuestion(question.text, this.currentDocument.uuid)
+        .then((response) => {
+          // Remove it from indexing array
+          _this.indexingQuestions = _this.indexingQuestions.filter(
+            q => q !== question
+          );
+
+          // Indexed question position
+          const position = _this.currentDocumentData.questions.indexOf(question);
+
+          // Replacing the question with result
+          _this.currentDocumentData.questions[position] = response;
+
+          this.saveDocumentChanges();
+        });
+    },
+    isIndexingQuestion(question) {
+      return this.indexingQuestions.includes(question);
     }
   },
   watch: {
     currentFolder() {
       this.assembleBreadcrumb();
     },
-    currentFile() {
+    currentDocument() {
       this.assembleBreadcrumb();
     }
   },
   mounted() {
     const _this = this;
 
-    this.$api.directory.getDocumentTree().then((response) => {
-      _this.documentTree = _this.prepareDocumentTree(response);
+    this.$api.documents.getDocumentTree().then((response) => {
+      _this.documentTree  = _this.prepareDocumentTree(response);
       _this.currentFolder = response;
+
+      _this.assembleBreadcrumb();
     });
   }
 }

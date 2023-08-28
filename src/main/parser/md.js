@@ -1,5 +1,6 @@
-const Marked = require('marked');
-const _      = require('lodash');
+const Marked   = require('marked');
+const _        = require('lodash');
+const Entities = require('entities');
 
 // Custom tokenizer
 const tokenizer = {
@@ -34,6 +35,27 @@ Marked.use({ tokenizer });
 
 /**
  *
+ * @param {*} block
+ * @returns
+ */
+function NormalizeTokens(block) {
+    let result = block.text;
+
+    if (block.type === 'image') {
+        result = '';
+    } else if(_.isArray(block.tokens)) {
+        _.forEach(block.tokens, (token) => {
+            result = result.replace(
+                token.raw, NormalizeTokens(token)
+            );
+        });
+    }
+
+    return result;
+}
+
+/**
+ *
  */
 const Normalizer = {
 
@@ -64,7 +86,9 @@ const Normalizer = {
      * @returns {String}
      */
     heading: (block) => {
-        return `${block.text.toUpperCase().trim()}`
+        const result = NormalizeTokens(block);
+
+        return `${result.toUpperCase().trim()}`
     },
 
     /**
@@ -75,23 +99,35 @@ const Normalizer = {
      * @returns {String}
      */
     paragraph: (block) => {
-        let response = block.text;
+        const result = NormalizeTokens(block);
 
-        _.forEach(block.tokens, (t) => {
-            if (t.type === 'link') {
-                response = response.replace(t.raw, t.text);
-            } else if (t.type === 'image') {
-                response = response.replace(t.raw, '');
-            }
+        return `${result.trim()}\n`;
+    },
+
+    /**
+     *
+     * @param {*} block
+     * @returns
+     */
+    list: (block) => {
+        const response = [];
+
+        _.forEach(block.items, (item) => {
+            response.push(NormalizeTokens(item.tokens[0]));
         });
 
-        return `${response.trim()}\n`;
+        return response.join('\n');
     }
 
 };
 
 export default {
 
+    /**
+     *
+     * @param {*} content
+     * @returns
+     */
     parse: async (content) => {
         const response = {
             title: null,
@@ -114,7 +150,10 @@ export default {
             }
         });
 
-        response.content = blocks.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+        const c = blocks.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+
+        // Finally decode any HTML entities
+        response.text = Entities.decode(c);
 
         return response;
     }

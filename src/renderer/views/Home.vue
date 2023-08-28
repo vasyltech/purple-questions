@@ -1,7 +1,7 @@
 <template>
-  <KnowledgeBase />
+  <Documents />
 </template>
 
 <script setup>
-  import KnowledgeBase from '@/components/KnowledgeBase.vue'
+  import Documents from '@/components/Documents.vue'
 </script>

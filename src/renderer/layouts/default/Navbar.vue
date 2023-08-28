@@ -27,6 +27,7 @@ export default {
         drawer: null,
         links: [
             ['mdi-tape-drive', 'Documents', '/'],
+            ['mdi-progress-question', 'Questions', '/questions'],
             ['mdi-message-processing-outline', 'Messages', '/messages'],
             ['mdi-cog-outline', 'Settings', '/settings']
         ],
