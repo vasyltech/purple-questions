@@ -14,13 +14,6 @@
             </v-app-bar-title>
 
             <template v-slot:append>
-                <v-tooltip text="Search Message" location="bottom">
-                    <template v-slot:activator="{ props }">
-                        <v-btn icon v-bind="props" @click="createMessageModal = true">
-                            <v-icon>mdi-magnify</v-icon>
-                        </v-btn>
-                    </template>
-                </v-tooltip>
                 <v-tooltip text="Add New Message" location="bottom">
                     <template v-slot:activator="{ props }">
                         <v-btn icon v-bind="props" @click="createMessageModal = true">

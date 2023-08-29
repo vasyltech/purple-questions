@@ -29,7 +29,7 @@ export default {
     /**
      * Preparing the list of questions from the provided document
      *
-     * @param {Object} document
+     * @param {Document} document
      *
      * @returns Promise<Object>
      */

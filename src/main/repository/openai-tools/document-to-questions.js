@@ -7,6 +7,13 @@ Keep questions generic. DO NOT include in generated questions names, website dom
 TEXT:
 {text}`;
 
+/**
+ * Get corpus
+ *
+ * @param {Document} doc
+ *
+ * @returns {Array}
+ */
 function GetCorpus(doc = null) {
     return [
         {
@@ -15,7 +22,7 @@ function GetCorpus(doc = null) {
         },
         {
             role: 'user',
-            content: doc ? USER_PROMPT.replace('{text}', doc.content) : USER_PROMPT
+            content: doc ? USER_PROMPT.replace('{text}', doc.text) : USER_PROMPT
         }
     ];
 }

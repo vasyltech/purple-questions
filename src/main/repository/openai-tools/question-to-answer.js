@@ -16,7 +16,7 @@ function GetCorpus(data = null) {
         {
             role: 'user',
             content: data ? USER_PROMPT
-                .replace('{text}', data.document.content)
+                .replace('{text}', data.document.text)
                 .replace('{question}', data.question) : USER_PROMPT
         }
     ];

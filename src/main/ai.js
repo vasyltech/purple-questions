@@ -1,9 +1,9 @@
-const { v4: uuidv4 } = require('uuid');
-const _              = require('lodash');
+const _ = require('lodash');
 
 import OpenAiRepository from './repository/openai';
 import Db from './repository/db';
 import Documents from './documents';
+import Questions from './questions';
 import Messages from './messages'
 
 export default {
@@ -11,13 +11,13 @@ export default {
     /**
      * Analyze document content and convert it to the list of questions
      *
-     * @param {String} path
+     * @param {String} uuid
      *
      * @returns {Promise<Document>}
      */
-    analyzeDocumentContent: async (path) => {
+    analyzeDocumentContent: async (uuid) => {
         // Step #1. Read the document data
-        const document = Documents.readDocument(path);
+        const document = Documents.readDocument(uuid);
 
         // Step #2. Generate the list of questions from the document
         const res1 = await OpenAiRepository.prepareQuestionListFromDocument(
@@ -71,49 +71,46 @@ export default {
         // }
 
         // Updating the document with all the info
-        Documents.updateDocument(path, document);
+        Documents.updateDocument(uuid, document);
 
         return document;
     },
 
-    indexDocumentQuestion: async (question, origin) => {
+    /**
+     *
+     * @param {*} text
+     * @param {*} uuid
+     */
+    indexDocumentQuestion: async (text, uuid) => {
         // Prepare the object for the new question
-        const content = {
-            uuid: uuidv4(),
-            text: question,
-            origin: `/documents${origin.path}`,
+        const question = {
+            text,
+            origin: `/documents/${uuid}`,
             usage: []
         };
 
         // Step #1. Prepare the vector embedding for the question
-        const res1 = await OpenAiRepository.prepareTextEmbedding(question);
+        const res1 = await OpenAiRepository.prepareTextEmbedding(text);
 
         // Add usage to the question
-        content.usage.push(res1.usage);
+        question.usage.push(res1.usage);
 
-        // Step #2. Generate the answer for the question and persist the
-        // data in the vector database
-        const res2 = await OpenAiRepository.prepareAnswerFromDocument(
+        // Step #2. Generate the answer for the question based on document's material
+        const document = Documents.readDocument(uuid);
+        const res2     = await OpenAiRepository.prepareAnswerFromDocument(
             question.text, document
         );
 
         // Add usage to the document
-        document.usage.push(res3.usage);
-
-        // Generate unique question uuid
-        const uuid = uuidv4();
+        question.usage.push(res2.usage);
 
         // Now we have all the necessary information to store the question in the
         // document
-        document.questions.push({
-            uuid,
-            text: question.text,
-            answer: res3.output,
-            embedding: question.embedding
-        });
+        question.answer    = res2.output;
+        question.embedding = res1.output.embedding;
 
         // Index the question
-        Db.indexQuestion(path, uuid, question.embedding);
+        return Questions.createQuestion(question);
     },
 
     /**

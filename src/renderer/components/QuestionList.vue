@@ -165,10 +165,6 @@ export default {
                 this.showSearchInput = false;
             }
         },
-        handleSearchIconClick() {
-            this.showSearchInput = true
-            this.$refs.search.focus();
-        },
         navigateTo(node) {
             this.currentMessage = node;
         },

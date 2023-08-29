@@ -21,12 +21,20 @@ contextBridge.exposeInMainWorld(
             readDocument: (uuid) => ipcRenderer.invoke(
                 'documents', ['readDocument', uuid]
             ),
-            deleteDocument: (uuid) => ipcRenderer.invoke(
-                'documents', ['deleteDocument', uuid]
+            deleteDocument: (uuid, deleteIndexedQuestions) => ipcRenderer.invoke(
+                'documents', ['deleteDocument', uuid, deleteIndexedQuestions]
             ),
             updateDocument: (uuid, data) => ipcRenderer.invoke(
                 'documents', ['updateDocument', uuid, data]
             ),
+            deleteDocumentQuestion: (uuid, question) => ipcRenderer.invoke(
+                'documents', ['deleteDocumentQuestion', uuid, question]
+            ),
+        },
+        questions: {
+            updateQuestion: (uuid, data) => ipcRenderer.invoke(
+                'questions', ['updateQuestion', uuid, data]
+            )
         },
         settings: {
             readSettings: () => ipcRenderer.invoke(
@@ -37,14 +45,14 @@ contextBridge.exposeInMainWorld(
             )
         },
         ai: {
-            analyzeDocumentContent: (path) => ipcRenderer.invoke(
-                'ai', ['analyzeDocumentContent', path]
+            analyzeDocumentContent: (uuid) => ipcRenderer.invoke(
+                'ai', ['analyzeDocumentContent', uuid]
             ),
             analyzeMessageContent: (uuid) => ipcRenderer.invoke(
                 'ai', ['analyzeMessageContent', uuid]
             ),
-            indexDocumentQuestion: (question, origin) => ipcRenderer.invoke(
-                'ai', ['indexDocumentQuestion', question, origin]
+            indexDocumentQuestion: (text, uuid) => ipcRenderer.invoke(
+                'ai', ['indexDocumentQuestion', text, uuid]
             )
         },
         messages: {

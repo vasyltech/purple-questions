@@ -13,59 +13,92 @@
         </v-breadcrumbs>
       </v-app-bar-title>
 
-      <template v-slot:append>
-        <v-tooltip v-if="!currentDocument" text="Add New Folder" location="bottom">
-          <template v-slot:activator="{ props }">
-            <v-btn icon v-bind="props" @click="createFolderModal = true">
-              <v-icon>mdi-folder-plus</v-icon>
-            </v-btn>
-          </template>
-        </v-tooltip>
+      <v-spacer></v-spacer>
 
-        <v-tooltip v-if="!currentDocument" text="Add New Document" location="bottom">
+      <v-text-field
+          v-if="showSearchInput"
+          density="compact"
+          ref="search"
+          autofocus
+          variant="outlined"
+          label="Search..."
+          append-inner-icon="mdi-magnify"
+          @blur="handleSearchBlur"
+          v-model="search"
+          class="mt-6"
+      ></v-text-field>
+      <v-tooltip v-else text="Search Question" location="bottom">
           <template v-slot:activator="{ props }">
-            <v-btn icon v-bind="props" @click="createDocumentModal = true">
-              <v-icon>mdi-clipboard-plus-outline</v-icon>
-            </v-btn>
+              <v-btn icon v-bind="props" @click="showSearchInput = true">
+                  <v-icon>mdi-magnify</v-icon>
+              </v-btn>
           </template>
-        </v-tooltip>
+      </v-tooltip>
 
-        <v-tooltip v-if="!currentDocument" text="Upload From Computer" location="bottom">
-          <template v-slot:activator="{ props }">
-            <v-btn icon v-bind="props" @click="uploadDocumentModal = true">
-              <v-icon>mdi-upload</v-icon>
-            </v-btn>
-          </template>
-        </v-tooltip>
+      <v-tooltip v-if="!currentDocument" text="Add New Folder" location="bottom">
+        <template v-slot:activator="{ props }">
+          <v-btn icon v-bind="props" @click="createFolderModal = true">
+            <v-icon>mdi-folder-plus</v-icon>
+          </v-btn>
+        </template>
+      </v-tooltip>
 
-        <v-tooltip v-if="currentDocument" text="Save Changes" location="bottom">
-          <template v-slot:activator="{ props }">
-            <v-btn icon v-bind="props" @click="saveDocumentChanges">
-              <v-icon>mdi-content-save</v-icon>
-            </v-btn>
-          </template>
-        </v-tooltip>
+      <v-tooltip v-if="!currentDocument" text="Add New Document" location="bottom">
+        <template v-slot:activator="{ props }">
+          <v-btn icon v-bind="props" @click="createDocumentModal = true">
+            <v-icon>mdi-clipboard-plus-outline</v-icon>
+          </v-btn>
+        </template>
+      </v-tooltip>
 
-        <v-tooltip v-if="currentDocument" text="Delete Document" location="bottom">
-          <template v-slot:activator="{ props }">
-            <v-btn icon v-bind="props" @click="deleteCurrentDocument">
-              <v-icon>mdi-trash-can</v-icon>
-            </v-btn>
-          </template>
-        </v-tooltip>
+      <v-tooltip v-if="!currentDocument" text="Upload From Computer" location="bottom">
+        <template v-slot:activator="{ props }">
+          <v-btn icon v-bind="props" @click="uploadDocumentModal = true">
+            <v-icon>mdi-upload</v-icon>
+          </v-btn>
+        </template>
+      </v-tooltip>
 
-        <v-tooltip v-if="!currentDocument && currentFolder && currentFolder.children.length === 0" text="Delete Folder"
-          location="bottom">
-          <template v-slot:activator="{ props }">
-            <v-btn icon v-bind="props" @click="deleteCurrentFolder">
-              <v-icon>mdi-trash-can</v-icon>
-            </v-btn>
-          </template>
-        </v-tooltip>
-      </template>
+      <v-tooltip v-if="currentDocument" text="Save Changes" location="bottom">
+        <template v-slot:activator="{ props }">
+          <v-btn icon v-bind="props" @click="saveDocumentChanges">
+            <v-icon>mdi-content-save</v-icon>
+          </v-btn>
+        </template>
+      </v-tooltip>
+
+      <v-tooltip v-if="currentDocument" text="Delete Document" location="bottom">
+        <template v-slot:activator="{ props }">
+          <v-btn icon v-bind="props" @click="deleteCurrentDocument">
+            <v-icon>mdi-trash-can</v-icon>
+          </v-btn>
+        </template>
+      </v-tooltip>
+
+      <v-tooltip v-if="!currentDocument && currentFolder && currentFolder.children.length === 0" text="Delete Folder"
+        location="bottom">
+        <template v-slot:activator="{ props }">
+          <v-btn icon v-bind="props" @click="deleteCurrentFolder">
+            <v-icon>mdi-trash-can</v-icon>
+          </v-btn>
+        </template>
+      </v-tooltip>
     </v-app-bar>
 
-    <v-responsive v-if="!currentDocument" class="align-left fill-height">
+    <v-responsive v-if="search" class="align-left fill-height">
+      <v-container>
+        <v-sheet class="d-flex align-center justify-center flex-wrap text-center mx-auto px-4" elevation="1"
+            height="150" rounded width="100%">
+            <div>
+              <p class="text-body-2">
+                Not yet implemented. Sorry...
+              </p>
+            </div>
+          </v-sheet>
+      </v-container>
+    </v-responsive>
+
+    <v-responsive v-else-if="!currentDocument" class="align-left fill-height">
       <v-container>
         <div class="text-overline pb-2">Folders</div>
 
@@ -248,18 +281,30 @@
             </v-expansion-panel-title>
             <v-expansion-panel-text>
               <v-textarea v-if="question.uuid" label="Answer" v-model="currentDocumentData.questions[index].answer" auto-grow variant="outlined" class="mt-6"></v-textarea>
-              <v-alert
-                v-else
-                color="grey-lighten-3"
-                title="Do you find this question useful?"
-                class="mt-2 mb-4"
-                text="Let's index it. The system will generate a concise answer to this question that you can adjust if necessary."
-              ></v-alert>
+              <v-sheet v-else class="d-flex mt-2 mb-4 align-center justify-center flex-wrap text-center mx-auto px-4" color="grey-lighten-5"
+                height="150" rounded width="100%">
+                <div v-if="!isIndexingQuestion(question)">
+                  <p class="text-body-2 mb-4">
+                    Generate the answer and index the question.
+                  </p>
+                  <v-btn @click="indexQuestion(question)">Index Question</v-btn>
+                </div>
+                <div v-else>
+                  <p class="text-body-2 mb-4">
+                    Please wait a few seconds. We are indexing the question
+                  </p>
+                  <v-progress-circular
+                    indeterminate
+                    color="grey"
+                  ></v-progress-circular>
+                </div>
+              </v-sheet>
 
               <div class="d-flex justify-end">
                 <v-btn variant="text" @click="deleteQuestion(question)">Delete</v-btn>
-                <v-btn variant="outlined" class="ml-2" v-if="question.uuid" @click="saveDocumentChanges()">Update</v-btn>
-                <v-btn variant="outlined" class="ml-2" v-else :disabled="isIndexingQuestion(question)" @click="indexQuestion(question)">{{ isIndexingQuestion(question) ? 'Indexing...' : 'Index' }}</v-btn>
+                <v-btn variant="outlined" class="ml-2" v-if="question.uuid" :disabled="isSavingQuestion(question)" @click="saveQuestion(question)">
+                  {{ isSavingQuestion(question) ? 'Updating...' : 'Update' }}
+                </v-btn>
               </div>
             </v-expansion-panel-text>
           </v-expansion-panel>
@@ -286,7 +331,24 @@
         </v-sheet>
       </v-container>
 
-      <v-snackbar v-model="showSuccessMessage">
+      <v-dialog v-model="deleteQuestionModal" transition="dialog-bottom-transition" width="550">
+        <v-card>
+          <v-toolbar title="Delete Question"></v-toolbar>
+          <v-card-text>
+            <v-alert :type="selectedQuestion && selectedQuestion.uuid ? 'warning' : 'info'" prominent variant="outlined" color="grey-darken-2">
+              You are about to delete the {{ selectedQuestion && selectedQuestion.uuid ? 'INDEXED' : '' }} <strong v-if="selectedQuestion">"{{ selectedQuestion.text }}"</strong> question.
+              {{ selectedQuestion && selectedQuestion.uuid ? 'This will also delete the question index. ' : '' }}
+              Please confirm.
+            </v-alert>
+          </v-card-text>
+          <v-card-actions class="justify-end">
+            <v-btn variant="text" @click="deleteSelectedQuestion">Delete</v-btn>
+            <v-btn variant="text" @click="deleteQuestionModal = false">Close</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
+      <v-snackbar v-model="showSuccessMessage" :timeout="2000">
           {{ successMessage }}
 
           <template v-slot:actions>
@@ -297,13 +359,14 @@
       </v-snackbar>
     </v-responsive>
 
-    <v-dialog v-model="deleteDocumentModal" transition="dialog-bottom-transition" width="400">
+    <v-dialog v-model="deleteDocumentModal" transition="dialog-bottom-transition" width="450">
       <v-card>
         <v-toolbar title="Delete Document"></v-toolbar>
         <v-card-text>
-          <v-alert type="warning" prominent variant="outlined">
+          <v-alert type="warning" prominent variant="outlined" color="grey-darken-2">
             You are about to delete the <strong v-if="selectedDocument">"{{ selectedDocument.name }}"</strong> document. Please confirm.
           </v-alert>
+          <v-checkbox v-model="deleteIndexedQuestions" label="Also delete any indexed questions"></v-checkbox>
         </v-card-text>
         <v-card-actions class="justify-end">
           <v-btn variant="text" @click="deleteSelectedDocument">Delete</v-btn>
@@ -326,16 +389,22 @@ export default {
     createDocumentModal: false,
     deleteFolderModal: false,
     deleteDocumentModal: false,
+    deleteQuestionModal: false,
+    deleteIndexedQuestions: true,
     uploadDocumentModal: false,
     newFolderName: null,
     newDocumentName: null,
+    showSearchInput: false,
+    search: null,
     showSuccessMessage: false,
     successMessage: null,
     analyzingContent: false,
     // The selected folder/document is the one that is selected from inline action
     selectedFolder: null,
     selectedDocument: null,
+    selectedQuestion: null,
     indexingQuestions: [],
+    updatingQuestions: [],
 
     inputValidationRules: {
       required: value => !!value || 'Required.',
@@ -380,8 +449,10 @@ export default {
       this.currentDocumentData = {};
     },
     openDocument(document) {
-      const _this          = this;
-      this.currentDocument = document;
+      const _this            = this;
+      this.currentDocument   = document;
+      this.indexingQuestions = [];
+      this.updatingQuestions = [];
 
       this.$api.documents
         .readDocument(document.uuid)
@@ -432,7 +503,7 @@ export default {
       const _this = this;
 
       this.$api.documents
-        .deleteDocument(this.selectedDocument.uuid)
+        .deleteDocument(this.selectedDocument.uuid, this.deleteIndexedQuestions)
         .then(() => {
           // Remove the folder from the list
           const parent = _this.selectedDocument.parent;
@@ -453,22 +524,34 @@ export default {
         });
     },
     deleteQuestion(question) {
-      this.currentDocumentData.questions = this.currentDocumentData.questions.filter(
-        q => q.text !== question.text
-      );
+      this.selectedQuestion    = question;
+      this.deleteQuestionModal = true;
+    },
+    deleteSelectedQuestion() {
+      const _this = this;
 
-      this.saveDocumentChanges();
+      this.$api.documents
+        .deleteDocumentQuestion(this.currentDocument.uuid, {
+          uuid: this.selectedQuestion.uuid,
+          text: this.selectedQuestion.text
+        })
+        .then(() => {
+          // Remove the question from the list of document questions
+          _this.currentDocumentData.questions = _this.currentDocumentData.questions.filter(
+            q => q !== _this.selectedQuestion
+          );
+
+          _this.deleteQuestionModal = false;
+          _this.selectedQuestion    = null;
+        });
     },
     createFolder() {
       const _this = this;
       const name  = this.newFolderName;
 
-      console.log(this.currentFolder);
-
       this.$api.documents
         .createFolder(this.currentFolder.uuid, name)
         .then((folder) => {
-          console.log(folder);
           _this.currentFolder.children.push(folder);
 
           // Set the parent node for the newly created folder
@@ -527,7 +610,19 @@ export default {
         .updateDocument(this.currentDocument.uuid, {
           name: this.currentDocumentData.name,
           text: this.currentDocumentData.text,
-          questions: JSON.parse(JSON.stringify(this.currentDocumentData.questions))
+          questions: JSON.parse(JSON.stringify(
+            this.currentDocumentData.questions.map((q) => {
+              const res = {};
+
+              if (q.uuid !== undefined) {
+                res.uuid = q.uuid;
+              }
+
+              res.text = q.text;
+
+              return res;
+            })
+          ))
         })
         .then((document) => {
           _this.currentDocument = Object.assign(_this.currentDocument, document);
@@ -535,6 +630,28 @@ export default {
           _this.successMessage     = 'Changes saved!';
           _this.showSuccessMessage = true;
         });
+    },
+    saveQuestion(question) {
+      this.updatingQuestions.push(question);
+
+      const _this = this;
+
+      this.$api.questions
+        .updateQuestion(question.uuid, {
+          answer: question.answer
+        })
+        .then(() => {
+          // Remove it from saving array
+          _this.updatingQuestions = _this.updatingQuestions.filter(
+            q => q !== question
+          );
+
+          _this.successMessage     = 'Changes saved!';
+          _this.showSuccessMessage = true;
+        });
+    },
+    isSavingQuestion(question) {
+      return this.updatingQuestions.includes(question);
     },
     prepareDocumentTree(tree, parent = null) {
       if (tree.type === 'folder') {
@@ -575,9 +692,11 @@ export default {
       );
     },
     analyzeDocumentContent() {
-      const _this = this;
-
+      const _this           = this;
       this.analyzingContent = true;
+
+      // Save existing document first in case any changes to the content happened
+      this.saveDocumentChanges();
 
       this.$api.ai
         .analyzeDocumentContent(this.currentDocument.uuid)
@@ -610,6 +729,11 @@ export default {
     },
     isIndexingQuestion(question) {
       return this.indexingQuestions.includes(question);
+    },
+    handleSearchBlur() {
+      if (this.search === '' || this.search === null) {
+          this.showSearchInput = false;
+      }
     }
   },
   watch: {

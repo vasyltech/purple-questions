@@ -1,7 +1,6 @@
 const _              = require('lodash');
 const Fs             = require('fs');
 const LanceDb        = require('vectordb');
-const { Vector, Type }     = require('apache-arrow');
 const { app }        = require('electron');
 const Path           = require('path');
 
@@ -19,26 +18,6 @@ function GetDbBasePath() {
 
     return basePath;
 }
-
-// class VectorDb {
-
-//     async connect(tableName = 'questions') {
-//         this._db     = await LanceDb.connect(GetDbBasePath());
-
-
-//         return this;
-//     }
-
-//     async add(record) {
-//         return this._table.add([record]);
-//     }
-
-
-//     async search(vector, limit = 2) {
-//         return this._table.search(vector).limit(limit).execute();
-//     }
-
-// }
 
 let DbTables = {};
 
@@ -58,8 +37,7 @@ async function GetTable(tableName) {
             // The schema for the table
             DbTables[tableName] = await db.createTable(tableName, [{
                 vector: Array(1536),
-                document: 'table/partition-number/uuid',
-                question: 'uui'
+                uuid: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx'
             }]);
         }
     }
@@ -71,21 +49,32 @@ export default {
 
     /**
      *
-     * @param {String} document
-     * @param {String} question
+     * @param {String} uuid
      * @param {Array} embedding
      *
      * @returns {Void}
      */
-    indexQuestion: async (document, question, embedding) => {
+    indexQuestion: async (uuid, embedding) => {
         const table = await GetTable('questions');
 
         // Store the question in the vector store
         await table.add([{
             vector: embedding,
-            document,
-            question
+            uuid
         }]);
+    },
+
+    /**
+     *
+     * @param {String} uuid
+     *
+     * @returns {Void}
+     */
+    deleteQuestion: async (uuid) => {
+        const table = await GetTable('questions');
+
+        // Store the question in the vector store
+        await table.delete(`uuid="${uuid}"`);
     },
 
     /**

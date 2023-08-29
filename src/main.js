@@ -2,6 +2,7 @@ const { app, BrowserWindow, screen, ipcMain } = require('electron');
 const path = require('path');
 
 import Documents from './main/documents';
+import Questions from './main/questions';
 import Settings from './main/settings';
 import Ai from './main/ai';
 import Messages from './main/messages';
@@ -43,6 +44,7 @@ const createWindow = () => {
   mainWindow.webContents.openDevTools();
 
   RegisterHandler('documents', Documents);
+  RegisterHandler('questions', Questions);
   RegisterHandler('settings', Settings);
   RegisterHandler('ai', Ai);
   RegisterHandler('messages', Messages);

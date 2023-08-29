@@ -6,6 +6,7 @@ const _              = require('lodash');
 const Crypto         = require('crypto');
 
 import Parsers from './parser';
+import Questions from './questions';
 
 /**
  * Get the path to the documents directory or subdirectory
@@ -99,18 +100,19 @@ function RemoveByUuid(uuid, level, force = false) {
     let response;
 
     for(let i = 0; i < level.length; i++) {
-        if (level[i].uuid === 'uuid') {
+        if (level[i].uuid === uuid) {
             if (
-                !_.isUndefined(level[i].children)
+                _.isUndefined(level[i].children)
                 || level[i].children.length === 0
                 || force
             ) {
-                response = _.unset(level, i);
+                level    = _.remove(level, (n) => n.uuid === uuid);
+                response = true;
             } else {
                 response = false;
             }
         } else if (_.isArray(level[i].children)) {
-            response = FindByUuid(uuid, level[i].children, force);
+            response = RemoveByUuid(uuid, level[i].children, force);
         }
 
         if (!_.isUndefined(response)) {
@@ -121,7 +123,7 @@ function RemoveByUuid(uuid, level, force = false) {
     return response;
 }
 
-export default {
+const Methods = {
 
     /**
      *
@@ -276,20 +278,47 @@ export default {
     },
 
     /**
+     * Read the document content
      *
-     * @param {*} uuid
-     * @returns
+     * @param {String} uuid
+     *
+     * @returns {Document}
      */
     readDocument: (uuid) => {
-        return JSON.parse(Fs.readFileSync(GetDocumentsPath(uuid)).toString());
+        const document = JSON.parse(
+            Fs.readFileSync(GetDocumentsPath(uuid)).toString()
+        );
+
+        // Iterate over the list of questions and get answers
+        _.forEach(document.questions, (q) => {
+            if (!_.isUndefined(q.uuid)) {
+                q.answer = Questions.readQuestion(q.uuid).answer;
+            }
+        });
+
+        return document;
     },
 
     /**
      *
-     * @param {*} uuid
+     * @param {String}  uuid
+     * @param {Boolean} deleteIndexedQuestions
      * @returns
      */
-    deleteDocument: (uuid) => {
+    deleteDocument: async (uuid, deleteIndexedQuestions = false) => {
+        // Delete all indexed questions first, if chosen
+        if (deleteIndexedQuestions) {
+            const document = JSON.parse(
+                Fs.readFileSync(GetDocumentsPath(uuid)).toString()
+            );
+
+            for (let i = 0; i < document.questions.length; i++) {
+                if (_.isString(document.questions[i].uuid)) {
+                    await Questions.deleteQuestion(document.questions[i].uuid);
+                }
+            }
+        }
+
         const index  = GetDocumentIndex();
         const result = RemoveByUuid(uuid, index);
 
@@ -306,6 +335,32 @@ export default {
     /**
      *
      * @param {*} uuid
+     * @param {*} question
+     * @returns
+     */
+    deleteDocumentQuestion: async (uuid, question) => {
+        const document = JSON.parse(
+            Fs.readFileSync(GetDocumentsPath(uuid)).toString()
+        );
+
+        // Remove the question from the list
+        document.questions = _.filter(
+            document.questions, (q => q.text !== question.text)
+        );
+
+        Methods.updateDocument(uuid, { questions: document.questions });
+
+        // If question is already indexed, delete it as well
+        if (_.isString(question.uuid)) {
+            await Questions.deleteQuestion(question.uuid);
+        }
+
+        return true;
+    },
+
+    /**
+     *
+     * @param {*} uuid
      * @param {*} data
      * @returns
      */
@@ -314,19 +369,20 @@ export default {
         const document = FindByUuid(uuid, index);
 
         if (!_.isUndefined(document)) {
-            document.name      = data.name;
-            document.updatedAt = (new Date()).getTime();
-            document.checksum  = Crypto.createHash('md5').update(data.text).digest('hex');
-
             // Read old content and merge it with incoming content
-            const filepath = GetDocumentsPath(uuid);
-            const content  = JSON.parse(Fs.readFileSync(filepath).toString());
+            const filepath   = GetDocumentsPath(uuid);
+            const content    = JSON.parse(Fs.readFileSync(filepath).toString());
+            const newContent = Object.assign({}, content, data);
 
-            Fs.writeFileSync(GetDocumentsPath(uuid), JSON.stringify(Object.assign(
-                {},
-                content,
-                data
-            )));
+            // Update document attributes
+            document.name      = newContent.name;
+            document.updatedAt = (new Date()).getTime();
+            document.checksum  = Crypto
+                .createHash('md5')
+                .update(newContent.text)
+                .digest('hex');
+
+            Fs.writeFileSync(GetDocumentsPath(uuid), JSON.stringify(newContent));
 
             SaveDocumentIndex(index);
         }
@@ -335,3 +391,5 @@ export default {
     }
 
 }
+
+export default Methods;
