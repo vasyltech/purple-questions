@@ -244,7 +244,7 @@
         <v-card>
           <v-toolbar title="Delete Folder"></v-toolbar>
           <v-card-text>
-            <v-alert type="warning" prominent variant="outlined">
+            <v-alert type="warning" prominent variant="outlined" color="grey-darken-2">
               You are about to delete the <strong v-if="selectedFolder">"{{ selectedFolder.name }}"</strong> folder. Please confirm.
             </v-alert>
           </v-card-text>

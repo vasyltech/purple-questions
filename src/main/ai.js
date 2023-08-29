@@ -130,16 +130,17 @@ export default {
 
             // Prepare message for indexing
             message.questions = []; // List of generated questions
+            message.rewrite = res1.output.rewrite;
             // document.corpus = res1.corpus; // What did we send to OpenAI?
             message.usage     = [res1.usage];  // Cost?
 
-            // Updating the message with usage info
+            // Save what we have so far
             Messages.updateMessage(uuid, message);
 
-            if (res1.output.length > 0) {
+            if (res1.output.questions.length > 0) {
                 // Prepare the list of embeddings for each question
                 const res2 = await OpenAiRepository.prepareQuestionListEmbedding(
-                    res1.output
+                    res1.output.questions
                 );
 
                 // Updating usage
@@ -154,14 +155,11 @@ export default {
                     );
 
                     if (!_.isEmpty(candidate)) {
-                        const document = Directory.readFile(candidate.document);
+                        const question = Questions.readQuestion(candidate.uuid);
 
                         question.candidate = {
-                            document: candidate.document,
-                            question: candidate.question,
-                            answer: _.filter(
-                                document.questions, (q) => q.uuid === candidate.question
-                            ).shift().answer
+                            question: candidate.uuid,
+                            answer: question.answer
                         };
                     }
 

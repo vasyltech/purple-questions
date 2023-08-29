@@ -21,6 +21,13 @@
                         </v-btn>
                     </template>
                 </v-tooltip>
+                <v-tooltip v-if="currentMessage" text="Delete Message" location="bottom">
+                    <template v-slot:activator="{ props }">
+                    <v-btn icon v-bind="props" @click="deleteCurrentMessage">
+                        <v-icon>mdi-trash-can</v-icon>
+                    </v-btn>
+                    </template>
+                </v-tooltip>
             </template>
         </v-app-bar>
 
@@ -35,6 +42,23 @@
                                 </template>
                                 <v-list-item-title>{{ item.excerpt }}</v-list-item-title>
                                 <v-list-item-subtitle>{{ getMessageDate(item) }}</v-list-item-subtitle>
+
+                                <template v-slot:append>
+                                    <v-menu location="left">
+                                        <template v-slot:activator="{ props }">
+                                        <v-btn icon="mdi-dots-vertical" color="grey-lighten-1" variant="text" v-bind="props"></v-btn>
+                                        </template>
+
+                                        <v-list>
+                                        <v-list-item @click="openMessage(item)">
+                                            <v-list-item-title>Open</v-list-item-title>
+                                        </v-list-item>
+                                        <v-list-item @click="deleteMessage(item)">
+                                            <v-list-item-title>Delete</v-list-item-title>
+                                        </v-list-item>
+                                        </v-list>
+                                    </v-menu>
+                                    </template>
                             </v-list-item>
                         </template>
                     </v-virtual-scroll>
@@ -52,7 +76,28 @@
             </v-container>
 
             <v-container v-else>
-                <v-textarea auto-grow label="Message" variant="outlined" v-model="currentMessageData.text"></v-textarea>
+                <v-tabs
+                    v-model="currentTab"
+                    color="grey-darken-1"
+                    align-tabs="start"
+                >
+                    <v-tab value="original">Message</v-tab>
+                    <v-tab value="rewrite" v-if="currentMessageData.rewrite">Rewrite</v-tab>
+                </v-tabs>
+
+                <v-window v-model="currentTab">
+                    <v-window-item value="original">
+                        <v-container fluid>
+                            <v-textarea auto-grow variant="outlined" v-model="currentMessageData.text"></v-textarea>
+                        </v-container>
+                    </v-window-item>
+                    <v-window-item value="rewrite">
+                        <v-container fluid>
+                            <v-textarea auto-grow readonly variant="outlined" v-model="currentMessageData.rewrite"></v-textarea>
+                        </v-container>
+                    </v-window-item>
+                </v-window>
+
 
                 <div v-if="hasIndexedQuestions">
                     <div class="text-overline pb-2">Identified Questions</div>
@@ -68,8 +113,12 @@
                                 <v-textarea label="Best Answer" v-if="question.candidate" variant="outlined" auto-grow
                                     readonly class="mt-6" v-model="question.candidate.answer"></v-textarea>
                                 <div v-else>
-                                    <v-alert type="warning" color="grey" title="Knowledge Gap"
-                                        text="There is no information in the current knowledge base to answer this question confidently."></v-alert>
+                                    <v-textarea label="Provide Your Answer" variant="outlined" auto-grow
+                                         class="mt-6" ></v-textarea>
+                                </div>
+                                <div class="d-flex justify-end">
+                                    <v-btn variant="text" v-if="!question.candidate" @click="indexQuestion(question)">Index</v-btn>
+                                    <v-btn variant="text" v-if="!question.candidate" @click="ignoreQuestion(question)">Ignore</v-btn>
                                 </div>
                             </v-expansion-panel-text>
                         </v-expansion-panel>
@@ -106,6 +155,21 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
+
+        <v-dialog v-model="deleteMessageModal" transition="dialog-bottom-transition" width="550">
+            <v-card>
+            <v-toolbar title="Delete Message"></v-toolbar>
+            <v-card-text>
+                <v-alert type="warning" prominent variant="outlined" color="grey-darken-2">
+                    You are about to delete the <strong v-if="selectedMessage">"{{ selectedMessage.excerpt }}"</strong> message. Please confirm.
+                </v-alert>
+            </v-card-text>
+            <v-card-actions class="justify-end">
+                <v-btn variant="text" @click="deleteSelectedMessage">Delete</v-btn>
+                <v-btn variant="text" @click="deleteMessageModal = false">Close</v-btn>
+            </v-card-actions>
+            </v-card>
+        </v-dialog>
     </v-container>
 </template>
 
@@ -118,9 +182,12 @@
 export default {
     data: () => {
         return {
+            currentTab: 'original',
             breadcrumb: [],
             messages: [],
             createMessageModal: false,
+            deleteMessageModal: false,
+            selectedMessage: null,
             newMessage: null,
             currentMessage: null,
             currentMessageData: {},
@@ -142,14 +209,14 @@ export default {
             this.currentMessage = node;
         },
         analyzeMessage() {
-            const _this = this;
+            const _this           = this;
             this.analyzingMessage = true;
 
             this.$api.ai
                 .analyzeMessageContent(this.currentMessage.uuid)
                 .then((data) => {
                     _this.currentMessageData = data;
-                    _this.analyzingMessage = false;
+                    _this.analyzingMessage   = false;
                 });
         },
         createMessage() {
@@ -159,19 +226,21 @@ export default {
                 .createMessage(this.newMessage)
                 .then((message) => {
                     _this.messages.unshift(message);
-                    _this.currentMessage = message;
-                    _this.currentMessageData = message;
 
                     // Closing the dialog & resetting the form
                     _this.createMessageModal = false;
-                    _this.newMessage = null;
+                    _this.newMessage         = null;
+
+                    // Open the new message
+                    _this.openMessage(message);
                 });
         },
         openMessage(message) {
             const _this = this;
 
             this.$api.messages.readMessage(message.uuid).then((response) => {
-                _this.currentMessage = message;
+                _this.currentMessage     = message;
+                _this.currentTab         = 'original';
                 _this.currentMessageData = response;
             });
         },
@@ -203,6 +272,34 @@ export default {
             }
 
             this.breadcrumb = breadcrumb;
+        },
+        deleteMessage(message) {
+            this.selectedMessage    = message;
+            this.deleteMessageModal = true;
+        },
+        deleteCurrentMessage() {
+            this.selectedMessage    = this.currentMessage;
+            this.deleteMessageModal = true;
+        },
+        deleteSelectedMessage() {
+            const _this = this;
+
+            this.$api.messages
+                .deleteMessage(this.selectedMessage.uuid)
+                .then(() => {
+                    _this.messages = _this.messages.filter(
+                        m => m.uuid !== _this.selectedMessage.uuid
+                    );
+
+                // Are we deleting from the edit document view?
+                if (_this.currentMessage === _this.selectedMessage) {
+                    _this.currentMessage = null;
+                }
+
+                // Closing the modal & resetting the selecting
+                _this.deleteMessageModal = false;
+                _this.selectedMessage    = null;
+                });
         }
     },
     watch: {

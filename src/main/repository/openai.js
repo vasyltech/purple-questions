@@ -164,12 +164,12 @@ export default {
             'purpose': 'Message2Questions'
         });
 
-        const questions = JSON.parse(
-            _.get(result, 'choices[0].message.content', '[]')
+        const output = JSON.parse(
+            _.get(result, 'choices[0].message.content', '{}')
         );
 
         return {
-            output: questions,
+            output,
             usage,
             corpus: Message2QuestionsTool.getCorpus()
         }

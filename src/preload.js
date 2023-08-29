@@ -59,11 +59,17 @@ contextBridge.exposeInMainWorld(
             getMessages: (page, limit) => ipcRenderer.invoke(
                 'messages', ['getMessages', page, limit]
             ),
-            createMessage: (message) => ipcRenderer.invoke(
-                'messages', ['createMessage', message]
+            createMessage: (text) => ipcRenderer.invoke(
+                'messages', ['createMessage', text]
             ),
             readMessage: (uuid) => ipcRenderer.invoke(
                 'messages', ['readMessage', uuid]
+            ),
+            updateMessage: (uuid, data) => ipcRenderer.invoke(
+                'messages', ['updateMessage', uuid, data]
+            ),
+            deleteMessage: (uuid) => ipcRenderer.invoke(
+                'messages', ['deleteMessage', uuid]
             )
         }
     }
