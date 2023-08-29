@@ -34,94 +34,157 @@ function GetDocumentsPath(append = null) {
     return append ? Path.join(basePath, append) : basePath;
 }
 
-let DocumentIndex = null;
-
-/**
- *
- * @returns
- */
-function GetDocumentIndex() {
-    if (_.isNull(DocumentIndex)) {
-        const filePath = GetDocumentsPath('.index');
-
-        DocumentIndex = [];
-
-        if (Fs.existsSync(filePath)) {
-            DocumentIndex = JSON.parse(Fs.readFileSync(filePath).toString());
-        }
-    }
-
-    return DocumentIndex;
-}
-
 /**
  *
  */
-function SaveDocumentIndex(index) {
-    Fs.writeFileSync(GetDocumentsPath('.index'), JSON.stringify(index));
-}
+const DocumentIndex = (() => {
 
-/**
- * Find folder/document by UUID
- *
- * @param {String} uuid
- * @param {Array}  folder
- *
- * @returns {Object}
- */
-function FindByUuid(uuid, folder) {
-    let response;
+    let index = null;
 
-    for(let i = 0; i < folder.length; i++) {
-        if (folder[i].uuid === uuid) {
-            response = folder[i];
-        } else if (_.isArray(folder[i].children)) {
-            response = FindByUuid(uuid, folder[i].children);
-        }
+    /**
+     *
+     * @returns
+     */
+    function Read() {
+        if (_.isNull(index)) {
+            const filePath = GetDocumentsPath('.index');
 
-        if (!_.isUndefined(response)) {
-            break;
-        }
-    }
-
-    return response;
-}
-
-/**
- * Find folder/document by UUID and delete it
- *
- * @param {String}  uuid
- * @param {Array}   level
- * @param {Boolean} force
- *
- * @returns {Boolean}
- */
-function RemoveByUuid(uuid, level, force = false) {
-    let response;
-
-    for(let i = 0; i < level.length; i++) {
-        if (level[i].uuid === uuid) {
-            if (
-                _.isUndefined(level[i].children)
-                || level[i].children.length === 0
-                || force
-            ) {
-                level    = _.remove(level, (n) => n.uuid === uuid);
-                response = true;
+            if (Fs.existsSync(filePath)) {
+                index = JSON.parse(Fs.readFileSync(filePath).toString());
             } else {
-                response = false;
+                index = [];
             }
-        } else if (_.isArray(level[i].children)) {
-            response = RemoveByUuid(uuid, level[i].children, force);
         }
 
-        if (!_.isUndefined(response)) {
-            break;
-        }
+        return index;
     }
 
-    return response;
-}
+    /**
+     *
+     */
+    function Save() {
+        Fs.writeFileSync(GetDocumentsPath('.index'), JSON.stringify(index));
+    }
+
+    /**
+     * Find folder/document by UUID
+     *
+     * @param {String} uuid
+     * @param {Array}  level
+     *
+     * @returns {Object}
+     */
+    function Find(uuid, level = null) {
+        let response;
+
+        const folder = (_.isNull(level) ? index : level);
+
+        for(let i = 0; i < folder.length; i++) {
+            if (folder[i].uuid === uuid) {
+                response = folder[i];
+            } else if (_.isArray(folder[i].children)) {
+                response = Find(uuid, folder[i].children);
+            }
+
+            if (!_.isUndefined(response)) {
+                break;
+            }
+        }
+
+        return response;
+    }
+
+    /**
+     *
+     * @param {*} parent
+     * @param {*} node
+     * @returns
+     */
+    function Add(parent, node) {
+        const base = Find(parent);
+
+        if (_.isArray(base)) {
+            base.push(node);
+        } else {
+            base.children.push(node);
+        }
+
+        Save();
+
+        return node;
+    }
+
+    /**
+     *
+     * @param {*} uuid
+     * @param {*} data
+     * @returns
+     */
+    function Update(uuid, data) {
+        const node = Find(uuid);
+
+        _.forEach(data, (v, p) => {
+            node[p] = v;
+        });
+
+        Save();
+
+        return node;
+    }
+
+    /**
+     * Find folder/document by UUID and delete it
+     *
+     * @param {String}  uuid
+     * @param {Array}   level
+     *
+     * @returns {Boolean}
+     */
+    function Remove(uuid, level = null) {
+        let response;
+
+        let folder = (_.isNull(level) ? index : level);
+
+        for(let i = 0; i < folder.length; i++) {
+            if (folder[i].uuid === uuid) {
+                if (
+                    _.isUndefined(folder[i].children)
+                    || folder[i].children.length === 0
+                ) {
+                    folder   = _.remove(folder, (n) => n.uuid === uuid);
+                    response = true;
+                } else {
+                    response = false;
+                }
+            } else if (_.isArray(folder[i].children)) {
+                response = Remove(uuid, folder[i].children);
+            }
+
+            if (!_.isUndefined(response)) {
+                break;
+            }
+        }
+
+        return response;
+    }
+
+    return {
+        get: () => Read()[0],
+        add: Add,
+        find: Find,
+        save: Save,
+        update: Update,
+        remove: (uuid) => {
+            const result = Remove(uuid);
+
+            if (result === true) {
+                Save();
+            }
+
+            return result;
+        }
+    }
+})();
 
 const Methods = {
 
@@ -130,7 +193,7 @@ const Methods = {
      * @returns
      */
     getDocumentTree: () => {
-        return GetDocumentIndex()[0]; // The first root
+        return DocumentIndex.get(); // The first root
     },
 
     /**
@@ -139,51 +202,20 @@ const Methods = {
      * @param {*} name
      * @returns
      */
-    createFolder: (parentFolder, name) => {
-        let response;
-
-        const index = GetDocumentIndex();
-        const base  = FindByUuid(parentFolder, index);
-        const uuid  = uuidv4();
-
-        if (!_.isUndefined(base)) {
-            response = {
-                uuid,
-                name,
-                createdAt: (new Date()).getTime(),
-                type: 'folder',
-                children: []
-            };
-
-            if (_.isArray(base)) {
-                base.push(response);
-            } else {
-                base.children.push(response);
-            }
-
-            // Save the changes
-            SaveDocumentIndex(index);
-        } else {
-            response = null;
-        }
-
-        return response
-    },
+    createFolder: (parentFolder, name) => DocumentIndex.add(parentFolder, {
+        uuid: uuidv4(),
+        name,
+        createdAt: (new Date()).getTime(),
+        type: 'folder',
+        children: []
+    }),
 
     /**
      *
      * @param {*} uuid
      * @returns
      */
-    deleteFolder: (uuid) => {
-        const result = RemoveByUuid(uuid, GetDocumentIndex());
-
-        if (result === true) {
-            SaveDocumentIndex();
-        }
-
-        return result;
-    },
+    deleteFolder: (uuid) => DocumentIndex.remove(uuid),
 
     /**
      *
@@ -192,38 +224,20 @@ const Methods = {
      * @returns
      */
     createDocument: (parentFolder, name) => {
-        let response;
+        // Update the index
+        const response = DocumentIndex.add(parentFolder,{
+            uuid: uuidv4(),
+            name,
+            createdAt: (new Date()).getTime(),
+            type: 'document'
+        })
 
-        const index = GetDocumentIndex();
-        const base  = FindByUuid(parentFolder, index);
-        const uuid  = uuidv4();
-
-        if (!_.isUndefined(base)) {
-            response = {
-                uuid,
-                name,
-                createdAt: (new Date()).getTime(),
-                type: 'document'
-            };
-
-            if (_.isArray(base)) {
-                base.push(response);
-            } else {
-                base.children.push(response);
-            }
-
-            // Creating a physical file with data
-            Fs.writeFileSync(GetDocumentsPath(uuid), JSON.stringify({
-                name,
-                text: '',
-                questions: []
-            }));
-
-            // Save the changes
-            SaveDocumentIndex(index);
-        } else {
-            response = null;
-        }
+        // Creating a physical file with data
+        Fs.writeFileSync(GetDocumentsPath(response.uuid), JSON.stringify({
+            name,
+            text: '',
+            questions: []
+        }));
 
         return response;
     },
@@ -237,10 +251,6 @@ const Methods = {
     uploadDocument: async (parentFolder, documentPath) => {
         let response;
 
-        const index = GetDocumentIndex();
-        const base  = FindByUuid(parentFolder, index);
-        const uuid  = uuidv4();
-
         const attributes = Path.parse(documentPath);
         const extension  = attributes.ext.substring(1).toLowerCase();
 
@@ -249,29 +259,20 @@ const Methods = {
                 Fs.readFileSync(documentPath).toString()
             );
 
-            response = {
-                uuid,
+            response = DocumentIndex.add(parentFolder, {
+                uuid: uuidv4(),
                 name: result.title || 'New Document',
                 createdAt: (new Date()).getTime(),
                 type: 'document',
                 checksum: Crypto.createHash('md5').update(result.text).digest('hex')
-            };
-
-            if (_.isArray(base)) {
-                base.push(response);
-            } else {
-                base.children.push(response);
-            }
+            });
 
             // Write a physical file
-            Fs.writeFileSync(GetDocumentsPath(uuid), JSON.stringify({
+            Fs.writeFileSync(GetDocumentsPath(response.uuid), JSON.stringify({
                 name: response.name,
                 text: result.text,
                 questions: []
             }));
-
-            // Save the changes
-            SaveDocumentIndex(index);
         }
 
         return response;
@@ -319,14 +320,14 @@ const Methods = {
             }
         }
 
-        const index  = GetDocumentIndex();
-        const result = RemoveByUuid(uuid, index);
+        // Remove index first
+        const result = DocumentIndex.remove(uuid);
 
-        if (result === true) {
-            SaveDocumentIndex(index);
+        // Remove a physical file. Should I?
+        const filepath = GetDocumentsPath(uuid);
 
-            // Remove a physical file. Should I?
-            Fs.unlinkSync(GetDocumentsPath(uuid));
+        if (Fs.existsSync(filepath)) {
+            Fs.unlinkSync(filepath);
         }
 
         return result;
@@ -365,29 +366,22 @@ const Methods = {
      * @returns
      */
     updateDocument: (uuid, data) => {
-        const index    = GetDocumentIndex();
-        const document = FindByUuid(uuid, index);
+        // Read old content and merge it with incoming content
+        const filepath   = GetDocumentsPath(uuid);
+        const content    = JSON.parse(Fs.readFileSync(filepath).toString());
+        const newContent = Object.assign({}, content, data);
 
-        if (!_.isUndefined(document)) {
-            // Read old content and merge it with incoming content
-            const filepath   = GetDocumentsPath(uuid);
-            const content    = JSON.parse(Fs.readFileSync(filepath).toString());
-            const newContent = Object.assign({}, content, data);
+        // Update document attributes
+        const response = DocumentIndex.update(uuid, {
+            name: newContent.name,
+            updatedAt: (new Date()).getTime(),
+            checksum: Crypto.createHash('md5').update(newContent.text).digest('hex')
+        });
 
-            // Update document attributes
-            document.name      = newContent.name;
-            document.updatedAt = (new Date()).getTime();
-            document.checksum  = Crypto
-                .createHash('md5')
-                .update(newContent.text)
-                .digest('hex');
+        // Update the actual file
+        Fs.writeFileSync(GetDocumentsPath(uuid), JSON.stringify(newContent));
 
-            Fs.writeFileSync(GetDocumentsPath(uuid), JSON.stringify(newContent));
-
-            SaveDocumentIndex(index);
-        }
-
-        return document;
+        return response;
     }
 
 }

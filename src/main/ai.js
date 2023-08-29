@@ -1,7 +1,6 @@
 const _ = require('lodash');
 
 import OpenAiRepository from './repository/openai';
-import Db from './repository/db';
 import Documents from './documents';
 import Questions from './questions';
 import Messages from './messages'
@@ -31,44 +30,6 @@ export default {
 
         // document.corpus = res1.corpus; // What did we send to OpenAI?
         document.usage     = [res1.usage];  // Cost?
-
-        // Updating the document with usage info
-        // Documents.updateDocument(path, document);
-
-        // // Step #3. Prepare the vector embedding for all the questions
-        // const res2 = await OpenAiRepository.prepareQuestionListEmbedding(
-        //     res1.output
-        // );
-
-        // // Add usage to the document
-        // document.usage.push(res2.usage);
-
-        // // Step #3. Generate the list of answers for each question and persist the
-        // // data in the database
-        // for(let i = 0; i < res2.output.length; i++) {
-        //     const question = res2.output[i];
-        //     const res3     = await OpenAiRepository.prepareAnswerFromDocument(
-        //         question.text, document
-        //     );
-
-        //     // Add usage to the document
-        //     document.usage.push(res3.usage);
-
-        //     // Generate unique question uuid
-        //     const uuid = uuidv4();
-
-        //     // Now we have all the necessary information to store the question in the
-        //     // document
-        //     document.questions.push({
-        //         uuid,
-        //         text: question.text,
-        //         answer: res3.output,
-        //         embedding: question.embedding
-        //     });
-
-        //     // Index the question
-        //     Db.indexQuestion(path, uuid, question.embedding);
-        // }
 
         // Updating the document with all the info
         Documents.updateDocument(uuid, document);
@@ -115,12 +76,36 @@ export default {
 
     /**
      *
+     * @param {*} messageUuid
+     * @param {*} text
+     * @param {*} answer
+     * @returns
+     */
+    indexMessageQuestion: async (messageUuid, text, answer) => {
+        // Read the message data
+        const message  = await Messages.readMessage(messageUuid);
+        const question = _.first(
+            _.filter(message.questions, (q) => q.text === text)
+        );
+
+        // Create and index the question
+        return await Questions.createQuestion({
+            text: question.text,
+            origin: `/messages/${messageUuid}`,
+            answer: answer.trim(), // TODO: Should rewrite with Open AI?
+            embedding: question.embedding,
+            usage: []
+        });
+    },
+
+    /**
+     *
      * @param {*} uuid
      * @returns
      */
     analyzeMessageContent: async (uuid) => {
         // Step #1. Read the message data
-        const message = Messages.readMessage(uuid);
+        const message = await Messages.readMessage(uuid);
 
         if (!_.isArray(message.questions) || message.questions.length === 0) {
             // Step #2. Preparing the list of questions that come from the message
@@ -128,11 +113,10 @@ export default {
                 message.text
             );
 
-            // Prepare message for indexing
-            message.questions = []; // List of generated questions
+            // Part of the result is a complete rewrite of the original message
             message.rewrite = res1.output.rewrite;
             // document.corpus = res1.corpus; // What did we send to OpenAI?
-            message.usage     = [res1.usage];  // Cost?
+            message.usage   = [res1.usage];  // Cost?
 
             // Save what we have so far
             Messages.updateMessage(uuid, message);
@@ -146,29 +130,49 @@ export default {
                 // Updating usage
                 message.usage.push(res2.usage);
 
-                // Prepare the array of questions and metadata associated with each
-                // question
-                for (let i = 0; i < res2.output.length; i++) {
-                    const question  = res2.output[i];
-                    const candidate = await Db.searchQuestion(
-                        question.embedding, 1
-                    );
-
-                    if (!_.isEmpty(candidate)) {
-                        const question = Questions.readQuestion(candidate.uuid);
-
-                        question.candidate = {
-                            question: candidate.uuid,
-                            answer: question.answer
-                        };
-                    }
-
-                    message.questions.push(question);
-                }
+                // Add all the questions & embedding
+                message.questions = res2.output;
 
                 // Updating the message with usage info
                 Messages.updateMessage(uuid, message);
             }
+        }
+
+        // Read the message again so we can analyze the potential candidates
+        return Messages.readMessage(uuid);
+    },
+
+    /**
+     *
+     * @param {*} uuid
+     * @returns
+     */
+    generateMessageAnswer: async (uuid) => {
+        // Step #1. Read the message data
+        const message = await Messages.readMessage(uuid);
+
+        // Compile all the necessary information for answer generation
+        const material = _.filter(message.questions, (q) => q.candidate.answer).map(c => ({
+            // TODO: Note! We are using the generated from user message question
+            // as alias to a similar question that is identified as a candidate
+            // Not sure if we need to pass the actual c.candidate.text instead
+            question: c.text,
+            answer: c.candidate.answer
+        }));
+
+        // Verify that we have all the necessary information to prepare the answer
+        if (material.length > 0) {
+            const res1 = await OpenAiRepository.prepareAnswerForMessage(
+                message.rewrite, // TODO: Should we use the original message instead?
+                material
+            );
+
+            message.answer = res1.output;
+            // document.corpus = res1.corpus; // What did we send to OpenAI?
+            message.usage.push(res1.usage);  // Cost?
+
+            // Save what we have so far
+            Messages.updateMessage(uuid, message);
         }
 
         return message;

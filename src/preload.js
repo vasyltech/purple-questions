@@ -53,7 +53,13 @@ contextBridge.exposeInMainWorld(
             ),
             indexDocumentQuestion: (text, uuid) => ipcRenderer.invoke(
                 'ai', ['indexDocumentQuestion', text, uuid]
-            )
+            ),
+            indexMessageQuestion: (messageUuid, text, answer) => ipcRenderer.invoke(
+                'ai', ['indexMessageQuestion', messageUuid, text, answer]
+            ),
+            generateMessageAnswer: (uuid) => ipcRenderer.invoke(
+                'ai', ['generateMessageAnswer', uuid]
+            ),
         },
         messages: {
             getMessages: (page, limit) => ipcRenderer.invoke(
@@ -65,12 +71,18 @@ contextBridge.exposeInMainWorld(
             readMessage: (uuid) => ipcRenderer.invoke(
                 'messages', ['readMessage', uuid]
             ),
+            indexMessageIdentifiedQuestion: (uuid) => ipcRenderer.invoke(
+                'messages', ['indexMessageIdentifiedQuestion', uuid]
+            ),
             updateMessage: (uuid, data) => ipcRenderer.invoke(
                 'messages', ['updateMessage', uuid, data]
             ),
             deleteMessage: (uuid) => ipcRenderer.invoke(
                 'messages', ['deleteMessage', uuid]
-            )
+            ),
+            updateMessageStatus: (uuid, status) => ipcRenderer.invoke(
+                'messages', ['updateMessageStatus', uuid, status]
+            ),
         }
     }
 );

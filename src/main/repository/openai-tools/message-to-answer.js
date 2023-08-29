@@ -1,12 +1,16 @@
-const SYSTEM_PROMPT = 'You are a helpful assistant and you use provided information to generate the best possible answer to the user question. Keep the answer concise.';
+const SYSTEM_PROMPT = 'You are a polite customer support agent. Use the best customer support guidances.';
 
-const USER_PROMPT = `Generate an answer to the user message based on the provided material. If you cannot prepare a good answer, say you do not know. DO NOT fabricate the answer.
+const USER_PROMPT = `Prepare an answer to the user message based on answers to similar questions. If you cannot prepare a good answer, say you do not know. DO NOT fabricate the answer.
 
-MATERIAL:
+SIMILAR QUESTION WITH ANSWERS:
+"""
 {material}
+"""
 
 USER MESSAGE:
-{message}`;
+"""
+{message}
+"""`;
 
 function GetCorpus(data = null) {
     return [

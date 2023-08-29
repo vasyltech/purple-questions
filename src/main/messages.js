@@ -5,7 +5,8 @@ const { v4: uuidv4 } = require('uuid');
 const _              = require('lodash');
 const Crypto         = require('crypto');
 
-let MessageIndex = null;
+import DbRepository from './repository/db';
+import Questions from './questions';
 
 /**
  * Get the base path to the messages directory
@@ -25,68 +26,84 @@ function GetMessagesBasePath(append = null) {
     return append ? Path.join(basePath, append) : append;
 }
 
-/**
- *
- * @returns
- */
-function GetMessageIndex() {
-    if (_.isNull(MessageIndex)) {
-        const filePath = GetMessagesBasePath('.index');
+const MessageIndex = (() => {
 
-        MessageIndex = [];
+    let index = null;
 
-        if (Fs.existsSync(filePath)) {
-            MessageIndex = JSON.parse(Fs.readFileSync(filePath).toString());
+    /**
+     *
+     * @returns
+     */
+    function Read() {
+        if (_.isNull(index)) {
+            const filePath = GetMessagesBasePath('.index');
+
+            if (Fs.existsSync(filePath)) {
+                index = JSON.parse(Fs.readFileSync(filePath).toString());
+            } else {
+                index = [];
+            }
         }
+
+        return index;
     }
 
-    return MessageIndex;
-}
+    /**
+     *
+     */
+    function Save() {
+        Fs.writeFileSync(GetMessagesBasePath('.index'), JSON.stringify(index));
+    }
 
-/**
- *
- * @param {*} uuid
- * @param {*} data
- */
-function AddToMessageIndex(data) {
-    const index = GetMessageIndex();
+    /**
+     *
+     * @param {*} message
+     */
+    function Add(message) {
+        Read().push(message);
 
-    index.push(data);
+        Save();
 
-    Fs.writeFileSync(GetMessagesBasePath('.index'), JSON.stringify(index));
-}
+        return message;
+    }
 
-/**
- *
- * @param {*} message
- */
-function UpdateMessageIndex(message) {
-    let response;
+    /**
+     *
+     * @param {*} message
+     */
+    function Update(uuid, data) {
+        let response;
 
-    const index = GetMessageIndex();
+        const list = Read();
 
-    _.forEach(index, (m, i) => {
-        if (m.uuid === message.uuid) {
-            index[i] = Object.assign({}, m, message);
-            response = index[i];
+        for (let i = 0; i < list.length; i++) {
+            if (list[i].uuid === uuid) {
+                list[i]  = Object.assign({}, list[i], data);
+                response = list[i];
+
+                break;
+            }
         }
-    });
 
-    Fs.writeFileSync(GetMessagesBasePath('.index'), JSON.stringify(index));
+        Save();
 
-    return response;
-}
+        return response;
+    }
 
-/**
- *
- * @param {*} uuid
- */
-function RemoveFromMessageIndex(uuid) {
-    let index    = GetMessageIndex();
-    MessageIndex = index.filter(m => m.uuid !== uuid);
+    function Remove(uuid) {
+        index = Read().filter(m => m.uuid !== uuid);
 
-    Fs.writeFileSync(GetMessagesBasePath('.index'), JSON.stringify(MessageIndex));
-}
+        Save();
+    }
+
+    return {
+        get: Read,
+        add: Add,
+        update: Update,
+        remove: Remove
+    }
+})();
+
 
 /**
  *
@@ -100,7 +117,7 @@ function PrepareExcerpt(text, wCount = 30) {
     return parts.slice(0, wCount).join(' ') + (parts.length > wCount ? '...' : '');
 }
 
-export default {
+const Methods = {
 
     /**
      *
@@ -108,7 +125,8 @@ export default {
      * @param {*} limit
      */
     getMessages: (page = 0, limit = 500) => {
-        const index = GetMessageIndex();
+        // Cloning the array to avoid issue with reverse
+        const index = _.clone(MessageIndex.get());
         const start = page * limit;
 
         return index.reverse().slice(start, start + limit);
@@ -130,16 +148,65 @@ export default {
 
         Fs.writeFileSync(fullPath, JSON.stringify(data));
 
-        const message = {
+        return MessageIndex.add({
             uuid,
             createdAt: (new Date()).getTime(),
             excerpt: PrepareExcerpt(data.text),
             checksum: Crypto.createHash('md5').update(data.text).digest('hex'),
             status: 'new'
-        };
+        });
+    },
 
-        // Index message
-        AddToMessageIndex(message);
+    /**
+     *
+     * @param {*} uuid
+     * @returns
+     */
+    readMessage: async (uuid) => {
+        const message = JSON.parse(
+            Fs.readFileSync(GetMessagesBasePath(uuid)).toString()
+        );
+
+        // Dynamically find the best answer candidates
+        for (let i = 0; i < message.questions.length; i++) {
+            const question = message.questions[i];
+            const similar  = await DbRepository.searchQuestions(
+                question.embedding, 5
+            );
+
+            // Prepare the array of candidates
+            const candidates = [];
+
+            _.forEach(similar, (candidate) => {
+                if (candidate._distance <= 0.25) {
+                    const q = Questions.readQuestion(candidate.uuid);
+
+                    candidates.push({
+                        uuid: q.uuid,
+                        text: q.text,
+                        answer: q.answer,
+                        isEditable: q.origin === `/messages/${uuid}`
+                    });
+                }
+            });
+
+            // If there are no candidates, then create one that is just a placeholder
+            // for manual entry
+            if (candidates.length === 0) {
+                question.candidate = {
+                    answer: null,
+                    isEditable: true
+                };
+            // However, if there are more than 1 candidate to answer the question,
+            // then combine them together as a single answer
+            } else if (candidates.length > 1) {
+                question.candidate = _.reduce(candidates, (combine, c) => {
+                    combine.answer += `\n\n== ${c.text} ==\n${c.answer}`;
+                }, { answer: '', isEditable: true, isMultiple: true });
+            } else { // There is only one candidate
+                question.candidate = candidates.shift();
+            }
+        }
 
         return message;
     },
@@ -149,8 +216,10 @@ export default {
      * @param {*} uuid
      * @returns
      */
-    readMessage: (uuid) => {
-        return JSON.parse(Fs.readFileSync(GetMessagesBasePath(uuid)).toString());
+    indexMessageIdentifiedQuestion: async (uuid) => {
+        const message = await Methods.readMessage(uuid);
+
+        return message.questions;
     },
 
     /**
@@ -167,8 +236,7 @@ export default {
         Fs.writeFileSync(fullPath, JSON.stringify(newContent));
 
         // Index file data
-        return UpdateMessageIndex({
-            uuid,
+        return MessageIndex.update(uuid, {
             updatedAt: (new Date()).getTime(),
             excerpt: PrepareExcerpt(newContent.text),
             checksum: Crypto.createHash('md5').update(newContent.text).digest('hex')
@@ -180,9 +248,19 @@ export default {
      * @param {*} uuid
      * @returns
      */
+    updateMessageStatus: (uuid, status) => MessageIndex.update(uuid, {
+        status,
+        updatedAt: (new Date()).getTime()
+    }),
+
+    /**
+     *
+     * @param {*} uuid
+     * @returns
+     */
     deleteMessage: (uuid) => {
         // Delete the message from index
-        RemoveFromMessageIndex(uuid);
+        MessageIndex.remove(uuid);
 
         // Delete the message file
         const fullPath = GetMessagesBasePath(uuid);
@@ -192,6 +270,8 @@ export default {
         }
 
         return true;
-    },
+    }
 
 }
+
+export default Methods;

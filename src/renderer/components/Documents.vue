@@ -16,7 +16,7 @@
       <v-spacer></v-spacer>
 
       <v-text-field
-          v-if="showSearchInput"
+          v-if="showSearchInput && !currentDocument"
           density="compact"
           ref="search"
           autofocus
@@ -27,7 +27,7 @@
           v-model="search"
           class="mt-6"
       ></v-text-field>
-      <v-tooltip v-else text="Search Question" location="bottom">
+      <v-tooltip v-else-if="!currentDocument" text="Search Question" location="bottom">
           <template v-slot:activator="{ props }">
               <v-btn icon v-bind="props" @click="showSearchInput = true">
                   <v-icon>mdi-magnify</v-icon>
@@ -88,7 +88,7 @@
     <v-responsive v-if="search" class="align-left fill-height">
       <v-container>
         <v-sheet class="d-flex align-center justify-center flex-wrap text-center mx-auto px-4" elevation="1"
-            height="150" rounded width="100%">
+            height="150" rounded width="100%" color="grey-lighten-3">
             <div>
               <p class="text-body-2">
                 Not yet implemented. Sorry...
@@ -102,7 +102,7 @@
       <v-container>
         <div class="text-overline pb-2">Folders</div>
 
-        <v-item-group>
+        <v-item-group v-if="currentFolder">
           <v-row v-if="currentFolderHasChildren('folder')">
             <v-col v-for="folder in getCurrentFolderChildren('folder')" :key="folder.uuid" cols="12" md="3">
               <v-item>
@@ -135,10 +135,10 @@
           </v-row>
 
           <v-sheet v-else class="d-flex align-center justify-center flex-wrap text-center mx-auto px-4" elevation="1"
-            height="200" rounded width="100%">
+            height="200" rounded width="100%" color="grey-lighten-3">
             <div>
               <p class="text-body-2 mb-4">
-                There are no folders in your knowledge folder.
+                There are no folders in the "{{ currentFolder.name }}" folder.
               </p>
               <v-btn @click="createFolderModal = true">Create First Folder</v-btn>
             </div>
@@ -178,7 +178,7 @@
         </v-list>
 
         <v-sheet v-else class="d-flex align-center justify-center flex-wrap text-center mx-auto px-4" elevation="1"
-          height="200" rounded width="100%">
+          height="200" rounded width="100%" color="grey-lighten-3">
           <div>
             <p class="text-body-2 mb-4">
               There are no documents in the "{{ currentFolder.name }}" folder.
@@ -281,7 +281,7 @@
             </v-expansion-panel-title>
             <v-expansion-panel-text>
               <v-textarea v-if="question.uuid" label="Answer" v-model="currentDocumentData.questions[index].answer" auto-grow variant="outlined" class="mt-6"></v-textarea>
-              <v-sheet v-else class="d-flex mt-2 mb-4 align-center justify-center flex-wrap text-center mx-auto px-4" color="grey-lighten-5"
+              <v-sheet v-else class="d-flex mt-2 mb-4 align-center justify-center flex-wrap text-center mx-auto px-4" color="grey-lighten-3"
                 height="150" rounded width="100%">
                 <div v-if="!isIndexingQuestion(question)">
                   <p class="text-body-2 mb-4">
@@ -312,7 +312,7 @@
       </v-container>
       <v-container v-else>
         <v-sheet class="d-flex align-center justify-center flex-wrap text-center mx-auto px-4" elevation="1"
-          height="150" rounded width="100%">
+          height="150" rounded width="100%" color="grey-lighten-3">
           <div v-if="!analyzingContent">
             <p class="text-body-2 mb-4">
               The next step is to analyze the content and index the data.
@@ -347,16 +347,6 @@
           </v-card-actions>
         </v-card>
       </v-dialog>
-
-      <v-snackbar v-model="showSuccessMessage" :timeout="2000">
-          {{ successMessage }}
-
-          <template v-slot:actions>
-              <v-btn variant="text" @click="showSuccessMessage = false">
-                  Close
-              </v-btn>
-          </template>
-      </v-snackbar>
     </v-responsive>
 
     <v-dialog v-model="deleteDocumentModal" transition="dialog-bottom-transition" width="450">
@@ -374,6 +364,16 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <v-snackbar v-model="showSuccessMessage" :timeout="2000">
+        {{ successMessage }}
+
+        <template v-slot:actions>
+            <v-btn variant="text" @click="showSuccessMessage = false">
+                Close
+            </v-btn>
+        </template>
+    </v-snackbar>
   </v-container>
 </template>
 
