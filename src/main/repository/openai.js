@@ -36,7 +36,7 @@ export default {
     prepareQuestionListFromDocument: async (document) => {
         const corpus = Document2QuestionsTool.getCorpus(document);
         const result = await GetClient().chat.completions.create({
-            model: 'gpt-3.5-turbo',
+            model: Settings.getSetting('llmModel', 'gpt-3.5-turbo'),
             messages: corpus
         });
 
@@ -70,7 +70,7 @@ export default {
             document
         });
         const result = await GetClient().chat.completions.create({
-            model: 'gpt-3.5-turbo',
+            model: Settings.getSetting('llmModel', 'gpt-3.5-turbo'),
             messages: corpus
         });
 
@@ -155,7 +155,7 @@ export default {
     prepareQuestionListFromMessage: async (message) => {
         const corpus = Message2QuestionsTool.getCorpus(message);
         const result = await GetClient().chat.completions.create({
-            model: 'gpt-3.5-turbo',
+            model: Settings.getSetting('llmModel', 'gpt-3.5-turbo'),
             messages: corpus
         });
 
@@ -189,7 +189,7 @@ export default {
             material
         });
         const result = await GetClient().chat.completions.create({
-            model: 'gpt-3.5-turbo',
+            model: Settings.getSetting('llmModel', 'gpt-3.5-turbo'),
             messages: corpus
         });
 

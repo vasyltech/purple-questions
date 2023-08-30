@@ -578,8 +578,12 @@ export default {
         }
     },
     watch: {
-        currentMessage() {
+        currentMessage(message) {
             this.assembleBreadcrumb();
+
+            if (message === null) {
+                this.showSuccessMessage = false;
+            }
         },
     },
     mounted() {

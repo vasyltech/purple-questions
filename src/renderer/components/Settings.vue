@@ -20,21 +20,56 @@
 
                 <v-row>
                     <v-col cols="12" md="6">
-                        <v-text-field v-model="settings.apiKey" label="OpenAI API Key" placeholder="sk-****"
-                            hint="Insert your OpenAI API key. It should start with sk-"></v-text-field>
+                        <v-text-field
+                            v-model="settings.apiKey"
+                            label="OpenAI API Key"
+                            placeholder="sk-****"
+                            persistent-hint
+                            hint="The OpenAI API key. It should start with sk-"
+                        ></v-text-field>
                     </v-col>
                 </v-row>
-
-                <v-snackbar v-model="showSuccessMessage">
-                    {{ successMessage }}
-
-                    <template v-slot:actions>
-                        <v-btn variant="text" @click="showSuccessMessage = false">
-                            Close
-                        </v-btn>
-                    </template>
-                </v-snackbar>
+                <v-row>
+                    <v-col cols="12" md="6">
+                        <v-select
+                            v-model="settings.llmModel"
+                            label="LLM Model"
+                            hint="Select the LLM model to use. Default is GPT-3.5"
+                            persistent-hint
+                            return-object
+                            :items="supportedLlmModels"
+                        ></v-select>
+                    </v-col>
+                </v-row>
             </v-container>
+
+            <v-container>
+                <v-row>
+                    <v-col cols="12" md="6">
+                        <v-divider></v-divider>
+
+                        <div class="text-overline pt-6 pb-2">Application Configurations</div>
+                        <v-text-field
+                            variant="outlined"
+                            label="Application Data Location"
+                            prepend-inner-icon="mdi-folder"
+                            v-model="settings.appDataFolder"
+                            persistent-hint
+                            :hint="`The location were all application data is stored. Default path is ${defaultAppDataFolder}`"
+                        ></v-text-field>
+                    </v-col>
+                </v-row>
+            </v-container>
+
+            <v-snackbar v-model="showSuccessMessage">
+                {{ successMessage }}
+
+                <template v-slot:actions>
+                    <v-btn variant="text" @click="showSuccessMessage = false">
+                        Close
+                    </v-btn>
+                </template>
+            </v-snackbar>
         </v-responsive>
     </v-container>
 </template>
@@ -50,6 +85,16 @@ export default {
         settings: {},
         showSuccessMessage: false
     }),
+    computed: {
+        defaultAppDataFolder() {
+            return this.settings
+                && this.settings._system ? this.settings._system.defaultAppDataFolder : '...';
+        },
+        supportedLlmModels() {
+            return this.settings
+                && this.settings._system ? this.settings._system.supportedLlmModels : [];
+        }
+    },
     methods: {
         saveSettings() {
             const _this = this;
@@ -63,7 +108,9 @@ export default {
                     if (/^sk-[a-zA-Z\d]+$/.test(value) || value === '') {
                         settings[property] = value;
                     }
-                } else {
+                } else if (property === 'llmModel') {
+                    settings[property] = value.value;
+                } else if (property !== '_system') {
                     settings[property] = value;
                 }
             }

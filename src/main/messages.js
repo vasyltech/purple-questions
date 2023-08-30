@@ -7,6 +7,7 @@ const Crypto         = require('crypto');
 
 import DbRepository from './repository/db';
 import Questions from './questions';
+import Settings from './settings';
 
 /**
  * Get the base path to the messages directory
@@ -14,7 +15,10 @@ import Questions from './questions';
  * @returns {String}
  */
 function GetMessagesBasePath(append = null) {
-    const basePath = Path.join(app.getPath('userData'), 'store', 'messages');
+    const basePath = Path.join(
+        Settings.getSetting('appDataFolder', app.getPath('userData')),
+        'store/messages'
+    );
 
     if (!Fs.existsSync(basePath)) {
         Fs.mkdirSync(basePath, { recursive: true});
@@ -200,9 +204,18 @@ const Methods = {
             // However, if there are more than 1 candidate to answer the question,
             // then combine them together as a single answer
             } else if (candidates.length > 1) {
-                question.candidate = _.reduce(candidates, (combine, c) => {
-                    combine.answer += `\n\n== ${c.text} ==\n${c.answer}`;
-                }, { answer: '', isEditable: true, isMultiple: true });
+                question.candidate = _.reduce(
+                    candidates,
+                    (combine, c) => {
+                        combine.answer += `== ${c.text} ==\n${c.answer}\n\n`;
+
+                        return combine;
+                    },
+                    { answer: '', isEditable: true, isMultiple: true }
+                );
+
+                // Trim unnecessary spaces
+                question.candidate.answer = question.candidate.answer.trim();
             } else { // There is only one candidate
                 question.candidate = candidates.shift();
             }

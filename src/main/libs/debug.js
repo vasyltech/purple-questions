@@ -3,13 +3,18 @@ const Fs      = require('fs');
 const Path    = require('path');
 const _       = require('lodash');
 
+import Settings from '../settings';
+
 /**
  * Get the base path to the logs directory
  *
  * @returns {String}
  */
 function GetLogsBasePath() {
-    const basePath = Path.join(app.getPath('userData'), 'store', 'logs');
+    const basePath = Path.join(
+        Settings.getSetting('appDataFolder', app.getPath('userData')),
+        'store/logs'
+    );
 
     if (!Fs.existsSync(basePath)) {
         Fs.mkdirSync(basePath, { recursive: true});

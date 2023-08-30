@@ -5,7 +5,8 @@ const { v4: uuidv4 } = require('uuid');
 const _              = require('lodash');
 const Crypto         = require('crypto');
 
-import DbRepository from './repository/db'
+import DbRepository from './repository/db';
+import Settings from './settings';
 
 /**
  * Get the base path to the questions directory
@@ -13,7 +14,10 @@ import DbRepository from './repository/db'
  * @returns {String}
  */
 function GetQuestionsPath(append = null) {
-    const basePath = Path.join(app.getPath('userData'), 'store', 'questions');
+    const basePath = Path.join(
+        Settings.getSetting('appDataFolder', app.getPath('userData')),
+        'store/questions'
+    );
 
     if (!Fs.existsSync(basePath)) {
         Fs.mkdirSync(basePath, { recursive: true});

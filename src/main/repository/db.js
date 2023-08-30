@@ -4,13 +4,18 @@ const LanceDb        = require('vectordb');
 const { app }        = require('electron');
 const Path           = require('path');
 
+import Settings from '../settings';
+
 /**
  * Get the base path to the db directory
  *
  * @returns {String}
  */
 function GetDbBasePath() {
-    const basePath = Path.join(app.getPath('userData'), 'store', 'db');
+    const basePath = Path.join(
+        Settings.getSetting('appDataFolder', app.getPath('userData')),
+        'store/db'
+    );
 
     if (!Fs.existsSync(basePath)) {
         Fs.mkdirSync(basePath, { recursive: true});

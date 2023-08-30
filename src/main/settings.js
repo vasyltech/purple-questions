@@ -45,10 +45,25 @@ function ReadSettings() {
     const fullPath = GetSettingsPath();
     const response = JSON.parse(Fs.readFileSync(fullPath).toString());
 
+    // Append also some system info
+    response._system = {
+        defaultAppDataFolder: app.getPath('userData'),
+        supportedLlmModels: [
+            {
+                title: 'GPT-3.5',
+                value: 'gpt-3.5-turbo'
+            },
+            {
+                title: 'GPT-4',
+                value: 'gpt-4'
+            }
+        ]
+    }
+
     return response;
 }
 
-export default {
+const Methods = {
 
     /**
      *
@@ -76,12 +91,16 @@ export default {
     /**
      *
      * @param {*} setting
+     *
      * @returns
      */
-    getSetting: (setting) => {
+    getSetting: (setting, def = null) => {
         const settings = ReadSettings();
+        const value    = _.get(settings, setting);
 
-        return _.get(settings, setting);
+        return _.isEmpty(value) ? def : value;
     }
 
 }
+
+export default Methods;

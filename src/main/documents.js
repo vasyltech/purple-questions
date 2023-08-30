@@ -7,6 +7,7 @@ const Crypto         = require('crypto');
 
 import Parsers from './parser';
 import Questions from './questions';
+import Settings from './settings';
 
 /**
  * Get the path to the documents directory or subdirectory
@@ -16,7 +17,10 @@ import Questions from './questions';
  * @returns {String}
  */
 function GetDocumentsPath(append = null) {
-    const basePath = Path.join(app.getPath('userData'), 'store', 'documents');
+    const basePath = Path.join(
+        Settings.getSetting('appDataFolder', app.getPath('userData')),
+        'store/documents'
+    );
 
     if (!Fs.existsSync(basePath)) {
         Fs.mkdirSync(basePath, { recursive: true});
