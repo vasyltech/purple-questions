@@ -260,13 +260,13 @@
       <v-container>
         <div class="text-overline pb-2">Document Name</div>
 
-        <v-text-field v-model="currentDocumentData.name" label="Document Title" variant="outlined"></v-text-field>
+        <v-text-field v-model="currentDocumentData.name" variant="outlined"></v-text-field>
       </v-container>
 
       <v-container>
         <div class="text-overline pb-2">Content</div>
 
-        <v-textarea v-model="currentDocumentData.text" auto-grow label="Content" variant="outlined"></v-textarea>
+        <v-textarea v-model="currentDocumentData.text" auto-grow variant="outlined"></v-textarea>
       </v-container>
 
       <v-container v-if="hasIndexedQuestions">

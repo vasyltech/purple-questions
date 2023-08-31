@@ -117,7 +117,7 @@
                                         </v-list-item>
                                         </v-list>
                                     </v-menu>
-                                    </template>
+                                </template>
                             </v-list-item>
                         </template>
                     </v-virtual-scroll>

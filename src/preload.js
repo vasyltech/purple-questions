@@ -32,9 +32,18 @@ contextBridge.exposeInMainWorld(
             ),
         },
         questions: {
+            getQuestions: (page, limit) => ipcRenderer.invoke(
+                'questions', ['getQuestions', page, limit]
+            ),
+            readQuestion: (uuid) => ipcRenderer.invoke(
+                'questions', ['readQuestion', uuid]
+            ),
             updateQuestion: (uuid, data) => ipcRenderer.invoke(
                 'questions', ['updateQuestion', uuid, data]
-            )
+            ),
+            deleteQuestion: (uuid) => ipcRenderer.invoke(
+                'questions', ['deleteQuestion', uuid]
+            ),
         },
         settings: {
             readSettings: () => ipcRenderer.invoke(

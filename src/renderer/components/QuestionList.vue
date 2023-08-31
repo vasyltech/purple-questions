@@ -25,7 +25,7 @@
                 append-inner-icon="mdi-magnify"
                 @blur="handleSearchBlur"
                 v-model="search"
-                class="mt-6"
+                class="mt-6 mr-2"
             ></v-text-field>
             <v-tooltip v-else text="Search Question" location="bottom">
                 <template v-slot:activator="{ props }">
@@ -34,27 +34,47 @@
                     </v-btn>
                 </template>
             </v-tooltip>
-
-            <v-tooltip text="Add New Question" location="bottom">
+            <v-tooltip v-if="currentQuestion" text="Save Question" location="bottom">
                 <template v-slot:activator="{ props }">
-                    <v-btn icon v-bind="props" @click="createQuestionModal = true">
-                        <v-icon>mdi-plus-circle</v-icon>
-                    </v-btn>
+                <v-btn icon v-bind="props" @click="saveQuestionChanges">
+                    <v-icon>mdi-content-save</v-icon>
+                </v-btn>
+                </template>
+            </v-tooltip>
+
+            <v-tooltip v-if="currentQuestion" text="Delete Question" location="bottom">
+                <template v-slot:activator="{ props }">
+                <v-btn icon v-bind="props" @click="deleteCurrentQuestion">
+                    <v-icon>mdi-trash-can</v-icon>
+                </v-btn>
                 </template>
             </v-tooltip>
         </v-app-bar>
 
         <v-responsive class="align-left fill-height">
-            <v-container v-if="!currentMessage">
+            <v-container v-if="!currentQuestion">
                 <v-card>
-                    <v-virtual-scroll v-if="messages.length" :items="messages" item-height="96">
+                    <v-virtual-scroll v-if="questions.length" :items="questions" item-height="96">
                         <template v-slot:default="{ item }">
-                            <v-list-item @click="openMessage(item)" lines="two">
-                                <template v-slot:prepend>
-                                    <v-icon size="large" :icon="getMessageStatusIcon(item)"></v-icon>
+                            <v-list-item @click="openQuestion(item)" lines="two">
+                                <v-list-item-title>{{ item.text }}</v-list-item-title>
+                                <v-list-item-subtitle>{{ getQuestionDate(item) }}</v-list-item-subtitle>
+                                <template v-slot:append>
+                                    <v-menu location="left">
+                                        <template v-slot:activator="{ props }">
+                                        <v-btn icon="mdi-dots-vertical" color="grey-lighten-1" variant="text" v-bind="props"></v-btn>
+                                        </template>
+
+                                        <v-list>
+                                        <v-list-item @click="openQuestion(item)">
+                                            <v-list-item-title>Open</v-list-item-title>
+                                        </v-list-item>
+                                        <v-list-item @click="deleteQuestion(item)">
+                                            <v-list-item-title>Delete</v-list-item-title>
+                                        </v-list-item>
+                                        </v-list>
+                                    </v-menu>
                                 </template>
-                                <v-list-item-title>{{ item.excerpt }}</v-list-item-title>
-                                <v-list-item-subtitle>{{ getMessageDate(item) }}</v-list-item-subtitle>
                             </v-list-item>
                         </template>
                     </v-virtual-scroll>
@@ -63,69 +83,52 @@
                         elevation="1" height="200" rounded width="100%">
                         <div>
                             <p class="text-body-2 mb-4">
-                                There are no messages.
+                                There are no questions in your knowledge base.
                             </p>
-                            <v-btn @click="createMessageModal = true">Create First Message</v-btn>
                         </div>
                     </v-sheet>
                 </v-card>
             </v-container>
 
             <v-container v-else>
-                <v-textarea auto-grow label="Message" variant="outlined" v-model="currentMessageData.text"></v-textarea>
+                <v-container>
+                    <div class="text-overline pb-2">Question</div>
 
-                <div v-if="hasIndexedQuestions">
-                    <div class="text-overline pb-2">Identified Questions</div>
+                    <v-text-field :value="currentQuestionData.text" readonly variant="outlined"></v-text-field>
+                </v-container>
 
-                    <v-expansion-panels>
-                        <v-expansion-panel v-for="(question, index) in currentMessageData.questions" :key="index">
-                            <v-expansion-panel-title>
-                                <v-icon color="grey"
-                                    :icon="question.candidate ? 'mdi-check-circle' : 'mdi-alert-circle'"></v-icon>
-                                <span class="ml-2">{{ question.text }}</span>
-                            </v-expansion-panel-title>
-                            <v-expansion-panel-text>
-                                <v-textarea label="Best Answer" v-if="question.candidate" variant="outlined" auto-grow
-                                    readonly class="mt-6" v-model="question.candidate.answer"></v-textarea>
-                                <div v-else>
-                                    <v-alert type="warning" color="grey" title="Knowledge Gap"
-                                        text="There is no information in the current knowledge base to answer this question confidently."></v-alert>
-                                </div>
-                            </v-expansion-panel-text>
-                        </v-expansion-panel>
-                    </v-expansion-panels>
-                </div>
-                <v-sheet v-else class="d-flex align-center justify-center flex-wrap text-center mx-auto px-4" elevation="1"
-                    height="150" rounded width="100%">
-                    <div v-if="!analyzingMessage">
-                        <p class="text-body-2 mb-4">
-                            The next step is to analyze the message and identify the list of questions.
-                        </p>
-                        <v-btn @click="analyzeMessage">Analyze Message</v-btn>
-                    </div>
-                    <div v-else>
-                        <p class="text-body-2 mb-4">
-                            Please wait a bit. Depending on the size of the message, it might take a couple of minutes to
-                            run
-                        </p>
-                        <v-progress-circular indeterminate color="grey"></v-progress-circular>
-                    </div>
-                </v-sheet>
+                <v-container>
+                    <div class="text-overline pb-2">Best Answer</div>
+
+                    <v-textarea v-model="currentQuestionData.answer" auto-grow variant="outlined"></v-textarea>
+                </v-container>
+
+                <v-snackbar v-model="showSuccessMessage" :timeout="2000">
+                    {{ successMessage }}
+
+                    <template v-slot:actions>
+                        <v-btn variant="text" @click="showSuccessMessage = false">
+                            Close
+                        </v-btn>
+                    </template>
+                </v-snackbar>
             </v-container>
-        </v-responsive>
 
-        <v-dialog v-model="createMessageModal" transition="dialog-bottom-transition" width="600">
-            <v-card>
-                <v-toolbar title="Create New Message"></v-toolbar>
+            <v-dialog v-model="deleteQuestionModal" transition="dialog-bottom-transition" width="550">
+                <v-card>
+                <v-toolbar title="Delete Question"></v-toolbar>
                 <v-card-text>
-                    <v-textarea autofocus label="Message" v-model="newMessage" variant="outlined"></v-textarea>
+                    <v-alert type="warning" prominent variant="outlined" color="grey-darken-2">
+                        You are about to delete the <strong v-if="selectedQuestion">"{{ selectedQuestion.text }}"</strong> question. This will also remove the question for the index. Please confirm.
+                    </v-alert>
                 </v-card-text>
                 <v-card-actions class="justify-end">
-                    <v-btn variant="text" @click="createMessage">Create</v-btn>
-                    <v-btn variant="text" @click="createMessageModal = false">Close</v-btn>
+                    <v-btn variant="text" @click="deleteSelectedQuestion">Delete</v-btn>
+                    <v-btn variant="text" @click="deleteQuestionModal = false">Close</v-btn>
                 </v-card-actions>
-            </v-card>
-        </v-dialog>
+                </v-card>
+            </v-dialog>
+        </v-responsive>
     </v-container>
 </template>
 
@@ -141,22 +144,16 @@ export default {
             search: null,
             showSearchInput: false,
             breadcrumb: [],
-            messages: [],
-            createMessageModal: false,
-            newMessage: null,
-            currentMessage: null,
-            currentMessageData: {},
-            analyzingMessage: false,
+            questions: [],
+            currentQuestion: null,
+            currentQuestionData: {},
+            deleteQuestionModal: false,
+            selectedQuestion: null,
+            successMessage: null,
+            showSuccessMessage: false,
             inputValidationRules: {
                 required: value => !!value || 'Required.',
             }
-        }
-    },
-    computed: {
-        hasIndexedQuestions() {
-            return this.currentMessageData
-                && this.currentMessageData.questions
-                && this.currentMessageData.questions.length > 0
         }
     },
     methods: {
@@ -166,82 +163,87 @@ export default {
             }
         },
         navigateTo(node) {
-            this.currentMessage = node;
+            this.currentQuestion = node;
         },
-        analyzeMessage() {
-            const _this = this;
-            this.analyzingMessage = true;
-
-            this.$api.ai
-                .analyzeMessageContent(this.currentMessage.uuid)
-                .then((data) => {
-                    _this.currentMessageData = data;
-                    _this.analyzingMessage = false;
-                });
-        },
-        createMessage() {
+        openQuestion(question) {
             const _this = this;
 
-            this.$api.messages
-                .createMessage(this.newMessage)
-                .then((message) => {
-                    _this.messages.unshift(message);
-                    _this.currentMessage = message;
-                    _this.currentMessageData = message;
-
-                    // Closing the dialog & resetting the form
-                    _this.createMessageModal = false;
-                    _this.newMessage = null;
-                });
-        },
-        openMessage(message) {
-            const _this = this;
-
-            this.$api.messages.readMessage(message.uuid).then((response) => {
-                _this.currentMessage = message;
-                _this.currentMessageData = response;
+            this.$api.questions.readQuestion(question.uuid).then((response) => {
+                _this.currentQuestion     = question;
+                _this.currentQuestionData = response;
             });
         },
-        getMessageStatusIcon(message) {
-            let icon = 'mdi-alert-circle';
-
-            if (message.status === 'closed') {
-                icon = 'mdi-check-circle';
-            }
-
-            return icon
-        },
-        getMessageDate(message) {
-            return (new Date(message.createdAt)).toLocaleDateString(
+        getQuestionDate(question) {
+            return (new Date(question.createdAt)).toLocaleDateString(
                 'en-us',
                 { weekday: "long", year: "numeric", month: "short", day: "numeric" }
             );
         },
         assembleBreadcrumb() {
             const breadcrumb = [{
-                title: 'Messages',
+                title: 'Questions',
                 node: null
             }];
 
-            if (this.currentMessage !== null) {
+            if (this.currentQuestion !== null) {
                 breadcrumb.push({
-                    title: this.currentMessage.excerpt.substring(0, 30) + '...'
+                    title: this.currentQuestion.text.substring(0, 30) + '...'
                 })
             }
 
             this.breadcrumb = breadcrumb;
-        }
+        },
+        deleteQuestion(question) {
+            this.selectedQuestion    = question;
+            this.deleteQuestionModal = true;
+        },
+        deleteCurrentQuestion() {
+            this.selectedQuestion    = this.currentQuestion;
+            this.deleteQuestionModal = true;
+        },
+        deleteSelectedQuestion() {
+            const _this = this;
+
+            this.$api.questions
+                .deleteQuestion(this.selectedQuestion.uuid)
+                .then(() => {
+                    _this.questions = _this.questions.filter(
+                        m => m.uuid !== _this.selectedQuestion.uuid
+                    );
+
+                // Are we deleting from the edit question view?
+                if (_this.currentQuestion === _this.selectedQuestion) {
+                    _this.currentQuestion = null;
+                }
+
+                // Closing the modal & resetting the selecting
+                _this.deleteQuestionModal = false;
+                _this.selectedQuestion    = null;
+                });
+        },
+        saveQuestionChanges() {
+            const _this = this;
+
+            this.$api.questions
+                .updateQuestion(this.currentQuestion.uuid, {
+                    answer: this.currentQuestionData.text
+                })
+                .then(() => {
+                    _this.successMessage     = 'Changes saved!';
+                    _this.showSuccessMessage = true;
+                });
+        },
     },
     watch: {
-        currentMessage() {
+        currentQuestion() {
             this.assembleBreadcrumb();
         },
     },
     mounted() {
         const _this = this;
 
-        this.$api.messages.getMessages().then((response) => {
-            _this.messages = response;
+        this.$api.questions.getQuestions().then((response) => {
+            _this.questions = response;
         });
 
         this.assembleBreadcrumb();

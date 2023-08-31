@@ -30,6 +30,9 @@ function GetMessagesBasePath(append = null) {
     return append ? Path.join(basePath, append) : append;
 }
 
+/**
+ * Message index
+ */
 const MessageIndex = (() => {
 
     let index = null;
@@ -107,7 +110,6 @@ const MessageIndex = (() => {
         remove: Remove
     }
 })();
-
 
 /**
  *
