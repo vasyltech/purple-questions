@@ -32,16 +32,18 @@
   },
   "dependencies": {
     "@mdi/font": "^7.2.96",
+    "cheerio": "^1.0.0-rc.12",
     "electron-squirrel-startup": "^1.0.0",
     "entities": "^4.5.0",
+    "html-to-md": "^0.8.3",
     "lodash": "^4.17.21",
     "marked": "^7.0.4",
     "openai": "^4.2.0",
+    "superagent": "^8.1.2",
     "uuid": "^9.0.0",
     "vectordb": "^0.2.4",
     "vue": "^3.3.4",
     "vue-router": "^4.2.4",
-    "vuetify": "^3.3.13",
-    "webfontloader": "^1.6.28"
+    "vuetify": "^3.3.13"
   }
 }

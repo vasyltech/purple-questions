@@ -15,8 +15,11 @@ contextBridge.exposeInMainWorld(
             createDocument: (parentFolder, name) => ipcRenderer.invoke(
                 'documents', ['createDocument', parentFolder, name]
             ),
-            uploadDocument: (parentFolder, documentPath) => ipcRenderer.invoke(
-                'documents', ['uploadDocument', parentFolder, documentPath]
+            createFromFile: (parentFolder, documentPath) => ipcRenderer.invoke(
+                'documents', ['createFromFile', parentFolder, documentPath]
+            ),
+            createFromUrl: (parentFolder, url, selector) => ipcRenderer.invoke(
+                'documents', ['createFromUrl', parentFolder, url, selector]
             ),
             readDocument: (uuid) => ipcRenderer.invoke(
                 'documents', ['readDocument', uuid]

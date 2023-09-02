@@ -51,14 +51,6 @@
         </template>
       </v-tooltip>
 
-      <v-tooltip v-if="!currentDocument" text="Upload From Computer" location="bottom">
-        <template v-slot:activator="{ props }">
-          <v-btn icon v-bind="props" @click="uploadDocumentModal = true">
-            <v-icon>mdi-upload</v-icon>
-          </v-btn>
-        </template>
-      </v-tooltip>
-
       <v-tooltip v-if="currentDocument" text="Save Changes" location="bottom">
         <template v-slot:activator="{ props }">
           <v-btn icon v-bind="props" @click="saveDocumentChanges">
@@ -204,38 +196,72 @@
         </v-card>
       </v-dialog>
 
-      <v-dialog v-model="createDocumentModal" transition="dialog-bottom-transition" width="500">
+      <v-dialog v-model="createDocumentModal" transition="dialog-bottom-transition" width="550">
         <v-card>
           <v-toolbar title="Create New Document"></v-toolbar>
           <v-card-text>
+            <v-tabs
+              v-model="addNewDocumentType"
+              color="grey"
+              align-tabs="left"
+            >
+              <v-tab value="manual">Manually</v-tab>
+              <v-tab value="upload">Upload File</v-tab>
+              <v-tab value="url">From URL</v-tab>
+            </v-tabs>
 
-            <div class="text-overline">Create Manually</div>
-            <v-text-field v-model="newDocumentName" :rules="[inputValidationRules.required]" variant="outlined"
-              label="Document Name*">
-            </v-text-field>
+            <v-window v-model="addNewDocumentType">
+              <v-window-item value="manual">
+                <v-container fluid>
+                  <v-text-field
+                    v-model="newDocumentName"
+                    :rules="[inputValidationRules.required]"
+                    variant="outlined"
+                    label="Enter Document Name"
+                  ></v-text-field>
+                </v-container>
+              </v-window-item>
+              <v-window-item value="upload">
+                <v-container fluid>
+                  <v-file-input
+                    v-model="addNewFile"
+                    label="Select Document"
+                    variant="outlined"
+                    accept=".txt,.md"
+                    :rules="[inputValidationRules.required]"
+                    persistent-hint
+                    hint="Current allowed only .txt and .md file formats"
+                  ></v-file-input>
+                </v-container>
+              </v-window-item>
+              <v-window-item value="url">
+                <v-container fluid>
+                  <v-text-field
+                    v-model="addNewUrl"
+                    prepend-inner-icon="mdi-link-variant"
+                    label="Enter URL"
+                    :rules="[inputValidationRules.required]"
+                    variant="outlined"
+                    persistent-hint
+                    hint="Enter valid and accessible URL"
+                  ></v-text-field>
+
+                  <v-combobox
+                    v-model="addNewUrlSelector"
+                    class="mt-4"
+                    label="Content Selector"
+                    variant="outlined"
+                    :items="cachedUrlSelectors"
+                    persistent-hint
+                    hint="Narrow down what part of the page we should parse. By default converts the entire page to text."
+                  ></v-combobox>
+                </v-container>
+              </v-window-item>
+            </v-window>
           </v-card-text>
           <v-card-actions class="justify-end">
             <v-btn variant="text" @click="createDocument">Create</v-btn>
             <v-btn variant="text" @click="createDocumentModal = false">Close</v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
-
-      <v-dialog v-model="uploadDocumentModal" transition="dialog-bottom-transition" width="500">
-        <v-card>
-          <v-toolbar title="Upload From Computer"></v-toolbar>
-          <v-card-text>
-            <v-file-input
-              v-model="uploadDocumentPath"
-              label="Select Document"
-              variant="outlined"
-              accept=".txt,.md"
-              hint="Current allowed only .txt and .md file formats"
-            ></v-file-input>
-          </v-card-text>
-          <v-card-actions class="justify-end">
-            <v-btn variant="text" @click="uploadDocument">Upload</v-btn>
-            <v-btn variant="text" @click="uploadDocumentModal = false">Close</v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>
@@ -280,7 +306,15 @@
               <span class="ml-2">{{ question.text }}</span>
             </v-expansion-panel-title>
             <v-expansion-panel-text>
-              <v-textarea v-if="question.uuid" label="Answer" v-model="currentDocumentData.questions[index].answer" auto-grow variant="outlined" class="mt-6"></v-textarea>
+              <v-textarea
+                v-if="question.uuid"
+                label="Answer"
+                v-model="currentDocumentData.questions[index].answer"
+                auto-grow
+                variant="outlined"
+                class="mt-6"
+              ></v-textarea>
+
               <v-sheet v-else class="d-flex mt-2 mb-4 align-center justify-center flex-wrap text-center mx-auto px-4" color="grey-lighten-3"
                 height="150" rounded width="100%">
                 <div v-if="!isIndexingQuestion(question)">
@@ -383,7 +417,7 @@ export default {
     documentTree: {},
     currentFolder: null,
     currentDocument: null,
-    uploadDocumentPath: null,
+    addNewFile: null,
     currentDocumentData: {},
     createFolderModal: false,
     createDocumentModal: false,
@@ -391,7 +425,10 @@ export default {
     deleteDocumentModal: false,
     deleteQuestionModal: false,
     deleteIndexedQuestions: true,
-    uploadDocumentModal: false,
+    addNewDocumentType: null,
+    cachedUrlSelectors: [],
+    addNewUrl: null,
+    addNewUrlSelector: null,
     newFolderName: null,
     newDocumentName: null,
     showSearchInput: false,
@@ -405,7 +442,6 @@ export default {
     selectedQuestion: null,
     indexingQuestions: [],
     updatingQuestions: [],
-
     inputValidationRules: {
       required: value => !!value || 'Required.',
       folderName: value => {
@@ -562,46 +598,44 @@ export default {
           _this.newFolderName     = null;
         });
     },
+    finalizeDocumentCreation(document) {
+      this.currentFolder.children.push(document);
+
+      // Set the parent node for the newly created document
+      document.parent = this.currentFolder;
+
+      // Cache the urlContentSelector if type is url
+      if (this.addNewDocumentType === 'url' && this.addNewUrlSelector) {
+        this.cachedUrlSelectors.push(this.addNewUrlSelector);
+      }
+
+      // Closing the modal & resetting the form
+      this.createDocumentModal = false;
+      this.newDocumentName     = null;
+      this.addNewFile          = null;
+      this.addNewUrl           = null;
+      this.addNewUrlSelector   = null;
+      this.addNewDocumentType  = null;
+
+      // Show the newly created document
+      this.openDocument(document);
+    },
     createDocument() {
       const _this = this;
-      const name  = this.newDocumentName;
 
-      this.$api.documents
-        .createDocument(this.currentFolder.uuid, name)
-        .then((document) => {
-          _this.currentFolder.children.push(document);
-
-          // Set the parent node for the newly created document
-          document.parent = _this.currentFolder;
-
-          // Closing the modal & resetting the form
-          _this.createDocumentModal = false;
-          _this.newFolderName       = null;
-
-          // Show the newly created document
-          _this.openDocument(document);
-        });
-    },
-    uploadDocument() {
-      const _this = this;
-
-      this.$api.documents
-        .uploadDocument(this.currentFolder.uuid, this.uploadDocumentPath[0].path)
-        .then((document) => {
-          if (document !== null) {
-            _this.currentFolder.children.push(document);
-
-            // Set the parent node for the newly created document
-            document.parent = _this.currentFolder;
-
-            // Closing the modal & resetting the form
-            _this.uploadDocumentModal = false;
-            _this.uploadDocumentPath  = null;
-
-            // Show the newly created document
-            _this.openDocument(document);
-          }
-        });
+      if (this.addNewDocumentType === 'upload') {
+        this.$api.documents
+          .createFromFile(this.currentFolder.uuid, this.addNewFile[0].path)
+          .then(document => _this.finalizeDocumentCreation(document));
+      } else if (this.addNewDocumentType === 'url') {
+        this.$api.documents
+          .createFromUrl(this.currentFolder.uuid, this.addNewUrl, this.addNewUrlSelector)
+          .then(document => _this.finalizeDocumentCreation(document));
+      } else {
+        this.$api.documents
+          .createDocument(this.currentFolder.uuid, this.newDocumentName)
+          .then(document => _this.finalizeDocumentCreation(document));
+      }
     },
     saveDocumentChanges() {
       const _this = this;

@@ -4,6 +4,9 @@ const { app }        = require('electron');
 const { v4: uuidv4 } = require('uuid');
 const _              = require('lodash');
 const Crypto         = require('crypto');
+const Cheerio        = require('cheerio');
+const Superagent     = require('superagent');
+const Html2Md        = require('html-to-md')
 
 import Parsers from './parser';
 import Questions from './questions';
@@ -252,7 +255,7 @@ const Methods = {
      * @param {*} documentPath
      * @returns
      */
-    uploadDocument: async (parentFolder, documentPath) => {
+    createFromFile: async (parentFolder, documentPath) => {
         let response;
 
         const attributes = Path.parse(documentPath);
@@ -268,6 +271,7 @@ const Methods = {
                 name: result.title || 'New Document',
                 createdAt: (new Date()).getTime(),
                 type: 'document',
+                origin: documentPath,
                 checksum: Crypto.createHash('md5').update(result.text).digest('hex')
             });
 
@@ -277,6 +281,51 @@ const Methods = {
                 text: result.text,
                 questions: []
             }));
+        }
+
+        return response;
+    },
+
+    /**
+     *
+     * @param {*} parentFolder
+     * @param {*} url
+     * @param {*} selector
+     */
+    createFromUrl: async (parentFolder, url, selector = null) => {
+        let response;
+
+        try {
+            // Fetching page content from provided URL
+            const page = await Superagent.get(url);
+
+            // Loading the raw HTML for parsing
+            const $ = Cheerio.load(page.text);
+
+            // Convert to markdown
+            const title   = $('head > title').text();
+            const content = Html2Md($(selector || 'body').html());
+
+            // Cleaning up the content
+            const clean = await Parsers.md.parse(content);
+
+            response = DocumentIndex.add(parentFolder, {
+                uuid: uuidv4(),
+                name: title || 'New Document',
+                createdAt: (new Date()).getTime(),
+                type: 'document',
+                origin: url,
+                checksum: Crypto.createHash('md5').update(clean.text).digest('hex')
+            });
+
+            // Write a physical file
+            Fs.writeFileSync(GetDocumentsPath(response.uuid), JSON.stringify({
+                name: response.name,
+                text: clean.text,
+                questions: []
+            }));
+        } catch (error) {
+            // TODO: log the error in the error log
         }
 
         return response;

@@ -165,7 +165,7 @@ export default {
         });
 
         const output = JSON.parse(
-            _.get(result, 'choices[0].message.content', '{}')
+            _.get(result, 'choices[0].message.content', '{}').replace(/\n/g, '\\n')
         );
 
         return {

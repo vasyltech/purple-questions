@@ -71,7 +71,14 @@ export default {
         question.embedding = res1.output.embedding;
 
         // Index the question
-        return Questions.createQuestion(question);
+        const result = Questions.createQuestion(question);
+
+        // Return enriched question back
+        return {
+            uuid: result.uuid,
+            text,
+            answer: question.answer
+        }
     },
 
     /**
