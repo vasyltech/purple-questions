@@ -52,8 +52,8 @@ const DocumentIndex = (() => {
      *
      * @returns
      */
-    function Read() {
-        if (_.isNull(index)) {
+    function Read(reload = false) {
+        if (_.isNull(index) || reload) {
             const filePath = GetDocumentsPath('.index');
 
             if (Fs.existsSync(filePath)) {
@@ -200,7 +200,7 @@ const Methods = {
      * @returns
      */
     getDocumentTree: () => {
-        return DocumentIndex.get(); // The first root
+        return DocumentIndex.get(true); // The first root
     },
 
     /**

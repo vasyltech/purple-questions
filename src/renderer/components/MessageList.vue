@@ -508,25 +508,30 @@ export default {
         indexQuestion(question) {
             const _this = this;
 
-            this.indexingQuestions.push(question);
+            const answer = question.candidate.answer
+                                ? question.candidate.answer.trim() : '';
 
-            this.$api.ai
-                .indexMessageQuestion(
-                    this.currentMessage.uuid,
-                    question.text,
-                    question.candidate.answer
-                ).then(() => {
-                    _this.indexingQuestions = _this.indexingQuestions.filter(
-                        q => q !== question
-                    );
+            if (answer.length > 0) {
+                this.indexingQuestions.push(question);
 
-                    _this.getMessageIdentifiedQuestions();
+                this.$api.ai
+                    .indexMessageQuestion(
+                        this.currentMessage.uuid,
+                        question.text,
+                        answer
+                    ).then(() => {
+                        _this.indexingQuestions = _this.indexingQuestions.filter(
+                            q => q !== question
+                        );
 
-                    _this.analyzingMessage = false;
+                        _this.getMessageIdentifiedQuestions();
 
-                    _this.successMessage     = 'Question Indexed!';
-                    _this.showSuccessMessage = true;
-                });
+                        _this.analyzingMessage = false;
+
+                        _this.successMessage     = 'Question Indexed!';
+                        _this.showSuccessMessage = true;
+                    });
+            }
         },
         updateQuestion(question) {
             const _this = this;
@@ -563,7 +568,7 @@ export default {
             return this.updatingQuestions.includes(question);
         },
         getAnswerBoxLabel(question) {
-            let label = question.candidate.uuid ? 'Best Answer' : 'Provide Your Answer';
+            let label = question.candidate.answer ? 'Best Answer' : 'Provide Your Answer';
 
             if (question.candidate.isMultiple) {
                 label += ' (Multiple Candidates)'

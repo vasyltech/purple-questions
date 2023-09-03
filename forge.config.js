@@ -1,11 +1,14 @@
 module.exports = {
-  packagerConfig: {},
+  packagerConfig: {
+    icon: './assets/icon'
+  },
   rebuildConfig: {},
   makers: [
     {
       name: '@electron-forge/maker-dmg',
       config: {
         background: './assets/dmg-background.png',
+        icon: './assets/icon.icns',
         format: 'ULFO'
       }
     }

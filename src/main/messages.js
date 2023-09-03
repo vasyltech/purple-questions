@@ -41,8 +41,8 @@ const MessageIndex = (() => {
      *
      * @returns
      */
-    function Read() {
-        if (_.isNull(index)) {
+    function Read(reload = false) {
+        if (_.isNull(index) || reload) {
             const filePath = GetMessagesBasePath('.index');
 
             if (Fs.existsSync(filePath)) {
@@ -132,7 +132,7 @@ const Methods = {
      */
     getMessages: (page = 0, limit = 500) => {
         // Cloning the array to avoid issue with reverse
-        const index = _.clone(MessageIndex.get());
+        const index = _.clone(MessageIndex.get(true));
         const start = page * limit;
 
         return index.reverse().slice(start, start + limit);

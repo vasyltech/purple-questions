@@ -12,6 +12,11 @@ if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
+/**
+ *
+ * @param {*} channel
+ * @param {*} handler
+ */
 function RegisterHandler(channel, handler) {
   ipcMain.handle(channel, (_, args) => {
     const method = args.shift();
@@ -29,6 +34,7 @@ const createWindow = () => {
     webPreferences: {
       preload: path.join(__dirname, 'preload.js')
     },
+    icon: path.join(__dirname + '/../assets/icon.png')
   });
 
   // and load the index.html of the app.
