@@ -159,13 +159,24 @@ export default {
         const message = await Messages.readMessage(uuid);
 
         // Compile all the necessary information for answer generation
-        const material = _.filter(message.questions, (q) => q.candidate.answer).map(c => ({
-            // TODO: Note! We are using the generated from user message question
-            // as alias to a similar question that is identified as a candidate
-            // Not sure if we need to pass the actual c.candidate.text instead
-            question: c.text,
-            answer: c.candidate.answer
-        }));
+        const material = [];
+
+        _.forEach(message.questions, (question) => {
+            if (_.isString(question.uuid)) { // Do we have a direct answer?
+                material.push({
+                    question: question.text,
+                    answer: question.answer
+                });
+            } else { // Iterate over the list of candidates and prepare the material
+                material.push(..._.map(question.candidates, (c) => ({
+                    // TODO: Note! We are using the generated from user message question
+                    // as alias to a similar question that is identified as a candidate
+                    // Not sure if we need to pass the actual c.text or question.text
+                    question: c.text,
+                    answer: c.answer
+                })));
+            }
+        });
 
         // Verify that we have all the necessary information to prepare the answer
         if (material.length > 0) {

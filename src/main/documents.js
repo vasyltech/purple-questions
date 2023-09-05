@@ -345,7 +345,7 @@ const Methods = {
 
         // Iterate over the list of questions and get answers
         _.forEach(document.questions, (q) => {
-            if (!_.isEmpty(q.uuid)) {
+            if (_.isUndefined(q.uuid) || _.isNull(q.uuid)) {
                 q.answer = Questions.readQuestion(q.uuid).answer;
             }
         });

@@ -171,7 +171,7 @@
                             <v-expansion-panel-title>
                                 <v-icon
                                     color="grey"
-                                    :icon="question.answer || question.candidates.length > 0 ? 'mdi-check' : 'mdi-alert-circle'"
+                                    :icon="question.uuid || question.candidates.length > 0 ? 'mdi-check' : 'mdi-alert-circle'"
                                 ></v-icon>
                                 <span class="ml-2">{{ question.text }}</span>
                             </v-expansion-panel-title>

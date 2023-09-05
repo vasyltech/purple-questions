@@ -98,7 +98,9 @@ const Methods = {
         const settings = ReadSettings();
         const value    = _.get(settings, setting);
 
-        return _.isEmpty(value) ? def : value;
+        return _.isUndefined(value)
+                || _.isNull(value)
+                || (_.isString(value) && value.length === 0) ? def : value;
     }
 
 }

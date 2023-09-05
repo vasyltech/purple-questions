@@ -213,12 +213,12 @@ const Methods = {
         for (let i = 0; i < message.questions.length; i++) {
             const question = message.questions[i];
 
-            if (!_.isEmpty(question.uuid)) { // Direct answer?
-                question.answer = Questions.readQuestion(question.uuid).answer;
-            } else {
+            if (_.isUndefined(question.uuid) || _.isNull(question.uuid)) {
                 question.candidates = await PrepareCandidates(
                     question, similarity
                 );
+            } else { // Direct answer
+                question.answer = Questions.readQuestion(question.uuid).answer;
             }
         }
 

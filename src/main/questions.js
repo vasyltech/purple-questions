@@ -200,7 +200,7 @@ export default {
         await DbRepository.indexQuestion(uuid, data.embedding);
 
         // Update the origin to include the question reference
-        if (!_.isEmpty(data.origin)) {
+        if (_.isString(data.origin)) {
             AddReferenceToOrigin(data.origin, data.text, uuid)
         }
 
