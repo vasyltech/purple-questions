@@ -6,6 +6,8 @@ const _              = require('lodash');
 
 import DbRepository from './repository/db';
 import Settings from './settings';
+import Documents from './documents';
+import Messages from './messages';
 
 /**
  * Get the base path to the questions directory
@@ -28,6 +30,61 @@ function GetQuestionsPath(append = null) {
     return append ? Path.join(basePath, append) : basePath;
 }
 
+/**
+ *
+ * @param {*} origin
+ * @param {*} text
+ * @param {*} uuid
+ */
+function AddReferenceToOrigin(origin, text, uuid) {
+    if (origin.includes('/documents/')) {
+        Documents.addDocumentQuestionReference(
+            origin.substring(11),
+            {
+                uuid,
+                text
+            }
+        );
+    } else if (origin.includes('/messages/')) {
+        Messages.addMessageQuestionReference(
+            origin.substring(10),
+            {
+                uuid,
+                text
+            }
+        );
+    }
+}
+
+/**
+ *
+ * @param {*} origin
+ * @param {*} text
+ * @param {*} uuid
+ */
+function RemoveReferenceFromOrigin(origin, text, uuid) {
+    if (origin.includes('/documents/')) {
+        Documents.removeDocumentQuestionReference(
+            origin.substring(11),
+            {
+                uuid,
+                text
+            }
+        );
+    } else if (origin.includes('/messages/')) {
+        Messages.removeMessageQuestionReference(
+            origin.substring(10),
+            {
+                uuid,
+                text
+            }
+        );
+    }
+}
+
+/**
+ *
+ */
 const QuestionIndex = (() => {
 
     let index = null;
@@ -142,6 +199,11 @@ export default {
         // Index the question in the vector store
         await DbRepository.indexQuestion(uuid, data.embedding);
 
+        // Update the origin to include the question reference
+        if (!_.isEmpty(data.origin)) {
+            AddReferenceToOrigin(data.origin, data.text, uuid)
+        }
+
         // Finally, add the question to the index
         return QuestionIndex.add({
             uuid,
@@ -182,8 +244,15 @@ export default {
      * @returns {}
      */
     deleteQuestion: async (uuid) => {
-        const path = GetQuestionsPath(uuid);
+        const path     = GetQuestionsPath(uuid);
+        const question = JSON.parse(Fs.readFileSync(path).toString());
 
+        // Remove any links associated with the question
+        if (question.origin) {
+            RemoveReferenceFromOrigin(question.origin, question.text, uuid);
+        }
+
+        // Delete the actual file
         if (Fs.existsSync(path)) {
             Fs.unlinkSync(GetQuestionsPath(uuid));
         }

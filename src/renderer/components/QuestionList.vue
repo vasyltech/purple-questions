@@ -226,7 +226,8 @@ export default {
 
             this.$api.questions
                 .updateQuestion(this.currentQuestion.uuid, {
-                    answer: this.currentQuestionData.text
+                    text: this.currentQuestionData.text,
+                    answer: this.currentQuestionData.answer
                 })
                 .then(() => {
                     _this.successMessage     = 'Changes saved!';

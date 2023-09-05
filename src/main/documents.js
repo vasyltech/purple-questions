@@ -345,12 +345,68 @@ const Methods = {
 
         // Iterate over the list of questions and get answers
         _.forEach(document.questions, (q) => {
-            if (!_.isUndefined(q.uuid)) {
+            if (!_.isEmpty(q.uuid)) {
                 q.answer = Questions.readQuestion(q.uuid).answer;
             }
         });
 
         return document;
+    },
+
+    /**
+     *
+     * @param {*} uuid
+     * @param {*} question
+     * @returns
+     */
+    addDocumentQuestionReference: (uuid, question) => {
+        let result     = false;
+        const document = Methods.readDocument(uuid);
+
+        // Find the question and add reference
+        _.forEach(document.questions, (q) => {
+            if (q.text === question.text) {
+                q.uuid = question.uuid;
+
+                // Yes, we found one
+                result = true;
+            }
+        });
+
+        // Update the question
+        Methods.updateDocument(uuid, {
+            questions: document.questions
+        })
+
+        return result;
+    },
+
+    /**
+     *
+     * @param {*} uuid
+     * @param {*} question
+     * @returns
+     */
+    removeDocumentQuestionReference: (uuid, question) => {
+        let result     = false;
+        const document = Methods.readDocument(uuid);
+
+        // Find the question and add reference
+        _.forEach(document.questions, (q) => {
+            if (q.uuid === question.uuid) {
+                q.uuid = null;
+
+                // Yes, we found one
+                result = true;
+            }
+        });
+
+        // Update the question
+        Methods.updateDocument(uuid, {
+            questions: document.questions
+        })
+
+        return result;
     },
 
     /**

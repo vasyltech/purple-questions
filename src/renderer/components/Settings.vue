@@ -44,11 +44,32 @@
             </v-container>
 
             <v-container>
-                <v-row>
+                <v-row class="mt-4">
                     <v-col cols="12" md="6">
                         <v-divider></v-divider>
 
-                        <div class="text-overline pt-6 pb-2">Application Configurations</div>
+                        <div class="text-overline pt-6">Application Configurations</div>
+                    </v-col>
+                </v-row>
+
+                <v-row class="mt-0">
+                    <v-col cols="12" md="6">
+                        <div>
+                            <span class="text-caption">Similarity Distance</span>
+                        </div>
+                        <v-slider
+                            v-model="settings.similarityDistance"
+                            :thumb-size="24"
+                            thumb-label="always"
+                            step="1"
+                            persistent-hint
+                            hint="What degree of similarity between two questions should be considered as indicative of them being similar?"
+                        ></v-slider>
+                    </v-col>
+                </v-row>
+
+                <v-row class="mt-6">
+                    <v-col cols="12" md="6">
                         <v-text-field
                             variant="outlined"
                             label="Application Data Location"
@@ -73,11 +94,6 @@
         </v-responsive>
     </v-container>
 </template>
-
-<script setup>
-    //
-</script>
-
 
 <script>
 export default {
@@ -129,7 +145,24 @@ export default {
 
         this.$api.settings.readSettings().then((response) => {
             _this.settings = response;
+
+            // Set some default values
+            if (!_this.settings.similarityDistance) {
+                _this.settings.similarityDistance = 25;
+            }
         });
     }
 }
 </script>
+
+<style scoped>
+.v-slider.v-input--horizontal {
+    margin-inline-start: 0;
+    margin-inline-end: 0;
+}
+
+.v-slider.v-input--horizontal .v-input__details {
+    padding-inline-start: 16px;
+    padding-inline-end: 16px;
+}
+</style>

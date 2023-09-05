@@ -97,6 +97,10 @@ const MessageIndex = (() => {
         return response;
     }
 
+    /**
+     *
+     * @param {*} uuid
+     */
     function Remove(uuid) {
         index = Read().filter(m => m.uuid !== uuid);
 
@@ -121,6 +125,37 @@ function PrepareExcerpt(text, wCount = 30) {
     const parts = text.split(/\r\n|\n|\s|\t/g).filter(p => p.trim().length > 0);
 
     return parts.slice(0, wCount).join(' ') + (parts.length > wCount ? '...' : '');
+}
+
+/**
+ *
+ * @param {Question} question
+ * @param {Number}   similarity
+ *
+ * @returns
+ */
+async function PrepareCandidates(question, similarity) {
+    const similar  = await DbRepository.searchQuestions(
+        question.embedding, 3
+    );
+
+    // Prepare the array of candidates
+    const candidates = [];
+
+    _.forEach(similar, (candidate) => {
+        if (candidate._distance <= similarity) {
+            const q = Questions.readQuestion(candidate.uuid);
+
+            candidates.push({
+                uuid: q.uuid,
+                text: q.text,
+                similarity: Math.round(candidate._distance * 100),
+                answer: q.answer
+            });
+        }
+    });
+
+    return candidates;
 }
 
 const Methods = {
@@ -172,58 +207,82 @@ const Methods = {
         const message = JSON.parse(
             Fs.readFileSync(GetMessagesBasePath(uuid)).toString()
         );
+        const similarity = Settings.getSetting('similarityDistance', 25) / 100;
 
         // Dynamically find the best answer candidates
         for (let i = 0; i < message.questions.length; i++) {
             const question = message.questions[i];
-            const similar  = await DbRepository.searchQuestions(
-                question.embedding, 5
-            );
 
-            // Prepare the array of candidates
-            const candidates = [];
-
-            _.forEach(similar, (candidate) => {
-                if (candidate._distance <= 0.25) {
-                    const q = Questions.readQuestion(candidate.uuid);
-
-                    candidates.push({
-                        uuid: q.uuid,
-                        text: q.text,
-                        answer: q.answer,
-                        isEditable: q.origin === `/messages/${uuid}`
-                    });
-                }
-            });
-
-            // If there are no candidates, then create one that is just a placeholder
-            // for manual entry
-            if (candidates.length === 0) {
-                question.candidate = {
-                    answer: null,
-                    isEditable: true
-                };
-            // However, if there are more than 1 candidate to answer the question,
-            // then combine them together as a single answer
-            } else if (candidates.length > 1) {
-                question.candidate = _.reduce(
-                    candidates,
-                    (combine, c) => {
-                        combine.answer += `== ${c.text} ==\n${c.answer}\n\n`;
-
-                        return combine;
-                    },
-                    { answer: '', isEditable: true, isMultiple: true }
+            if (!_.isEmpty(question.uuid)) { // Direct answer?
+                question.answer = Questions.readQuestion(question.uuid).answer;
+            } else {
+                question.candidates = await PrepareCandidates(
+                    question, similarity
                 );
-
-                // Trim unnecessary spaces
-                question.candidate.answer = question.candidate.answer.trim();
-            } else { // There is only one candidate
-                question.candidate = candidates.shift();
             }
         }
 
         return message;
+    },
+
+    /**
+     *
+     * @param {*} uuid
+     * @param {*} question
+     * @returns
+     */
+    addMessageQuestionReference: (uuid, question) => {
+        let result    = false;
+        const message = JSON.parse(
+            Fs.readFileSync(GetMessagesBasePath(uuid)).toString()
+        );
+
+        // Find the question and add reference
+        _.forEach(message.questions, (q) => {
+            if (q.text === question.text) {
+                q.uuid = question.uuid;
+
+                // Yes, we found one
+                result = true;
+            }
+        });
+
+        // Update the question
+        Methods.updateMessage(uuid, {
+            questions: message.questions
+        })
+
+        return result;
+    },
+
+    /**
+     *
+     * @param {*} uuid
+     * @param {*} question
+     * @returns
+     */
+    removeMessageQuestionReference: (uuid, question) => {
+        let result    = false;
+        const message = JSON.parse(
+            Fs.readFileSync(GetMessagesBasePath(uuid)).toString()
+        );
+
+        // Find the question and add reference
+        _.forEach(message.questions, (q) => {
+            if (q.uuid === question.uuid) {
+                q.uuid = null;
+
+                // Yes, we found one
+                result = true;
+            }
+        });
+
+        // Update the question
+        Methods.updateMessage(uuid, {
+            questions: message.questions
+        })
+
+        return result;
     },
 
     /**
@@ -243,8 +302,7 @@ const Methods = {
      * @returns
      */
     updateMessage: (uuid, data) => {
-        const fullPath = GetMessagesBasePath(uuid);
-
+        const fullPath   = GetMessagesBasePath(uuid);
         const content    = JSON.parse(Fs.readFileSync(fullPath).toString());
         const newContent = Object.assign({}, content, data);
 

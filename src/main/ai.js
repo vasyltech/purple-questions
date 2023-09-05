@@ -71,7 +71,7 @@ export default {
         question.embedding = res1.output.embedding;
 
         // Index the question
-        const result = Questions.createQuestion(question);
+        const result = await Questions.createQuestion(question);
 
         // Return enriched question back
         return {

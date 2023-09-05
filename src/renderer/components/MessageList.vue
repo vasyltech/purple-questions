@@ -171,25 +171,31 @@
                             <v-expansion-panel-title>
                                 <v-icon
                                     color="grey"
-                                    :icon="question.candidate.answer ? 'mdi-check' : 'mdi-alert-circle'"
+                                    :icon="question.answer || question.candidates.length > 0 ? 'mdi-check' : 'mdi-alert-circle'"
                                 ></v-icon>
                                 <span class="ml-2">{{ question.text }}</span>
                             </v-expansion-panel-title>
 
                             <v-expansion-panel-text>
+                                <div v-for="(candidate, i) in question.candidates" :key="i" class="mt-4">
+                                    <h4 class="text-subtitle-1 font-weight-medium">
+                                        {{ candidate.text }} <small>({{ candidate.similarity === 0 ? 'exact match' : `distance: ${candidate.similarity}` }})</small>
+                                    </h4>
+                                    <pre class="answer">{{ candidate.answer }}</pre>
+                                </div>
+
                                 <v-textarea
-                                    :label="getAnswerBoxLabel(question)"
+                                    label="Direct Answer"
                                     variant="outlined"
                                     auto-grow
-                                    :readonly="!question.candidate.isEditable"
                                     :rules="[inputValidationRules.required]"
                                     class="mt-6"
-                                    v-model="question.candidate.answer"
+                                    v-model="question.answer"
                                 ></v-textarea>
 
                                 <div class="d-flex justify-end">
                                     <v-btn
-                                        v-if="!question.candidate.uuid"
+                                        v-if="!question.uuid"
                                         variant="text"
                                         :disabled="isIndexingQuestion(question)"
                                         @click="indexQuestion(question)"
@@ -197,7 +203,7 @@
                                         {{ isIndexingQuestion(question) ? 'Indexing...' : 'Index Answer' }}
                                     </v-btn>
                                     <v-btn
-                                        v-if="question.candidate.isEditable && question.candidate.uuid"
+                                        v-else
                                         variant="text"
                                         :disabled="isUpdatingQuestion(question)"
                                         @click="updateQuestion(question)"
@@ -227,7 +233,7 @@
                     </div>
                 </v-sheet>
 
-                <v-sheet v-if="hasAnyAnswer && !currentMessageData.answer" class="d-flex align-center justify-center flex-wrap text-center mt-10 px-4" elevation="1"
+                <v-sheet v-if="hasAnyAnswer" class="d-flex align-center justify-center flex-wrap text-center mt-10 px-4" elevation="1"
                     height="200" rounded width="100%" color="grey-lighten-3">
                     <div v-if="!generatingAnswer">
                         <p class="text-body-2 mb-4">
@@ -345,7 +351,7 @@ export default {
             return this.currentMessageData
                 && this.currentMessageData.questions
                 && this.currentMessageData.questions.filter(
-                    q => q.candidate.answer
+                    q => q.answer || q.candidates.length > 0
                 ).length > 0
         }
     },
@@ -508,8 +514,7 @@ export default {
         indexQuestion(question) {
             const _this = this;
 
-            const answer = question.candidate.answer
-                                ? question.candidate.answer.trim() : '';
+            const answer = question.answer ? question.answer.trim() : '';
 
             if (answer.length > 0) {
                 this.indexingQuestions.push(question);
@@ -526,8 +531,6 @@ export default {
 
                         _this.getMessageIdentifiedQuestions();
 
-                        _this.analyzingMessage = false;
-
                         _this.successMessage     = 'Question Indexed!';
                         _this.showSuccessMessage = true;
                     });
@@ -540,8 +543,8 @@ export default {
 
             this.$api.questions
                 .updateQuestion(
-                    question.candidate.uuid,
-                    { answer: question.candidate.answer },
+                    question.uuid,
+                    { answer: question.answer }
                 ).then(() => {
                     _this.updatingQuestions = _this.updatingQuestions.filter(
                         q => q !== question
@@ -566,15 +569,6 @@ export default {
         },
         isUpdatingQuestion(question) {
             return this.updatingQuestions.includes(question);
-        },
-        getAnswerBoxLabel(question) {
-            let label = question.candidate.answer ? 'Best Answer' : 'Provide Your Answer';
-
-            if (question.candidate.isMultiple) {
-                label += ' (Multiple Candidates)'
-            }
-
-            return label;
         },
         handleSearchBlur() {
             if (this.search === '' || this.search === null) {
@@ -606,5 +600,14 @@ export default {
 <style scoped>
 .clickable {
     cursor: pointer;
+}
+
+.answer {
+    font-size: 0.85rem;
+    border: 1px solid #CCCCCC;
+    padding: 10px;
+    border-radius: 0.5rem;
+    white-space: pre-wrap;
+    word-wrap: break-word;
 }
 </style>
