@@ -25,7 +25,8 @@ export default {
 
         // Prepare document for indexing
         document.questions = res1.output.map(q => ({
-            text: q
+            text: q.question,
+            answer: q.answer
         })); // List of generated questions
 
         // document.corpus = res1.corpus; // What did we send to OpenAI?
@@ -39,46 +40,34 @@ export default {
 
     /**
      *
-     * @param {*} text
      * @param {*} uuid
+     * @param {*} data
+     * @returns
      */
-    indexDocumentQuestion: async (text, uuid) => {
+    indexDocumentQuestion: async (uuid, question) => {
         // Prepare the object for the new question
-        const question = {
-            text,
+        const content = {
+            text: question.text,
+            answer: question.answer,
             origin: `/documents/${uuid}`,
             usage: []
         };
 
         // Step #1. Prepare the vector embedding for the question
-        const res1 = await OpenAiRepository.prepareTextEmbedding(text);
+        const res1 = await OpenAiRepository.prepareTextEmbedding(question.text);
 
         // Add usage to the question
-        question.usage.push(res1.usage);
-
-        // Step #2. Generate the answer for the question based on document's material
-        const document = Documents.readDocument(uuid);
-        const res2     = await OpenAiRepository.prepareAnswerFromDocument(
-            question.text, document
-        );
-
-        // Add usage to the document
-        question.usage.push(res2.usage);
+        content.usage.push(res1.usage);
 
         // Now we have all the necessary information to store the question in the
         // document
-        question.answer    = res2.output;
-        question.embedding = res1.output.embedding;
+        content.embedding = res1.output.embedding;
 
         // Index the question
-        const result = await Questions.createQuestion(question);
+        const result = await Questions.createQuestion(content);
 
-        // Return enriched question back
-        return {
-            uuid: result.uuid,
-            text,
-            answer: question.answer
-        }
+        // Return enriched question
+        return Object.assign({ uuid: result.uuid } , question);
     },
 
     /**

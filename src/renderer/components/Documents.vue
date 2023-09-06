@@ -307,7 +307,6 @@
             </v-expansion-panel-title>
             <v-expansion-panel-text>
               <v-textarea
-                v-if="question.uuid"
                 label="Answer"
                 v-model="currentDocumentData.questions[index].answer"
                 auto-grow
@@ -315,29 +314,13 @@
                 class="mt-6"
               ></v-textarea>
 
-              <v-sheet v-else class="d-flex mt-2 mb-4 align-center justify-center flex-wrap text-center mx-auto px-4" color="grey-lighten-3"
-                height="150" rounded width="100%">
-                <div v-if="!isIndexingQuestion(question)">
-                  <p class="text-body-2 mb-4">
-                    Generate the answer and index the question.
-                  </p>
-                  <v-btn @click="indexQuestion(question)">Index Question</v-btn>
-                </div>
-                <div v-else>
-                  <p class="text-body-2 mb-4">
-                    Please wait a few seconds. We are indexing the question
-                  </p>
-                  <v-progress-circular
-                    indeterminate
-                    color="grey"
-                  ></v-progress-circular>
-                </div>
-              </v-sheet>
-
               <div class="d-flex justify-end">
                 <v-btn variant="text" @click="deleteQuestion(question)">Delete</v-btn>
                 <v-btn variant="outlined" class="ml-2" v-if="question.uuid" :disabled="isSavingQuestion(question)" @click="saveQuestion(question)">
                   {{ isSavingQuestion(question) ? 'Updating...' : 'Update' }}
+                </v-btn>
+                <v-btn variant="outlined" class="ml-2" v-else :disabled="isIndexingQuestion(question)" @click="indexQuestion(question)">
+                  {{ isIndexingQuestion(question) ? 'Indexing...' : 'Index' }}
                 </v-btn>
               </div>
             </v-expansion-panel-text>
@@ -381,6 +364,16 @@
           </v-card-actions>
         </v-card>
       </v-dialog>
+
+      <v-snackbar v-model="showSuccessMessage" :timeout="2000">
+        {{ successMessage }}
+
+        <template v-slot:actions>
+            <v-btn variant="text" @click="showSuccessMessage = false">
+                Close
+            </v-btn>
+        </template>
+      </v-snackbar>
     </v-responsive>
 
     <v-dialog v-model="deleteDocumentModal" transition="dialog-bottom-transition" width="450">
@@ -398,16 +391,6 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-
-    <v-snackbar v-model="showSuccessMessage" :timeout="2000">
-        {{ successMessage }}
-
-        <template v-slot:actions>
-            <v-btn variant="text" @click="showSuccessMessage = false">
-                Close
-            </v-btn>
-        </template>
-    </v-snackbar>
   </v-container>
 </template>
 
@@ -644,19 +627,7 @@ export default {
         .updateDocument(this.currentDocument.uuid, {
           name: this.currentDocumentData.name,
           text: this.currentDocumentData.text,
-          questions: JSON.parse(JSON.stringify(
-            this.currentDocumentData.questions.map((q) => {
-              const res = {};
-
-              if (q.uuid !== undefined) {
-                res.uuid = q.uuid;
-              }
-
-              res.text = q.text;
-
-              return res;
-            })
-          ))
+          questions: JSON.parse(JSON.stringify(this.currentDocumentData.questions))
         })
         .then((document) => {
           _this.currentDocument = Object.assign(_this.currentDocument, document);
@@ -745,7 +716,10 @@ export default {
       const _this = this;
 
       this.$api.ai
-        .indexDocumentQuestion(question.text, this.currentDocument.uuid)
+        .indexDocumentQuestion(this.currentDocument.uuid, {
+          text: question.text,
+          answer: question.answer
+        })
         .then((response) => {
           // Remove it from indexing array
           _this.indexingQuestions = _this.indexingQuestions.filter(
@@ -757,8 +731,6 @@ export default {
 
           // Replacing the question with result
           _this.currentDocumentData.questions[position] = response;
-
-          this.saveDocumentChanges();
         });
     },
     isIndexingQuestion(question) {

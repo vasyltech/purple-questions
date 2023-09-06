@@ -80,9 +80,9 @@
                     </v-virtual-scroll>
 
                     <v-sheet v-else class="d-flex align-center justify-center flex-wrap text-center mx-auto px-4"
-                        elevation="1" height="200" rounded width="100%">
+                        elevation="1" height="200" rounded width="100%" color="grey-lighten-3">
                         <div>
-                            <p class="text-body-2 mb-4">
+                            <p class="text-body-2">
                                 There are no questions in your knowledge base.
                             </p>
                         </div>

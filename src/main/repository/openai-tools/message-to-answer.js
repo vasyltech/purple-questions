@@ -12,21 +12,28 @@ USER MESSAGE:
 {message}
 """`;
 
+/**
+ *
+ * @param {*} data
+ * @returns
+ */
 function GetCorpus(data = null) {
-    return [
-        {
-            role: 'system',
-            content: SYSTEM_PROMPT
-        },
-        {
-            role: 'user',
-            content: data ? USER_PROMPT
-                .replace('{message}', data.message)
-                .replace('{material}', data.material.map(
-                    (m) => `${m.question}\n${m.answer}`).join('\n\n')
-                ) : USER_PROMPT
-        }
-    ];
+    return {
+        messages: [
+            {
+                role: 'system',
+                content: SYSTEM_PROMPT
+            },
+            {
+                role: 'user',
+                content: data ? USER_PROMPT
+                    .replace('{message}', data.message)
+                    .replace('{material}', data.material.map(
+                        (m) => `${m.question}\n${m.answer}`).join('\n\n')
+                    ) : USER_PROMPT
+            }
+        ]
+    }
 }
 
 export default {

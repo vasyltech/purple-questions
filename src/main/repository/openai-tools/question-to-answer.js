@@ -8,18 +8,20 @@ USER QUESTION:
 {question}`;
 
 function GetCorpus(data = null) {
-    return [
-        {
-            role: 'system',
-            content: SYSTEM_PROMPT
-        },
-        {
-            role: 'user',
-            content: data ? USER_PROMPT
-                .replace('{text}', data.document.text)
-                .replace('{question}', data.question) : USER_PROMPT
-        }
-    ];
+    return {
+        messages: [
+            {
+                role: 'system',
+                content: SYSTEM_PROMPT
+            },
+            {
+                role: 'user',
+                content: data ? USER_PROMPT
+                    .replace('{text}', data.document.text)
+                    .replace('{question}', data.question) : USER_PROMPT
+            }
+        ]
+    }
 }
 
 export default {

@@ -176,7 +176,7 @@ const DocumentIndex = (() => {
     }
 
     return {
-        get: () => Read()[0],
+        get: (reload = false) => Read(reload)[0],
         add: Add,
         find: Find,
         save: Save,
@@ -271,7 +271,6 @@ const Methods = {
                 name: result.title || 'New Document',
                 createdAt: (new Date()).getTime(),
                 type: 'document',
-                origin: documentPath,
                 checksum: Crypto.createHash('md5').update(result.text).digest('hex')
             });
 
@@ -279,6 +278,10 @@ const Methods = {
             Fs.writeFileSync(GetDocumentsPath(response.uuid), JSON.stringify({
                 name: response.name,
                 text: result.text,
+                origin: {
+                    type: 'file',
+                    path: documentPath
+                },
                 questions: []
             }));
         }
@@ -314,7 +317,6 @@ const Methods = {
                 name: title || 'New Document',
                 createdAt: (new Date()).getTime(),
                 type: 'document',
-                origin: url,
                 checksum: Crypto.createHash('md5').update(clean.text).digest('hex')
             });
 
@@ -322,6 +324,10 @@ const Methods = {
             Fs.writeFileSync(GetDocumentsPath(response.uuid), JSON.stringify({
                 name: response.name,
                 text: clean.text,
+                origin: {
+                    type: 'link',
+                    link: url
+                },
                 questions: []
             }));
         } catch (error) {
@@ -345,7 +351,7 @@ const Methods = {
 
         // Iterate over the list of questions and get answers
         _.forEach(document.questions, (q) => {
-            if (_.isUndefined(q.uuid) || _.isNull(q.uuid)) {
+            if (!_.isUndefined(q.uuid) && !_.isNull(q.uuid)) {
                 q.answer = Questions.readQuestion(q.uuid).answer;
             }
         });

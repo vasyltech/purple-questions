@@ -35,22 +35,28 @@ export default {
      */
     prepareQuestionListFromDocument: async (document) => {
         const corpus = Document2QuestionsTool.getCorpus(document);
-        const result = await GetClient().chat.completions.create({
-            model: Settings.getSetting('llmModel', 'gpt-3.5-turbo'),
-            messages: corpus
-        });
+        const result = await GetClient().chat.completions.create(Object.assign(
+            { model: Settings.getSetting('llmModel', 'gpt-3.5-turbo') },
+            corpus
+        ));
 
         // Extract the list of questions and usage data
         const usage = Object.assign({}, _.get(result, 'usage'), {
             'purpose': 'Document2Questions'
         });
 
-        const questions = JSON.parse(
-            _.get(result, 'choices[0].message.content', '[]')
-        );
+        let output = {};
+
+        if (_.get(result, 'choices[0].finish_reason') === 'function_call') {
+            const args = JSON.parse(
+                _.get(result, 'choices[0].message.function_call.arguments', '{}')
+            );
+
+            output = args.output;
+        }
 
         return {
-            output: questions,
+            output,
             usage,
             corpus: Document2QuestionsTool.getCorpus()
         }
@@ -69,10 +75,10 @@ export default {
             question,
             document
         });
-        const result = await GetClient().chat.completions.create({
-            model: Settings.getSetting('llmModel', 'gpt-3.5-turbo'),
-            messages: corpus
-        });
+        const result = await GetClient().chat.completions.create(Object.assign(
+            { model: Settings.getSetting('llmModel', 'gpt-3.5-turbo') },
+            corpus
+        ));
 
         // Extract the list of questions and usage data
         const usage = Object.assign({}, _.get(result, 'usage'), {
@@ -154,10 +160,10 @@ export default {
      */
     prepareQuestionListFromMessage: async (message) => {
         const corpus = Message2QuestionsTool.getCorpus(message);
-        const result = await GetClient().chat.completions.create({
-            model: Settings.getSetting('llmModel', 'gpt-3.5-turbo'),
-            messages: corpus
-        });
+        const result = await GetClient().chat.completions.create(Object.assign(
+            { model: Settings.getSetting('llmModel', 'gpt-3.5-turbo') },
+            corpus
+        ));
 
         // Extract the list of questions and usage data
         const usage = Object.assign({}, _.get(result, 'usage'), {
@@ -165,7 +171,9 @@ export default {
         });
 
         const output = JSON.parse(
-            _.get(result, 'choices[0].message.content', '{}').replace(/\n/g, '\\n')
+            _.get(result, 'choices[0].message.content', '{}')
+                .replace(/\n/g, '\\n')
+                .replace(/,\\n/g, ',')
         );
 
         return {
@@ -188,10 +196,10 @@ export default {
             message,
             material
         });
-        const result = await GetClient().chat.completions.create({
-            model: Settings.getSetting('llmModel', 'gpt-3.5-turbo'),
-            messages: corpus
-        });
+        const result = await GetClient().chat.completions.create(Object.assign(
+            { model: Settings.getSetting('llmModel', 'gpt-3.5-turbo') },
+            corpus
+        ));
 
         // Extract the list of questions and usage data
         const usage = Object.assign({}, _.get(result, 'usage'), {

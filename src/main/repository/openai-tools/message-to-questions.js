@@ -17,16 +17,18 @@ OUTPUT:
 `;
 
 function GetCorpus(message = null) {
-    return [
-        {
-            role: 'system',
-            content: SYSTEM_PROMPT
-        },
-        {
-            role: 'user',
-            content: message ? USER_PROMPT.replace('{message}', message) : USER_PROMPT
-        }
-    ];
+    return {
+        messages: [
+            {
+                role: 'system',
+                content: SYSTEM_PROMPT
+            },
+            {
+                role: 'user',
+                content: message ? USER_PROMPT.replace('{message}', message) : USER_PROMPT
+            }
+        ]
+    }
 }
 
 export default {

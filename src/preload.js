@@ -63,8 +63,8 @@ contextBridge.exposeInMainWorld(
             analyzeMessageContent: (uuid) => ipcRenderer.invoke(
                 'ai', ['analyzeMessageContent', uuid]
             ),
-            indexDocumentQuestion: (text, uuid) => ipcRenderer.invoke(
-                'ai', ['indexDocumentQuestion', text, uuid]
+            indexDocumentQuestion: (uuid, question) => ipcRenderer.invoke(
+                'ai', ['indexDocumentQuestion', uuid, question]
             ),
             indexMessageQuestion: (messageUuid, text, answer) => ipcRenderer.invoke(
                 'ai', ['indexMessageQuestion', messageUuid, text, answer]
