@@ -1,4 +1,4 @@
-const SYSTEM_PROMPT = 'You are a helpful assistant who prepares the list of questions';
+const SYSTEM_PROMPT = 'You are a helpful assistant. Always use the function you have been provided with.';
 
 const USER_PROMPT = `Prepare the list of "How to..?" questions that can be answered with information from the text. Generate as many questions as you can think of and answer them. Keep questions generic.
 
@@ -45,7 +45,10 @@ function GetCorpus(doc = null) {
                                 }
                             }
                         }
-                    }
+                    },
+                    required: [
+                        "output"
+                    ]
                 }
             }
         ]

@@ -1,21 +1,21 @@
-const SYSTEM_PROMPT = 'You are a helpful assistant. Output ONLY a valid JSON.';
+const SYSTEM_PROMPT = 'You are a helpful assistant. Always use the function you have been provided with.';
 
-const USER_PROMPT = `User sent a support message. They want guidance on how to resolve their questions.
+const USER_PROMPT = `User sent a support message. They want guidance on how to resolve their issues.
 
 USER MESSAGE:
 """
 {message}
 """
 
-Step 1. Rewrite the user message.
-Step 2. Rewrite Step 1 output as the list of "How to..?" questions user is asking. Keep the questions generic. DO NOT include in generated questions names, website domains or sensitive user data.
+Rewrite the user message and use the rewrite to prepare the list of questions that the user might be asking. Keep the questions generic. DO NOT include in generated questions names, website domains or sensitive user data.
 
-If user message does not have any problems or questions, DO NOT make up them. Just return an empty JSON object.
+For example, user message "I would like to create a few capabilities for my project. What would you recommend?" can be rewritten as the list of questions like: "How to create a custom capability?", "What are the best practices to name a capability?", "How many capabilities I can create?", etc.`;
 
-OUTPUT:
-{"rewrite": "output of the Step 1 as string","questions": "array of questions from Step 2"}
-`;
-
+/**
+ *
+ * @param {*} message
+ * @returns
+ */
 function GetCorpus(message = null) {
     return {
         messages: [
@@ -26,6 +26,30 @@ function GetCorpus(message = null) {
             {
                 role: 'user',
                 content: message ? USER_PROMPT.replace('{message}', message) : USER_PROMPT
+            }
+        ],
+        functions: [
+            {
+                name: "accept_output",
+                description: "Accept the message rewrite and an array of generated questions",
+                parameters: {
+                    type: "object",
+                    properties: {
+                        rewrite: {
+                            type: "string"
+                        },
+                        questions: {
+                            type: "array",
+                            items: {
+                                type: "string"
+                            }
+                        }
+                    },
+                    required: [
+                        "rewrite",
+                        "questions"
+                    ]
+                }
             }
         ]
     }

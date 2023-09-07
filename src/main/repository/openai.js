@@ -53,6 +53,8 @@ export default {
             );
 
             output = args.output;
+        } else {
+            throw new Error('OpenAI did not respond properly.');
         }
 
         return {
@@ -170,11 +172,16 @@ export default {
             'purpose': 'Message2Questions'
         });
 
-        const output = JSON.parse(
-            _.get(result, 'choices[0].message.content', '{}')
-                .replace(/\n/g, '\\n')
-                .replace(/,\\n/g, ',')
-        );
+        // Making sure that we got the correct output
+        let output = {};
+
+        if (_.get(result, 'choices[0].finish_reason') === 'function_call') {
+            output = JSON.parse(
+                _.get(result, 'choices[0].message.function_call.arguments')
+            );
+        } else {
+            throw new Error('OpenAI did not respond properly');
+        }
 
         return {
             output,
