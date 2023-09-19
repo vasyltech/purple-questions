@@ -1,8 +1,8 @@
 const SYSTEM_PROMPT = 'You are a polite customer support agent. Use the best customer support guidances.';
 
-const USER_PROMPT = `Prepare an answer to the user message based on answers to similar questions. If you cannot prepare a good answer, say you do not know. DO NOT fabricate the answer.
+const USER_PROMPT = `Prepare an answer to the user message based on answers to similar questions. If you cannot prepare a good answer, say you do not know. DO NOT fabricate the answer. {constraint}
 
-SIMILAR QUESTION WITH ANSWERS:
+MATERIAL:
 """
 {material}
 """
@@ -27,9 +27,10 @@ function GetCorpus(data = null) {
             {
                 role: 'user',
                 content: data ? USER_PROMPT
+                    .replace('{constraint}', data.constraint)
                     .replace('{message}', data.message)
                     .replace('{material}', data.material.map(
-                        (m) => `${m.question}\n${m.answer}`).join('\n\n')
+                        (m) => `${m.name}\n${m.text}`).join('\n\n')
                     ) : USER_PROMPT
             }
         ]

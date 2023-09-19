@@ -119,7 +119,8 @@ const MessageIndex = (() => {
  *
  * @param {*} text
  * @param {*} wCount
- * @returns
+ *
+ * @returns {String}
  */
 function PrepareExcerpt(text, wCount = 30) {
     const parts = text.split(/\r\n|\n|\s|\t/g).filter(p => p.trim().length > 0);
@@ -144,13 +145,28 @@ async function PrepareCandidates(question, similarity) {
 
     _.forEach(similar, (candidate) => {
         if (candidate._distance <= similarity) {
-            const q = Questions.readQuestion(candidate.uuid);
+            const q      = Questions.readQuestion(candidate.uuid);
+            const origin = Questions.getQuestionOrigin(q);
+
+            // Prepare the reference to the origin
+            const reference = {};
+
+            if (origin.type === 'document') {
+                reference.type = 'Document';
+                reference.uuid = origin.uuid;
+                reference.name = origin.ref.name;
+            } else {
+                reference.type = 'message';
+                reference.uuid = origin.uuid;
+                reference.name = origin.uuid;
+            }
 
             candidates.push({
                 uuid: q.uuid,
                 text: q.text,
                 similarity: Math.round(candidate._distance * 100),
-                answer: q.answer
+                answer: q.answer,
+                reference
             });
         }
     });

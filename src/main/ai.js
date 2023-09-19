@@ -152,18 +152,23 @@ export default {
 
         _.forEach(message.questions, (question) => {
             if (_.isString(question.uuid)) { // Do we have a direct answer?
+                // If the answer was directly answered, then use it as the material
+                // because somebody spent time entering the answer, right?
                 material.push({
-                    question: question.text,
-                    answer: question.answer
+                    uuid: question.uuid,
+                    name: question.text,
+                    text: question.answer
                 });
             } else { // Iterate over the list of candidates and prepare the material
-                material.push(..._.map(question.candidates, (c) => ({
-                    // TODO: Note! We are using the generated from user message question
-                    // as alias to a similar question that is identified as a candidate
-                    // Not sure if we need to pass the actual c.text or question.text
-                    question: c.text,
-                    answer: c.answer
-                })));
+                material.push(..._.map(question.candidates, (c) => {
+                    const doc = Documents.readDocument(c.reference.uuid);
+
+                    return {
+                        uuid: c.reference.uuid,
+                        name: doc.name,
+                        text: doc.text
+                    }
+                }));
             }
         });
 
@@ -171,7 +176,7 @@ export default {
         if (material.length > 0) {
             const res1 = await OpenAiRepository.prepareAnswerForMessage(
                 message.rewrite, // TODO: Should we use the original message instead?
-                material
+                _.unionBy(material, 'uuid')
             );
 
             message.answer = res1.output;

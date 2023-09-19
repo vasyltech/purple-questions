@@ -295,37 +295,38 @@
         <v-textarea v-model="currentDocumentData.text" auto-grow variant="outlined"></v-textarea>
       </v-container>
 
-      <v-container v-if="hasIndexedQuestions">
-        <div class="text-overline pb-2">Indexed Questions</div>
+      <v-container v-if="hasAssociatedQuestions">
+        <div class="text-overline pb-2">Associated Questions</div>
 
-        <v-expansion-panels>
-          <v-expansion-panel v-for="(question, index) in currentDocumentData.questions" :key="index">
-            <v-expansion-panel-title>
+        <v-list lines="false">
+          <v-list-item
+            v-for="(question, index) in currentDocumentData.questions"
+            :key="index"
+            :title="question.text"
+            @click="showDocumentQuestion(question)"
+          >
+            <template v-slot:prepend>
               <v-icon v-if="question.uuid">mdi-check</v-icon>
               <v-icon v-else>mdi-information-symbol</v-icon>
-              <span class="ml-2">{{ question.text }}</span>
-            </v-expansion-panel-title>
-            <v-expansion-panel-text>
-              <v-textarea
-                label="Answer"
-                v-model="currentDocumentData.questions[index].answer"
-                auto-grow
-                variant="outlined"
-                class="mt-6"
-              ></v-textarea>
-
-              <div class="d-flex justify-end">
-                <v-btn variant="text" @click="deleteQuestion(question)">Delete</v-btn>
-                <v-btn variant="outlined" class="ml-2" v-if="question.uuid" :disabled="isSavingQuestion(question)" @click="saveQuestion(question)">
-                  {{ isSavingQuestion(question) ? 'Updating...' : 'Update' }}
-                </v-btn>
-                <v-btn variant="outlined" class="ml-2" v-else :disabled="isIndexingQuestion(question)" @click="indexQuestion(question)">
-                  {{ isIndexingQuestion(question) ? 'Indexing...' : 'Index' }}
-                </v-btn>
-              </div>
-            </v-expansion-panel-text>
-          </v-expansion-panel>
-        </v-expansion-panels>
+            </template>
+            <template v-slot:append>
+              <v-tooltip v-if="!question.uuid" text="Index Question" location="bottom">
+                <template v-slot:activator="{ props }">
+                  <v-btn icon variant="plain" v-bind="props" @click.stop="indexQuestion(question)">
+                    <v-icon>mdi-check</v-icon>
+                  </v-btn>
+                </template>
+              </v-tooltip>
+              <v-tooltip text="Delete Question" location="bottom">
+                <template v-slot:activator="{ props }">
+                  <v-btn icon variant="plain" v-bind="props" @click.stop="deleteQuestion(question)">
+                    <v-icon>mdi-trash-can</v-icon>
+                  </v-btn>
+                </template>
+              </v-tooltip>
+            </template>
+          </v-list-item>
+        </v-list>
       </v-container>
       <v-container v-else>
         <v-sheet class="d-flex align-center justify-center flex-wrap text-center mx-auto px-4" elevation="1"
@@ -361,6 +362,26 @@
           <v-card-actions class="justify-end">
             <v-btn variant="text" @click="deleteSelectedQuestion">Delete</v-btn>
             <v-btn variant="text" @click="deleteQuestionModal = false">Close</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
+      <v-dialog v-model="showQuestionModal" transition="dialog-bottom-transition" width="800">
+        <v-card>
+          <v-toolbar title="Show Question"></v-toolbar>
+          <v-card-text>
+            <v-container>
+              <v-text-field label="Question" v-model="selectedQuestion.text" readonly variant="outlined"></v-text-field>
+            </v-container>
+
+            <v-container>
+              <v-textarea label="Answer" v-model="selectedQuestion.answer" readonly auto-grow variant="outlined"></v-textarea>
+            </v-container>
+          </v-card-text>
+          <v-card-actions class="justify-end">
+            <v-btn variant="text" @click="deleteSelectedQuestion">Delete</v-btn>
+            <v-btn variant="text" v-if="!selectedQuestion.uuid" @click="indexSelectedQuestion">Index</v-btn>
+            <v-btn variant="text" @click="showQuestionModal = false">Close</v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>
@@ -407,6 +428,7 @@ export default {
     deleteFolderModal: false,
     deleteDocumentModal: false,
     deleteQuestionModal: false,
+    showQuestionModal: false,
     deleteIndexedQuestions: true,
     addNewDocumentType: null,
     cachedUrlSelectors: [],
@@ -424,7 +446,6 @@ export default {
     selectedDocument: null,
     selectedQuestion: null,
     indexingQuestions: [],
-    updatingQuestions: [],
     inputValidationRules: {
       required: value => !!value || 'Required.',
       folderName: value => {
@@ -435,7 +456,7 @@ export default {
     drawer: null
   }),
   computed: {
-    hasIndexedQuestions() {
+    hasAssociatedQuestions() {
       return this.currentDocumentData
         && this.currentDocumentData.questions
         && this.currentDocumentData.questions.length > 0;
@@ -471,7 +492,6 @@ export default {
       const _this            = this;
       this.currentDocument   = document;
       this.indexingQuestions = [];
-      this.updatingQuestions = [];
 
       this.$api.documents
         .readDocument(document.uuid)
@@ -539,8 +559,12 @@ export default {
 
           // Closing the modal & resetting the selecting
           _this.deleteDocumentModal = false;
-          _this.selectedDocument    = null;
+          _this.selectedDocument  = null;
         });
+    },
+    showDocumentQuestion(question) {
+      this.selectedQuestion  = question;
+      this.showQuestionModal = true;
     },
     deleteQuestion(question) {
       this.selectedQuestion    = question;
@@ -561,7 +585,10 @@ export default {
           );
 
           _this.deleteQuestionModal = false;
-          _this.selectedQuestion    = null;
+
+          // Question can be deleted from the show modal as well
+          _this.showQuestionModal = false;
+          _this.selectedQuestion  = null;
         });
     },
     createFolder() {
@@ -636,28 +663,6 @@ export default {
           _this.showSuccessMessage = true;
         });
     },
-    saveQuestion(question) {
-      this.updatingQuestions.push(question);
-
-      const _this = this;
-
-      this.$api.questions
-        .updateQuestion(question.uuid, {
-          answer: question.answer
-        })
-        .then(() => {
-          // Remove it from saving array
-          _this.updatingQuestions = _this.updatingQuestions.filter(
-            q => q !== question
-          );
-
-          _this.successMessage     = 'Changes saved!';
-          _this.showSuccessMessage = true;
-        });
-    },
-    isSavingQuestion(question) {
-      return this.updatingQuestions.includes(question);
-    },
     prepareDocumentTree(tree, parent = null) {
       if (tree.type === 'folder') {
         for (let i = 0; i < tree.children.length; i++) {
@@ -709,6 +714,12 @@ export default {
           _this.currentDocumentData = document;
           _this.analyzingContent    = false;
         });
+    },
+    indexSelectedQuestion() {
+      this.indexQuestion(this.selectedQuestion);
+
+      // Question can be indexed from the show question modal as well
+      this.showQuestionModal = false;
     },
     indexQuestion(question) {
       this.indexingQuestions.push(question);

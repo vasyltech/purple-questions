@@ -178,10 +178,7 @@
 
                             <v-expansion-panel-text>
                                 <div v-for="(candidate, i) in question.candidates" :key="i" class="mt-4">
-                                    <h4 class="text-subtitle-1 font-weight-medium">
-                                        {{ candidate.text }} <small>({{ candidate.similarity === 0 ? 'exact match' : `distance: ${candidate.similarity}` }})</small>
-                                    </h4>
-                                    <pre class="answer">{{ candidate.answer }}</pre>
+                                    <strong>{{ candidate.reference.type }}:</strong> {{ candidate.reference.name }} <small>({{ candidate.similarity === 0 ? 'exact match' : `distance: ${candidate.similarity}` }})</small>
                                 </div>
 
                                 <v-textarea

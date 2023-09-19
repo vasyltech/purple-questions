@@ -3,6 +3,8 @@ const SYSTEM_PROMPT = 'You are a helpful assistant. Always use the function you 
 const USER_PROMPT = `Prepare the list of "How to..?" questions that can be answered with information from the text. Generate as many questions as you can think of and answer them. Keep questions generic.
 
 TEXT:
+# {title}
+
 {text}`;
 
 /**
@@ -21,7 +23,10 @@ function GetCorpus(doc = null) {
             },
             {
                 role: 'user',
-                content: doc ? USER_PROMPT.replace('{text}', doc.text) : USER_PROMPT
+                content: doc ? USER_PROMPT
+                        .replace('{text}', doc.text)
+                        .replace('{title}', doc.name)
+                    : USER_PROMPT
             }
         ],
         functions: [

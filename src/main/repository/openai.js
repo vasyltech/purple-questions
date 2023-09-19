@@ -201,8 +201,10 @@ export default {
     prepareAnswerForMessage: async (message, material) => {
         const corpus = Message2AnswerTool.getCorpus({
             message,
-            material
+            material,
+            constraint: Settings.getSetting('answerConstraints', '')
         });
+
         const result = await GetClient().chat.completions.create(Object.assign(
             { model: Settings.getSetting('llmModel', 'gpt-3.5-turbo') },
             corpus

@@ -1,6 +1,7 @@
-const SYSTEM_PROMPT = 'You are a helpful assistant and you use provided information to generate the best possible answer to the user question. Keep the answer concise.';
+const SYSTEM_PROMPT = 'You are a helpful assistant and you use provided information to generate the best possible answer to the user question.';
 
-const USER_PROMPT = `Generate answer to the user question based on the provided information. If you cannot identify the good answer, just say that you do not know. Do not fabricate the answer.
+const USER_PROMPT = `Generate response to the user message based on the provided material. Answer only to questions that you can find answers in provided material. Do not fabricate the answer.
+
 INFORMATION:
 {text}
 

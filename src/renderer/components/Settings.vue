@@ -41,6 +41,18 @@
                         ></v-select>
                     </v-col>
                 </v-row>
+                <v-row>
+                    <v-col cols="12" md="6">
+                        <v-textarea
+                            label="Constraints for the Model"
+                            v-model="settings.answerConstraints"
+                            auto-grow
+                            variant="outlined"
+                            persistent-hint
+                            hint="Limit what LLM model can use in the message response (e.g. allow referring only to specific WordPress plugins)"
+                        ></v-textarea>
+                    </v-col>
+                </v-row>
             </v-container>
 
             <v-container>

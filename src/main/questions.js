@@ -271,6 +271,28 @@ export default {
      */
     readQuestion: (uuid) => {
         return JSON.parse(Fs.readFileSync(GetQuestionsPath(uuid)).toString());
+    },
+
+    /**
+     *
+     * @param {Question} question
+     *
+     * @returns {Object}
+     */
+    getQuestionOrigin: (question) => {
+        let origin = {};
+
+        if (question.origin.includes('/documents/')) {
+            origin.uuid = question.origin.substring(11);
+            origin.type = 'document';
+            origin.ref  = Documents.readDocument(origin.uuid);
+        } else if (question.origin.includes('/messages/')) {
+            origin.uuid = question.origin.substring(10);
+            origin.type = 'message';
+            origin.ref  = Messages.readMessage(origin.uuid);
+        }
+
+        return origin;
     }
 
 }
