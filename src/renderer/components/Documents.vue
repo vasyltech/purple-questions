@@ -285,11 +285,13 @@
     <v-responsive v-else class="align-left fill-height">
       <v-container>
         <div class="text-overline pb-2">Document Name</div>
-
         <v-text-field v-model="currentDocumentData.name" variant="outlined"></v-text-field>
-      </v-container>
 
-      <v-container>
+        <div v-if="currentDocumentData && currentDocumentData.origin && currentDocumentData.origin.type === 'link'">
+          <div class="text-overline pb-2">Document Origin</div>
+          <v-text-field v-model="currentDocumentData.origin.link" variant="outlined"></v-text-field>
+        </div>
+
         <div class="text-overline pb-2">Content</div>
 
         <v-textarea v-model="currentDocumentData.text" auto-grow variant="outlined"></v-textarea>
@@ -449,11 +451,10 @@ export default {
     inputValidationRules: {
       required: value => !!value || 'Required.',
       folderName: value => {
-        return /^[a-zA-Z\s\d\-]+$/.test(value) || 'Only a-zA-Z0-9 and - allowed.'
+        return /^[a-zA-Z\s\d\-\&\_]+$/.test(value) || 'Only letters, numbers and &, (, ), _, - symbols allowed.'
       }
     },
-    breadcrumb: [{ title: '...'}],
-    drawer: null
+    breadcrumb: [{ title: '...'}]
   }),
   computed: {
     hasAssociatedQuestions() {
@@ -615,7 +616,10 @@ export default {
       document.parent = this.currentFolder;
 
       // Cache the urlContentSelector if type is url
-      if (this.addNewDocumentType === 'url' && this.addNewUrlSelector) {
+      if (this.addNewDocumentType === 'url'
+        && this.addNewUrlSelector
+        && !this.cachedUrlSelectors.includes(this.addNewUrlSelector)
+      ) {
         this.cachedUrlSelectors.push(this.addNewUrlSelector);
       }
 
@@ -654,6 +658,7 @@ export default {
         .updateDocument(this.currentDocument.uuid, {
           name: this.currentDocumentData.name,
           text: this.currentDocumentData.text,
+          origin: Object.assign({}, this.currentDocumentData.origin),
           questions: JSON.parse(JSON.stringify(this.currentDocumentData.questions))
         })
         .then((document) => {

@@ -166,7 +166,8 @@ async function PrepareCandidates(question, similarity) {
                 text: q.text,
                 similarity: Math.round(candidate._distance * 100),
                 answer: q.answer,
-                reference
+                reference,
+                question: q.text
             });
         }
     });

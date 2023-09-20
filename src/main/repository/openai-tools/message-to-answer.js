@@ -1,8 +1,8 @@
-const SYSTEM_PROMPT = 'You are a polite customer support agent. Use the best customer support guidances.';
+const SYSTEM_PROMPT = 'You are a polite customer support agent. Use the best customer support guidances. Do not include any placeholders like "[Your Name]", "[Company Name]", etc. The generated message will be forwarded to customer as-is.';
 
-const USER_PROMPT = `Prepare an answer to the user message based on answers to similar questions. If you cannot prepare a good answer, say you do not know. DO NOT fabricate the answer. {constraint}
+const USER_PROMPT = `Generate response to the user message based ONLY on DOCUMENTATION. Answer ONLY to questions listed in the QUESTIONS TO ANSWER section. Do not fabricate answers. For any other questions in the USER MESSAGE, reply that you do not have knowledge to answer it. {constraint}
 
-MATERIAL:
+DOCUMENTATION:
 """
 {material}
 """
@@ -10,7 +10,13 @@ MATERIAL:
 USER MESSAGE:
 """
 {message}
-"""`;
+"""
+
+QUESTIONS TO ANSWER:
+"""
+{questions}
+"""
+`;
 
 /**
  *
@@ -27,9 +33,11 @@ function GetCorpus(data = null) {
             {
                 role: 'user',
                 content: data ? USER_PROMPT
-                    .replace('{constraint}', data.constraint)
                     .replace('{message}', data.message)
-                    .replace('{material}', data.material.map(
+                    .replace('{constraint}', data.constraint)
+                    .replace('{questions}', data.material.map(
+                        (m) => m.question).join('\n')
+                    ).replace('{material}', data.material.map(
                         (m) => `${m.name}\n${m.text}`).join('\n\n')
                     ) : USER_PROMPT
             }

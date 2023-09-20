@@ -157,7 +157,10 @@ export default {
                 material.push({
                     uuid: question.uuid,
                     name: question.text,
-                    text: question.answer
+                    text: question.answer,
+                    // Duplicating this, so the question can be included in the
+                    // QUESTIONS TO ANSWER section inside the prompt
+                    question: question.text
                 });
             } else { // Iterate over the list of candidates and prepare the material
                 material.push(..._.map(question.candidates, (c) => {
@@ -166,7 +169,8 @@ export default {
                     return {
                         uuid: c.reference.uuid,
                         name: doc.name,
-                        text: doc.text
+                        text: doc.text,
+                        question: c.question
                     }
                 }));
             }
