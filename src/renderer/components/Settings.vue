@@ -16,56 +16,101 @@
 
         <v-responsive class="align-left fill-height">
             <v-container>
-                <div class="text-overline pb-2">OpenAI Configurations</div>
-
-                <v-row>
-                    <v-col cols="12" md="6">
+                <v-tabs
+                    v-model="tab"
+                    color="grey"
+                    align-tabs="left"
+                >
+                    <v-tab value="openai">OpenAI</v-tab>
+                    <v-tab v-if="settings.apiKey" value="persona">Personas</v-tab>
+                    <v-tab v-if="settings.apiKey" value="application">Application</v-tab>
+                </v-tabs>
+                <v-window v-model="tab">
+                    <v-window-item value="openai" class="pt-6">
                         <v-text-field
                             v-model="settings.apiKey"
                             label="OpenAI API Key"
                             placeholder="sk-****"
                             persistent-hint
+                            variant="outlined"
                             hint="The OpenAI API key. It should start with sk-"
                         ></v-text-field>
-                    </v-col>
-                </v-row>
-                <v-row>
-                    <v-col cols="12" md="6">
                         <v-select
+                            v-if="settings.apiKey"
                             v-model="settings.llmModel"
                             label="LLM Model"
+                            class="mt-6"
                             hint="Select the LLM model to use. Default is GPT-3.5"
                             persistent-hint
                             return-object
+                            variant="outlined"
                             :items="supportedLlmModels"
                         ></v-select>
-                    </v-col>
-                </v-row>
-                <v-row>
-                    <v-col cols="12" md="6">
-                        <v-textarea
-                            label="Constraints for the Model"
-                            v-model="settings.answerConstraints"
-                            auto-grow
-                            variant="outlined"
-                            persistent-hint
-                            hint="Limit what LLM model can use in the message response (e.g. allow referring only to specific WordPress plugins)"
-                        ></v-textarea>
-                    </v-col>
-                </v-row>
-            </v-container>
+                    </v-window-item>
+                    <v-window-item value="persona" class="pt-6">
+                        <div v-if="settings.persona && settings.persona.length > 0">
+                            <v-expansion-panels class="pb-4 pr-2 pl-2">
+                                <v-expansion-panel
+                                    v-for="(persona, i) in settings.persona"
+                                    :key="i"
+                                >
+                                    <v-expansion-panel-title>{{ persona.name || 'New Persona' }}</v-expansion-panel-title>
+                                    <v-expansion-panel-text>
+                                        <v-text-field
+                                            v-model="persona.name"
+                                            class="mt-4"
+                                            label="Persona Name"
+                                            variant="outlined"
+                                            persistent-hint
+                                            hint="How should we call this persona?"
+                                        ></v-text-field>
 
-            <v-container>
-                <v-row class="mt-4">
-                    <v-col cols="12" md="6">
-                        <v-divider></v-divider>
+                                        <v-textarea
+                                            class="mt-4"
+                                            label="Persona Description"
+                                            v-model="persona.description"
+                                            auto-grow
+                                            variant="outlined"
+                                            persistent-hint
+                                            hint="How would you describe "
+                                        ></v-textarea>
 
-                        <div class="text-overline pt-6">Application Configurations</div>
-                    </v-col>
-                </v-row>
+                                        <v-textarea
+                                            class="mt-4"
+                                            label="Answer Constraint"
+                                            v-model="persona.constraint"
+                                            auto-grow
+                                            variant="outlined"
+                                            persistent-hint
+                                            hint="Limit what LLM model can use in the message response (e.g. allow referring only to specific WordPress plugins)"
+                                        ></v-textarea>
 
-                <v-row class="mt-0">
-                    <v-col cols="12" md="6">
+                                        <div class="d-flex justify-end mt-6">
+                                            <v-btn variant="text" @click="deletePersona(persona)">Delete</v-btn>
+                                        </div>
+                                    </v-expansion-panel-text>
+                                </v-expansion-panel>
+                            </v-expansion-panels>
+                            <div class="d-flex justify-end">
+                                <v-btn variant="text" @click="createNewPersona">Add New Persona</v-btn>
+                            </div>
+                        </div>
+
+                        <v-sheet
+                            v-else
+                            class="text-center mx-auto py-6"
+                            elevation="1"
+                            rounded
+                            width="100%"
+                            color="grey-lighten-3"
+                        >
+                            <p class="text-body-2 mb-4">
+                                You haven't defined any personas yet.
+                            </p>
+                            <v-btn @click="createNewPersona">Create First Persona</v-btn>
+                        </v-sheet>
+                    </v-window-item>
+                    <v-window-item value="application" class="pt-6">
                         <div>
                             <span class="text-caption">Similarity Distance</span>
                         </div>
@@ -77,12 +122,8 @@
                             persistent-hint
                             hint="What degree of similarity between two questions should be considered as indicative of them being similar?"
                         ></v-slider>
-                    </v-col>
-                </v-row>
-
-                <v-row class="mt-6">
-                    <v-col cols="12" md="6">
                         <v-text-field
+                            class="mt-6"
                             variant="outlined"
                             label="Application Data Location"
                             prepend-inner-icon="mdi-folder"
@@ -90,8 +131,8 @@
                             persistent-hint
                             :hint="`The location were all application data is stored. Default path is ${defaultAppDataFolder}`"
                         ></v-text-field>
-                    </v-col>
-                </v-row>
+                    </v-window-item>
+                </v-window>
             </v-container>
 
             <v-snackbar v-model="showSuccessMessage">
@@ -110,20 +151,34 @@
 <script>
 export default {
     data: () => ({
+        tab: 'openai',
         settings: {},
+        supportedLlmModels: [],
         showSuccessMessage: false
     }),
     computed: {
         defaultAppDataFolder() {
             return this.settings
                 && this.settings._system ? this.settings._system.defaultAppDataFolder : '...';
-        },
-        supportedLlmModels() {
-            return this.settings
-                && this.settings._system ? this.settings._system.supportedLlmModels : [];
         }
     },
     methods: {
+        createNewPersona() {
+            if (!Array.isArray(this.settings.persona)) {
+                this.settings.persona = [];
+            }
+
+            this.settings.persona.push({
+                name: '',
+                description: '',
+                constraint: ''
+            });
+        },
+        deletePersona(persona) {
+            this.settings.persona = this.settings.persona.filter(
+                p => p !== persona
+            );
+        },
         saveSettings() {
             const _this = this;
 
@@ -136,8 +191,12 @@ export default {
                     if (/^sk-[a-zA-Z\d]+$/.test(value) || value === '') {
                         settings[property] = value;
                     }
-                } else if (property === 'llmModel') {
-                    settings[property] = value.value;
+                } else if (property === 'persona') {
+                    settings[property] = value.map(p => ({
+                        name: p.name,
+                        description: p.description,
+                        constraint: p.constraint
+                    }));
                 } else if (property !== '_system') {
                     settings[property] = value;
                 }
@@ -162,6 +221,10 @@ export default {
             if (!_this.settings.similarityDistance) {
                 _this.settings.similarityDistance = 25;
             }
+        });
+
+        this.$api.ai.getModelList().then((response) => {
+            _this.supportedLlmModels = response;
         });
     }
 }

@@ -27,12 +27,16 @@
     "@electron-forge/plugin-auto-unpack-natives": "^6.4.1",
     "@electron-forge/plugin-vite": "^6.4.1",
     "@vitejs/plugin-vue": "^4.3.3",
-    "electron": "26.0.0",
+    "electron": "^26.2.2",
     "vite-plugin-vuetify": "^1.0.2"
   },
   "dependencies": {
+    "@codemirror/lang-javascript": "^6.2.1",
+    "@codemirror/lang-markdown": "^6.2.1",
+    "@codemirror/lang-php": "^6.0.1",
     "@mdi/font": "^7.2.96",
     "cheerio": "^1.0.0-rc.12",
+    "codemirror": "^6.0.1",
     "electron-squirrel-startup": "^1.0.0",
     "entities": "^4.5.0",
     "html-to-md": "^0.8.3",
@@ -43,6 +47,7 @@
     "uuid": "^9.0.0",
     "vectordb": "^0.2.4",
     "vue": "^3.3.4",
+    "vue-codemirror": "^6.1.1",
     "vue-router": "^4.2.4",
     "vuetify": "^3.3.13"
   }

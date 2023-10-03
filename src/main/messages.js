@@ -136,39 +136,27 @@ function PrepareExcerpt(text, wCount = 30) {
  * @returns
  */
 async function PrepareCandidates(question, similarity) {
-    const similar  = await DbRepository.searchQuestions(
-        question.embedding, 3
-    );
+    const matches = await DbRepository.searchQuestions(question.embedding, 3);
 
-    // Prepare the array of candidates
+    // Prepare the collection of candidates
     const candidates = [];
 
-    _.forEach(similar, (candidate) => {
-        if (candidate._distance <= similarity) {
-            const q      = Questions.readQuestion(candidate.uuid);
-            const origin = Questions.getQuestionOrigin(q);
+    _.forEach(matches, (match) => {
+        if (match._distance <= similarity) {
+            // Reading the similar question and getting the data
+            const similar = Questions.readQuestion(match.uuid);
 
-            // Prepare the reference to the origin
-            const reference = {};
-
-            if (origin.type === 'document') {
-                reference.type = 'Document';
-                reference.uuid = origin.uuid;
-                reference.name = origin.ref.name;
-            } else {
-                reference.type = 'message';
-                reference.uuid = origin.uuid;
-                reference.name = origin.uuid;
+            // But only get the data if there is an actual answer provided.
+            // Note! Question itself can be indexed even if there are no answers.
+            // The scenario when question is indexed is when user analyzes the
+            // conversation and questions get embedded and indexed automatically
+            if (_.isString(similar.answer) && similar.answer.length > 0) {
+                candidates.push({
+                    name: similar.text,
+                    text: similar.answer,
+                    similarity: Math.round(match._distance * 100)
+                });
             }
-
-            candidates.push({
-                uuid: q.uuid,
-                text: q.text,
-                similarity: Math.round(candidate._distance * 100),
-                answer: q.answer,
-                reference,
-                question: q.text
-            });
         }
     });
 
@@ -226,80 +214,25 @@ const Methods = {
         );
         const similarity = Settings.getSetting('similarityDistance', 25) / 100;
 
+        const questions = [];
+
         // Dynamically find the best answer candidates
         for (let i = 0; i < message.questions.length; i++) {
-            const question = message.questions[i];
+            // Get question data & preparing the list of potential candidates
+            const question   = Questions.readQuestion(message.questions[i]);
+            const candidates = await PrepareCandidates(question, similarity);
 
-            if (_.isUndefined(question.uuid) || _.isNull(question.uuid)) {
-                question.candidates = await PrepareCandidates(
-                    question, similarity
-                );
-            } else { // Direct answer
-                question.answer = Questions.readQuestion(question.uuid).answer;
-            }
+            questions.push({
+                uuid: message.questions[i],
+                text: question.text,
+                answer: question.answer,
+                candidates
+            });
         }
 
+        message.questions = questions;
+
         return message;
-    },
-
-    /**
-     *
-     * @param {*} uuid
-     * @param {*} question
-     * @returns
-     */
-    addMessageQuestionReference: (uuid, question) => {
-        let result    = false;
-        const message = JSON.parse(
-            Fs.readFileSync(GetMessagesBasePath(uuid)).toString()
-        );
-
-        // Find the question and add reference
-        _.forEach(message.questions, (q) => {
-            if (q.text === question.text) {
-                q.uuid = question.uuid;
-
-                // Yes, we found one
-                result = true;
-            }
-        });
-
-        // Update the question
-        Methods.updateMessage(uuid, {
-            questions: message.questions
-        })
-
-        return result;
-    },
-
-    /**
-     *
-     * @param {*} uuid
-     * @param {*} question
-     * @returns
-     */
-    removeMessageQuestionReference: (uuid, question) => {
-        let result    = false;
-        const message = JSON.parse(
-            Fs.readFileSync(GetMessagesBasePath(uuid)).toString()
-        );
-
-        // Find the question and add reference
-        _.forEach(message.questions, (q) => {
-            if (q.uuid === question.uuid) {
-                q.uuid = null;
-
-                // Yes, we found one
-                result = true;
-            }
-        });
-
-        // Update the question
-        Methods.updateMessage(uuid, {
-            questions: message.questions
-        })
-
-        return result;
     },
 
     /**
@@ -348,7 +281,17 @@ const Methods = {
      * @param {*} uuid
      * @returns
      */
-    deleteMessage: (uuid) => {
+    deleteMessage: async (uuid) => {
+         // Delete all indexed questions first
+         const message = JSON.parse(
+            Fs.readFileSync(GetMessagesBasePath(uuid)).toString()
+        );
+
+        // Delete all the questions associated with the document
+        for (let i = 0; i < message.questions.length; i++) {
+            await Questions.deleteQuestion(message.questions[i]);
+        }
+
         // Delete the message from index
         MessageIndex.remove(uuid);
 

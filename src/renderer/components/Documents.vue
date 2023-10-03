@@ -59,6 +59,22 @@
         </template>
       </v-tooltip>
 
+      <v-tooltip v-if="currentDocument" text="Add New Question" location="bottom">
+        <template v-slot:activator="{ props }">
+          <v-btn icon v-bind="props" @click="showAddQuestionModal = true">
+            <v-icon>mdi-plus-box</v-icon>
+          </v-btn>
+        </template>
+      </v-tooltip>
+
+      <v-tooltip v-if="currentDocument" :text="hasAssociatedQuestions ? 'Re-Analyze Content' : 'Analyze Content'" location="bottom">
+        <template v-slot:activator="{ props }">
+          <v-btn icon v-bind="props" @click="analyzeContent" :disabled="analyzingContent">
+            <v-icon>mdi-refresh</v-icon>
+          </v-btn>
+        </template>
+      </v-tooltip>
+
       <v-tooltip v-if="currentDocument" text="Delete Document" location="bottom">
         <template v-slot:activator="{ props }">
           <v-btn icon v-bind="props" @click="deleteCurrentDocument">
@@ -293,8 +309,20 @@
         </div>
 
         <div class="text-overline pb-2">Content</div>
-
-        <v-textarea v-model="currentDocumentData.text" auto-grow variant="outlined"></v-textarea>
+        <codemirror
+          v-model="currentDocumentData.text"
+          placeholder="Content goes here..."
+          :style="{
+            height: '400px',
+            border: '1px solid #CCCCCC',
+            borderRadius: '0.3rem'
+          }"
+          :autofocus="true"
+          :indent-with-tab="true"
+          :tab-size="2"
+          theme="ayuLight"
+          :extensions="extensions"
+        />
       </v-container>
 
       <v-container v-if="hasAssociatedQuestions">
@@ -305,23 +333,25 @@
             v-for="(question, index) in currentDocumentData.questions"
             :key="index"
             :title="question.text"
-            @click="showDocumentQuestion(question)"
+            @click="selectQuestionForEditing(question)"
           >
             <template v-slot:prepend>
-              <v-icon v-if="question.uuid">mdi-check</v-icon>
+              <v-icon v-if="question.ft_method">
+                {{ question.ft_method === 'shallow' ? 'mdi-memory' : 'mdi-tune-variant'  }}
+              </v-icon>
               <v-icon v-else>mdi-information-symbol</v-icon>
             </template>
             <template v-slot:append>
-              <v-tooltip v-if="!question.uuid" text="Index Question" location="bottom">
+              <v-tooltip text="Fine-Tune Model" location="bottom">
                 <template v-slot:activator="{ props }">
-                  <v-btn icon variant="plain" v-bind="props" @click.stop="indexQuestion(question)">
-                    <v-icon>mdi-check</v-icon>
+                  <v-btn icon variant="plain" v-bind="props" @click.stop="selectQuestionForFineTuning(question)">
+                    <v-icon>mdi-tune-variant</v-icon>
                   </v-btn>
                 </template>
               </v-tooltip>
               <v-tooltip text="Delete Question" location="bottom">
                 <template v-slot:activator="{ props }">
-                  <v-btn icon variant="plain" v-bind="props" @click.stop="deleteQuestion(question)">
+                  <v-btn icon variant="plain" v-bind="props" @click.stop="selectQuestionForDeletion(question)">
                     <v-icon>mdi-trash-can</v-icon>
                   </v-btn>
                 </template>
@@ -335,7 +365,7 @@
           height="150" rounded width="100%" color="grey-lighten-3">
           <div v-if="!analyzingContent">
             <p class="text-body-2 mb-4">
-              The next step is to analyze the content and index the data.
+              The next step is to analyze the content and fine-tune the data.
             </p>
             <v-btn @click="analyzeDocumentContent">Analyze Content</v-btn>
           </div>
@@ -351,39 +381,129 @@
         </v-sheet>
       </v-container>
 
-      <v-dialog v-model="deleteQuestionModal" transition="dialog-bottom-transition" width="550">
+      <v-dialog v-model="showDeleteQuestionModal" transition="dialog-bottom-transition" width="550">
         <v-card>
           <v-toolbar title="Delete Question"></v-toolbar>
           <v-card-text>
-            <v-alert :type="selectedQuestion && selectedQuestion.uuid ? 'warning' : 'info'" prominent variant="outlined" color="grey-darken-2">
-              You are about to delete the {{ selectedQuestion && selectedQuestion.uuid ? 'INDEXED' : '' }} <strong v-if="selectedQuestion">"{{ selectedQuestion.text }}"</strong> question.
-              {{ selectedQuestion && selectedQuestion.uuid ? 'This will also delete the question index. ' : '' }}
+            <v-alert type="warning" prominent variant="outlined" color="grey-darken-2">
+              You are about to delete the <strong>"{{ selectedQuestion.text }}"</strong> question.
               Please confirm.
             </v-alert>
           </v-card-text>
           <v-card-actions class="justify-end">
             <v-btn variant="text" @click="deleteSelectedQuestion">Delete</v-btn>
-            <v-btn variant="text" @click="deleteQuestionModal = false">Close</v-btn>
+            <v-btn variant="text" @click="showDeleteQuestionModal = false">Close</v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>
 
-      <v-dialog v-model="showQuestionModal" transition="dialog-bottom-transition" width="800">
+      <v-dialog v-model="showEditQuestionModal" transition="dialog-bottom-transition" width="800">
         <v-card>
-          <v-toolbar title="Show Question"></v-toolbar>
+          <v-toolbar title="Edit Question"></v-toolbar>
+          <v-card-text>
+            <v-text-field
+              class="mt-6"
+              :label="stagedQuestionData.ft_method ? 'Question (read-only)' : 'Question'"
+              v-model="stagedQuestionData.text"
+              :readonly="stagedQuestionData.ft_method ? true : false"
+              variant="outlined"
+              :hint="stagedQuestionData.ft_method ? 'The question was fine-tuned, thus it cannot be modified' : ''"
+            ></v-text-field>
+
+            <v-textarea
+              v-if="stagedQuestionData.answer"
+              class="mt-4"
+              label="Answer (read-only)"
+              v-model="stagedQuestionData.answer"
+              readonly
+              auto-grow
+              variant="outlined"
+              hint="This shows how the system understands the question and what is kind of answer it may generate. You can change the answer manually or generate a new one on the fine-tuning modal."
+            ></v-textarea>
+          </v-card-text>
+          <v-card-actions class="justify-end">
+            <v-btn variant="text" @click="showDeleteQuestionModal = true">Delete</v-btn>
+            <v-btn variant="text" @click="showEditQuestionModal = false">Close</v-btn>
+            <v-btn variant="text" @click="updateSelectedQuestion">Update</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
+      <v-dialog v-model="showAddQuestionModal" transition="dialog-bottom-transition" width="800">
+        <v-card>
+          <v-toolbar title="Add New Question"></v-toolbar>
           <v-card-text>
             <v-container>
-              <v-text-field label="Question" v-model="selectedQuestion.text" readonly variant="outlined"></v-text-field>
-            </v-container>
-
-            <v-container>
-              <v-textarea label="Answer" v-model="selectedQuestion.answer" readonly auto-grow variant="outlined"></v-textarea>
+              <v-text-field label="Question" v-model="newQuestion" variant="outlined"></v-text-field>
             </v-container>
           </v-card-text>
           <v-card-actions class="justify-end">
-            <v-btn variant="text" @click="deleteSelectedQuestion">Delete</v-btn>
-            <v-btn variant="text" v-if="!selectedQuestion.uuid" @click="indexSelectedQuestion">Index</v-btn>
-            <v-btn variant="text" @click="showQuestionModal = false">Close</v-btn>
+            <v-btn variant="text" @click="addNewQuestion">Add</v-btn>
+            <v-btn variant="text" @click="showAddQuestionModal = false">Close</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
+      <v-dialog v-model="showFineTuneQuestionModal" transition="dialog-bottom-transition" width="1000">
+        <v-card>
+          <v-toolbar title="Fine-Tune Question"></v-toolbar>
+          <v-card-text>
+            <v-container>
+              <v-text-field
+                label="Question (read-only)"
+                v-model="stagedQuestionData.text"
+                readonly
+                variant="outlined"
+              ></v-text-field>
+
+              <v-textarea
+                label="Answer"
+                v-model="stagedQuestionData.answer"
+                auto-grow
+                persistent-hint
+                variant="outlined"
+                hint="Provide the high-quality answer to improve results."
+              ></v-textarea>
+            </v-container>
+
+            <v-radio-group
+              v-model="stagedQuestionData.ft_method"
+              inline
+              label="Fine-Tuning Method"
+              persistent-hint
+              :hint="stagedQuestionData.ft_method === 'shallow' ? 'Only memorize the question and include the training material in the prompt in conversation.' : 'Memorize the question and queue the answer to this question for actual model fine-tuning.'"
+            >
+              <v-radio label="Factual Learning" value="shallow"></v-radio>
+              <v-radio label="New Skill" value="deep"></v-radio>
+            </v-radio-group>
+          </v-card-text>
+          <v-card-actions class="justify-end">
+            <v-btn
+              variant="text"
+              :disabled="generatingAnswer"
+              @click="generateAnswerForSelectedQuestion">
+                {{ generatingAnswer ? 'Generating...' : 'Generate Answer' }}
+              </v-btn>
+            <v-btn variant="text" @click="fineTuneSelectedQuestion">Fine-Tune</v-btn>
+            <v-btn variant="text" @click="showFineTuneQuestionModal = false">Close</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
+      <v-dialog v-model="analyzeDocumentContentModal" transition="dialog-bottom-transition" width="550">
+        <v-card>
+          <v-toolbar title="Re-Analyze Question"></v-toolbar>
+          <v-card-text>
+            <v-alert type="warning" prominent variant="outlined" color="grey-darken-2">
+              You are on the verge of reevaluating the content of the current document.
+              Unless you opt to combine the new set, all existing questions will be removed.
+            </v-alert>
+
+            <v-checkbox v-model="mergeNewQuestions" label="Merge New Questions"></v-checkbox>
+          </v-card-text>
+          <v-card-actions class="justify-end">
+            <v-btn variant="text" @click="analyzeDocumentContent">Analyze</v-btn>
+            <v-btn variant="text" @click="analyzeDocumentContentModal = false">Close</v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>
@@ -404,9 +524,9 @@
         <v-toolbar title="Delete Document"></v-toolbar>
         <v-card-text>
           <v-alert type="warning" prominent variant="outlined" color="grey-darken-2">
-            You are about to delete the <strong v-if="selectedDocument">"{{ selectedDocument.name }}"</strong> document. Please confirm.
+            You are about to delete the <strong v-if="selectedDocument">"{{ selectedDocument.name }}"</strong> document.
+            {{ hasAssociatedQuestions ? 'All the associated questions will be deleted as well.' : '' }} Please confirm.
           </v-alert>
-          <v-checkbox v-model="deleteIndexedQuestions" label="Also delete any indexed questions"></v-checkbox>
         </v-card-text>
         <v-card-actions class="justify-end">
           <v-btn variant="text" @click="deleteSelectedDocument">Delete</v-btn>
@@ -418,7 +538,15 @@
 </template>
 
 <script>
+import { Codemirror } from 'vue-codemirror';
+import { EditorView } from 'codemirror';
+import { markdown } from '@codemirror/lang-markdown';
+import { Compartment } from "@codemirror/state";
+
 export default {
+  components: {
+    Codemirror
+  },
   data: () => ({
     documentTree: {},
     currentFolder: null,
@@ -429,9 +557,6 @@ export default {
     createDocumentModal: false,
     deleteFolderModal: false,
     deleteDocumentModal: false,
-    deleteQuestionModal: false,
-    showQuestionModal: false,
-    deleteIndexedQuestions: true,
     addNewDocumentType: null,
     cachedUrlSelectors: [],
     addNewUrl: null,
@@ -443,11 +568,23 @@ export default {
     showSuccessMessage: false,
     successMessage: null,
     analyzingContent: false,
+    showAddQuestionModal: false,
+    newQuestion: null,
+    analyzeDocumentContentModal: false,
+
+    // Properties to manage question's data
+    selectedQuestion: null,
+    stagedQuestionData: {},
+    showEditQuestionModal: false,
+    showFineTuneQuestionModal: false,
+    showDeleteQuestionModal: false,
+    generatingAnswer: false,
+
+
+    mergeNewQuestions: true,
     // The selected folder/document is the one that is selected from inline action
     selectedFolder: null,
     selectedDocument: null,
-    selectedQuestion: null,
-    indexingQuestions: [],
     inputValidationRules: {
       required: value => !!value || 'Required.',
       folderName: value => {
@@ -492,7 +629,6 @@ export default {
     openDocument(document) {
       const _this            = this;
       this.currentDocument   = document;
-      this.indexingQuestions = [];
 
       this.$api.documents
         .readDocument(document.uuid)
@@ -543,7 +679,7 @@ export default {
       const _this = this;
 
       this.$api.documents
-        .deleteDocument(this.selectedDocument.uuid, this.deleteIndexedQuestions)
+        .deleteDocument(this.selectedDocument.uuid)
         .then(() => {
           // Remove the folder from the list
           const parent = _this.selectedDocument.parent;
@@ -563,35 +699,135 @@ export default {
           _this.selectedDocument  = null;
         });
     },
-    showDocumentQuestion(question) {
-      this.selectedQuestion  = question;
-      this.showQuestionModal = true;
+
+    // Question methods
+    addNewQuestion() {
+      const _this = this;
+
+      // Let first validate that the provided question is legit and is not a
+      // duplicate
+      const sanitized = this.newQuestion.trim();
+
+      if (sanitized.length
+          && (this.currentDocumentData.questions.filter(q => q.text === sanitized).length === 0)
+      ) {
+        this.$api.documents
+          .addQuestionToDocument(this.currentDocument.uuid, sanitized)
+          .then((result) => {
+            // Add new question to the list of document questions
+            if (result !== false) {
+              _this.currentDocumentData.questions.push(result);
+
+              // Reset
+              _this.showAddQuestionModal = false;
+              _this.newQuestion          = null;
+            }
+          });
+      }
     },
-    deleteQuestion(question) {
-      this.selectedQuestion    = question;
-      this.deleteQuestionModal = true;
+    generateAnswerForSelectedQuestion() {
+      const _this           = this;
+      this.generatingAnswer = true;
+
+      this.$api.ai
+        .prepareAnswerFromDocument(
+          this.selectedQuestion.uuid,
+          this.currentDocument.uuid
+        ).then((response) => {
+          _this.selectedQuestion.answer   = response;
+          _this.stagedQuestionData.answer = response;
+        }).finally(() => {
+          _this.generatingAnswer = false;
+        });
+    },
+    selectQuestionForFineTuning(question) {
+      this.selectedQuestion = question;
+
+      // The "staged" question data is used as temporary holder for updated question
+      // data
+      this.stagedQuestionData = Object.assign({}, question);
+
+      this.showFineTuneQuestionModal = true;
+    },
+    selectQuestionForEditing(question) {
+      this.selectedQuestion = question;
+
+      // The "staged" question data is used as temporary holder for updated question
+      // data
+      this.stagedQuestionData = Object.assign({}, question);
+
+      this.showEditQuestionModal = true;
+    },
+    selectQuestionForDeletion(question) {
+      this.selectedQuestion        = question;
+      this.showDeleteQuestionModal = true;
     },
     deleteSelectedQuestion() {
       const _this = this;
 
       this.$api.documents
-        .deleteDocumentQuestion(this.currentDocument.uuid, {
-          uuid: this.selectedQuestion.uuid,
-          text: this.selectedQuestion.text
-        })
+        .deleteQuestionFromDocument(this.currentDocument.uuid, this.selectedQuestion.uuid)
         .then(() => {
           // Remove the question from the list of document questions
           _this.currentDocumentData.questions = _this.currentDocumentData.questions.filter(
             q => q !== _this.selectedQuestion
           );
 
-          _this.deleteQuestionModal = false;
+          _this.showDeleteQuestionModal = false;
 
           // Question can be deleted from the show modal as well
-          _this.showQuestionModal = false;
-          _this.selectedQuestion  = null;
+          _this.showEditQuestionModal = false;
+          _this.selectedQuestion      = null;
         });
     },
+    updateSelectedQuestion() {
+      const _this = this;
+
+      this.$api.questions
+        .updateQuestion(this.selectedQuestion.uuid, {
+          text: this.stagedQuestionData.text,
+          answer: this.stagedQuestionData.answer
+        }).then((response) => {
+          // Replace the old question with new data
+          for (let i = 0; i < _this.currentDocumentData.questions.length; i++) {
+            const q = _this.currentDocumentData.questions[i];
+
+            if (q.uuid === _this.selectedQuestion.uuid) {
+              _this.currentDocumentData.questions[i] = response;
+            }
+          }
+
+          // Close the modal
+          _this.showEditQuestionModal = false;
+          _this.selectedQuestion      = null;
+          _this.stagedQuestionData    = {};
+
+          // Show success message
+          _this.showSuccessMessage = true;
+          _this.successMessage     = 'Question updated!';
+        });
+    },
+    fineTuneSelectedQuestion() {
+      const _this = this;
+
+      this.$api.ai.fineTuneQuestion(this.selectedQuestion.uuid, {
+        answer: this.stagedQuestionData.answer,
+        ft_method: this.stagedQuestionData.ft_method
+      }).then(() => {
+        _this.selectedQuestion.answer    = _this.stagedQuestionData.answer;
+        _this.selectedQuestion.ft_method = _this.stagedQuestionData.ft_method;
+
+        // Close the modal
+        _this.showFineTuneQuestionModal = false;
+        _this.selectedQuestion          = null;
+        _this.stagedQuestionData        = {};
+
+        // Show success message
+        _this.showSuccessMessage = true;
+        _this.successMessage     = 'Question was fine-tuned!';
+      });
+    },
+
     createFolder() {
       const _this = this;
       const name  = this.newFolderName;
@@ -658,8 +894,7 @@ export default {
         .updateDocument(this.currentDocument.uuid, {
           name: this.currentDocumentData.name,
           text: this.currentDocumentData.text,
-          origin: Object.assign({}, this.currentDocumentData.origin),
-          questions: JSON.parse(JSON.stringify(this.currentDocumentData.questions))
+          origin: Object.assign({}, this.currentDocumentData.origin)
         })
         .then((document) => {
           _this.currentDocument = Object.assign(_this.currentDocument, document);
@@ -706,6 +941,13 @@ export default {
         { weekday:"long", year:"numeric", month:"short", day:"numeric"}
       );
     },
+    analyzeContent() {
+      if (this.hasAssociatedQuestions) {
+        this.analyzeDocumentContentModal = true;
+      } else {
+        this.analyzeDocumentContent();
+      }
+    },
     analyzeDocumentContent() {
       const _this           = this;
       this.analyzingContent = true;
@@ -714,43 +956,11 @@ export default {
       this.saveDocumentChanges();
 
       this.$api.ai
-        .analyzeDocumentContent(this.currentDocument.uuid)
+        .analyzeDocumentContent(this.currentDocument.uuid, this.mergeNewQuestions)
         .then((document) => {
           _this.currentDocumentData = document;
           _this.analyzingContent    = false;
         });
-    },
-    indexSelectedQuestion() {
-      this.indexQuestion(this.selectedQuestion);
-
-      // Question can be indexed from the show question modal as well
-      this.showQuestionModal = false;
-    },
-    indexQuestion(question) {
-      this.indexingQuestions.push(question);
-
-      const _this = this;
-
-      this.$api.ai
-        .indexDocumentQuestion(this.currentDocument.uuid, {
-          text: question.text,
-          answer: question.answer
-        })
-        .then((response) => {
-          // Remove it from indexing array
-          _this.indexingQuestions = _this.indexingQuestions.filter(
-            q => q !== question
-          );
-
-          // Indexed question position
-          const position = _this.currentDocumentData.questions.indexOf(question);
-
-          // Replacing the question with result
-          _this.currentDocumentData.questions[position] = response;
-        });
-    },
-    isIndexingQuestion(question) {
-      return this.indexingQuestions.includes(question);
     },
     handleSearchBlur() {
       if (this.search === '' || this.search === null) {
@@ -775,6 +985,32 @@ export default {
 
       _this.assembleBreadcrumb();
     });
+  },
+  setup() {
+    const lineWrapping = new Compartment();
+    const theme        = new Compartment();
+
+    return {
+      extensions: [
+        markdown(),
+        lineWrapping.of(EditorView.lineWrapping),
+        theme.of(EditorView.theme({
+          '&': {
+            padding: '0.5rem 0rem 0.5rem 0.6rem'
+          },
+          '&.cm-focused': {
+            outline: 'none',
+            border: '2px solid #333333'
+          },
+          '.cm-gutters': {
+            display: 'none'
+          },
+          '.cm-activeLine': {
+            backgroundColor: 'transparent'
+          }
+        }))
+      ]
+    }
   }
 }
 </script>

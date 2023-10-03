@@ -39,8 +39,9 @@ export default {
         drawer: null,
         links: [
             ['mdi-tape-drive', 'Documents', '/'],
-            ['mdi-progress-question', 'Questions', '/questions'],
-            ['mdi-message-processing-outline', 'Messages', '/messages'],
+            ['mdi-message-processing-outline', 'Conversations', '/messages'],
+            // ['mdi-progress-question', 'Questions', '/questions'],
+            ['mdi-tune-variant', 'LLM Fine-Tuning', '/tuning'],
             ['mdi-cog-outline', 'Settings', '/settings']
         ],
     }),

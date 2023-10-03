@@ -141,7 +141,6 @@
                     align-tabs="start"
                 >
                     <v-tab value="original">Message</v-tab>
-                    <v-tab value="rewrite" v-if="currentMessageData.rewrite">Rewrite</v-tab>
                     <v-tab value="answer" v-if="currentMessageData.answer">Answer</v-tab>
                 </v-tabs>
 
@@ -151,11 +150,6 @@
                             <v-textarea auto-grow variant="outlined" v-model="currentMessageData.text"></v-textarea>
                         </v-container>
                     </v-window-item>
-                    <v-window-item value="rewrite">
-                        <v-container fluid>
-                            <v-textarea auto-grow readonly variant="outlined" v-model="currentMessageData.rewrite"></v-textarea>
-                        </v-container>
-                    </v-window-item>
                     <v-window-item value="answer">
                         <v-container fluid>
                             <v-textarea auto-grow readonly variant="outlined" v-model="currentMessageData.answer"></v-textarea>
@@ -163,22 +157,22 @@
                     </v-window-item>
                 </v-window>
 
-                <div v-if="hasIdentifiedQuestions">
-                    <div class="text-overline pb-2">Identified Questions</div>
+                <div v-if="hasAssociatedQuestions">
+                    <div class="text-overline pb-2">Associated Questions</div>
 
                     <v-expansion-panels>
                         <v-expansion-panel v-for="(question, index) in currentMessageData.questions" :key="index">
                             <v-expansion-panel-title>
                                 <v-icon
                                     color="grey"
-                                    :icon="question.uuid || question.candidates.length > 0 ? 'mdi-check' : 'mdi-alert-circle'"
+                                    :icon="question.candidates.length > 0 ? 'mdi-check' : 'mdi-alert-circle'"
                                 ></v-icon>
                                 <span class="ml-2">{{ question.text }}</span>
                             </v-expansion-panel-title>
 
                             <v-expansion-panel-text>
                                 <div v-for="(candidate, i) in question.candidates" :key="i" class="mt-4">
-                                    <strong>{{ candidate.reference.type }}:</strong> {{ candidate.reference.name }} <small>({{ candidate.similarity === 0 ? 'exact match' : `distance: ${candidate.similarity}` }})</small>
+                                    - <em>{{ candidate.name }}</em> <small>({{ candidate.similarity === 0 ? 'exact match' : `similarity: ${candidate.similarity}` }})</small>
                                 </div>
 
                                 <v-textarea
@@ -192,15 +186,14 @@
 
                                 <div class="d-flex justify-end">
                                     <v-btn
-                                        v-if="!question.uuid"
+                                        v-if="question.answer"
                                         variant="text"
-                                        :disabled="isIndexingQuestion(question)"
-                                        @click="indexQuestion(question)"
+                                        :disabled="isFineTuningQuestion(question)"
+                                        @click="fineTuneQuestion(question)"
                                     >
-                                        {{ isIndexingQuestion(question) ? 'Indexing...' : 'Index Answer' }}
+                                        {{ isFineTuningQuestion(question) ? 'Processing...' : 'Fine-Tune' }}
                                     </v-btn>
                                     <v-btn
-                                        v-else
                                         variant="text"
                                         :disabled="isUpdatingQuestion(question)"
                                         @click="updateQuestion(question)"
@@ -310,7 +303,6 @@
     //
 </script>
 
-
 <script>
 export default {
     data: () => {
@@ -326,7 +318,7 @@ export default {
             currentMessageData: {},
             analyzingMessage: false,
             generatingAnswer: false,
-            indexingQuestions: [],
+            fineTuningQuestions: [],
             updatingQuestions: [],
             successMessage: null,
             showSuccessMessage: false,
@@ -339,7 +331,7 @@ export default {
         }
     },
     computed: {
-        hasIdentifiedQuestions() {
+        hasAssociatedQuestions() {
             return this.currentMessageData
                 && this.currentMessageData.questions
                 && this.currentMessageData.questions.length > 0
@@ -468,7 +460,7 @@ export default {
         },
         assembleBreadcrumb() {
             const breadcrumb = [{
-                title: 'Messages',
+                title: 'Conversations',
                 node: null
             }];
 
@@ -508,7 +500,7 @@ export default {
                 _this.selectedMessage    = null;
                 });
         },
-        indexQuestion(question) {
+        fineTuneQuestion(question) {
             const _this = this;
 
             const answer = question.answer ? question.answer.trim() : '';
@@ -561,8 +553,8 @@ export default {
                     _this.currentMessageData.questions = questions;
                 });
         },
-        isIndexingQuestion(question) {
-            return this.indexingQuestions.includes(question);
+        isFineTuningQuestion(question) {
+            return this.fineTuningQuestions.includes(question);
         },
         isUpdatingQuestion(question) {
             return this.updatingQuestions.includes(question);

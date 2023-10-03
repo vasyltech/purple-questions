@@ -6,8 +6,6 @@ const _              = require('lodash');
 
 import DbRepository from './repository/db';
 import Settings from './settings';
-import Documents from './documents';
-import Messages from './messages';
 
 /**
  * Get the base path to the questions directory
@@ -28,58 +26,6 @@ function GetQuestionsPath(append = null) {
     }
 
     return append ? Path.join(basePath, append) : basePath;
-}
-
-/**
- *
- * @param {*} origin
- * @param {*} text
- * @param {*} uuid
- */
-function AddReferenceToOrigin(origin, text, uuid) {
-    if (origin.includes('/documents/')) {
-        Documents.addDocumentQuestionReference(
-            origin.substring(11),
-            {
-                uuid,
-                text
-            }
-        );
-    } else if (origin.includes('/messages/')) {
-        Messages.addMessageQuestionReference(
-            origin.substring(10),
-            {
-                uuid,
-                text
-            }
-        );
-    }
-}
-
-/**
- *
- * @param {*} origin
- * @param {*} text
- * @param {*} uuid
- */
-function RemoveReferenceFromOrigin(origin, text, uuid) {
-    if (origin.includes('/documents/')) {
-        Documents.removeDocumentQuestionReference(
-            origin.substring(11),
-            {
-                uuid,
-                text
-            }
-        );
-    } else if (origin.includes('/messages/')) {
-        Messages.removeMessageQuestionReference(
-            origin.substring(10),
-            {
-                uuid,
-                text
-            }
-        );
-    }
 }
 
 /**
@@ -169,7 +115,7 @@ const QuestionIndex = (() => {
     }
 })();
 
-export default {
+const Methods = {
 
     /**
      *
@@ -196,12 +142,9 @@ export default {
 
         Fs.writeFileSync(GetQuestionsPath(uuid), JSON.stringify(data));
 
-        // Index the question in the vector store
-        await DbRepository.indexQuestion(uuid, data.embedding);
-
-        // Update the origin to include the question reference
-        if (_.isString(data.origin)) {
-            AddReferenceToOrigin(data.origin, data.text, uuid)
+        // Index the question in the vector store if embedding is included
+        if (_.isArray(data.embedding)) {
+            await DbRepository.indexQuestion(uuid, data.embedding);
         }
 
         // Finally, add the question to the index
@@ -218,7 +161,7 @@ export default {
      * @param {*} data
      * @returns
      */
-    updateQuestion: async (uuid, data) => {
+    updateQuestion: (uuid, data) => {
         const content = JSON.parse(
             Fs.readFileSync(GetQuestionsPath(uuid)).toString()
         );
@@ -232,9 +175,16 @@ export default {
 
         Fs.writeFileSync(GetQuestionsPath(uuid), JSON.stringify(newContent));
 
-        return QuestionIndex.update(uuid, {
+        QuestionIndex.update(uuid, {
             updatedAt: (new Date()).getTime()
         });
+
+        return {
+            uuid,
+            text: newContent.text,
+            answer: newContent.answer,
+            ft_method: newContent.ft_method,
+        }
     },
 
     /**
@@ -247,18 +197,15 @@ export default {
         const path     = GetQuestionsPath(uuid);
         const question = JSON.parse(Fs.readFileSync(path).toString());
 
-        // Remove any links associated with the question
-        if (question.origin) {
-            RemoveReferenceFromOrigin(question.origin, question.text, uuid);
-        }
-
         // Delete the actual file
         if (Fs.existsSync(path)) {
             Fs.unlinkSync(GetQuestionsPath(uuid));
         }
 
-        // Remove the question from the vector store
-        await DbRepository.deleteQuestion(uuid);
+        // Remove the question from the vector store if there is embedding
+        if (_.isArray(question.embedding)) {
+            await DbRepository.deleteQuestion(uuid);
+        }
 
         // Finally remove the question from the index
         QuestionIndex.remove(uuid);
@@ -271,28 +218,7 @@ export default {
      */
     readQuestion: (uuid) => {
         return JSON.parse(Fs.readFileSync(GetQuestionsPath(uuid)).toString());
-    },
-
-    /**
-     *
-     * @param {Question} question
-     *
-     * @returns {Object}
-     */
-    getQuestionOrigin: (question) => {
-        let origin = {};
-
-        if (question.origin.includes('/documents/')) {
-            origin.uuid = question.origin.substring(11);
-            origin.type = 'document';
-            origin.ref  = Documents.readDocument(origin.uuid);
-        } else if (question.origin.includes('/messages/')) {
-            origin.uuid = question.origin.substring(10);
-            origin.type = 'message';
-            origin.ref  = Messages.readMessage(origin.uuid);
-        }
-
-        return origin;
     }
-
 }
+
+export default Methods;

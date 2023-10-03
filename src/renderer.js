@@ -89,6 +89,17 @@ const routes = [
     ],
   },
   {
+    path: '/tuning',
+    component: () => import('@/layouts/default/Default.vue'),
+    children: [
+      {
+        path: '',
+        name: 'Tunings',
+        component: () => import('@/views/Tuning.vue'),
+      },
+    ],
+  },
+  {
     path: '/settings',
     component: () => import('@/layouts/default/Default.vue'),
     children: [

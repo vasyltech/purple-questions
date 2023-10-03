@@ -1,25 +1,39 @@
-const SYSTEM_PROMPT = 'You are a helpful assistant and you use provided information to generate the best possible answer to the user question. Do not include any placeholders like "[Your Name]", "[Company Name]", etc. The generated message will be forwarded to customer as-is.';
+const _ = require('lodash');
 
-const USER_PROMPT = `Generate response to the user message based on the provided material. Answer only to questions that you can find answers in provided material. Do not fabricate the answer.
+// Default prompt if persona is not defined
+const DEFAULT_SYSTEM_PROMPT = 'You are a helpful assistant.';
 
-INFORMATION:
-{text}
+// The actual prompt that converts text into the list of questions
+const USER_PROMPT = `Answer the provided question with few examples, if applicable. Do not fabricate the answer.
 
-USER QUESTION:
-{question}`;
+QUESTION:
+"""
+{question}
+"""
 
-function GetCorpus(data = null) {
+USE THIS MATERIAL TO ANSWER:
+"""
+{material}
+"""`;
+
+/**
+ *
+ * @param {*} data
+ * @param {*} persona
+ * @returns
+ */
+function GetCorpus(data, persona) {
     return {
         messages: [
             {
                 role: 'system',
-                content: SYSTEM_PROMPT
+                content: _.get(persona, 'description') || DEFAULT_SYSTEM_PROMPT
             },
             {
                 role: 'user',
-                content: data ? USER_PROMPT
-                    .replace('{text}', data.document.text)
-                    .replace('{question}', data.question) : USER_PROMPT
+                content: USER_PROMPT
+                    .replace('{material}', data.document.text)
+                    .replace('{question}', data.question)
             }
         ]
     }

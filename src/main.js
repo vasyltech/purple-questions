@@ -6,6 +6,7 @@ import Questions from './main/questions';
 import Settings from './main/settings';
 import Ai from './main/ai';
 import Messages from './main/messages';
+import Bridge from './main/bridge';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -47,13 +48,16 @@ const createWindow = () => {
   }
 
   // Open the DevTools.
-  mainWindow.webContents.openDevTools();
+  // mainWindow.webContents.openDevTools();
 
   RegisterHandler('documents', Documents);
   RegisterHandler('questions', Questions);
   RegisterHandler('settings', Settings);
   RegisterHandler('ai', Ai);
   RegisterHandler('messages', Messages);
+
+  // Finally load add-ons
+  Bridge.loadAddOns();
 };
 
 // This method will be called when Electron has finished

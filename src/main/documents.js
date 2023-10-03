@@ -350,9 +350,15 @@ const Methods = {
         );
 
         // Iterate over the list of questions and get answers
-        _.forEach(document.questions, (q) => {
-            if (!_.isUndefined(q.uuid) && !_.isNull(q.uuid)) {
-                q.answer = Questions.readQuestion(q.uuid).answer;
+        _.forEach(document.questions, (q, i) => {
+            const question = Questions.readQuestion(q);
+
+            // Enrich the question with additional information
+            document.questions[i] = {
+                uuid: q,
+                text: question.text,
+                answer: question.answer,
+                ft_method: _.get(question, 'ft_method', null)
             }
         });
 
@@ -361,78 +367,18 @@ const Methods = {
 
     /**
      *
-     * @param {*} uuid
-     * @param {*} question
-     * @returns
-     */
-    addDocumentQuestionReference: (uuid, question) => {
-        let result     = false;
-        const document = Methods.readDocument(uuid);
-
-        // Find the question and add reference
-        _.forEach(document.questions, (q) => {
-            if (q.text === question.text) {
-                q.uuid = question.uuid;
-
-                // Yes, we found one
-                result = true;
-            }
-        });
-
-        // Update the question
-        Methods.updateDocument(uuid, {
-            questions: document.questions
-        })
-
-        return result;
-    },
-
-    /**
-     *
-     * @param {*} uuid
-     * @param {*} question
-     * @returns
-     */
-    removeDocumentQuestionReference: (uuid, question) => {
-        let result     = false;
-        const document = Methods.readDocument(uuid);
-
-        // Find the question and add reference
-        _.forEach(document.questions, (q) => {
-            if (q.uuid === question.uuid) {
-                q.uuid = null;
-
-                // Yes, we found one
-                result = true;
-            }
-        });
-
-        // Update the question
-        Methods.updateDocument(uuid, {
-            questions: document.questions
-        })
-
-        return result;
-    },
-
-    /**
-     *
      * @param {String}  uuid
-     * @param {Boolean} deleteIndexedQuestions
      * @returns
      */
-    deleteDocument: async (uuid, deleteIndexedQuestions = false) => {
-        // Delete all indexed questions first, if chosen
-        if (deleteIndexedQuestions) {
-            const document = JSON.parse(
-                Fs.readFileSync(GetDocumentsPath(uuid)).toString()
-            );
+    deleteDocument: async (uuid) => {
+        // Delete all indexed questions first
+        const document = JSON.parse(
+            Fs.readFileSync(GetDocumentsPath(uuid)).toString()
+        );
 
-            for (let i = 0; i < document.questions.length; i++) {
-                if (_.isString(document.questions[i].uuid)) {
-                    await Questions.deleteQuestion(document.questions[i].uuid);
-                }
-            }
+        // Delete all the questions associated with the document
+        for (let i = 0; i < document.questions.length; i++) {
+            await Questions.deleteQuestion(document.questions[i]);
         }
 
         // Remove index first
@@ -454,22 +400,39 @@ const Methods = {
      * @param {*} question
      * @returns
      */
-    deleteDocumentQuestion: async (uuid, question) => {
+    addQuestionToDocument: async (uuid, text) => {
+        const document = JSON.parse(
+            Fs.readFileSync(GetDocumentsPath(uuid)).toString()
+        );
+
+        const question = await Questions.createQuestion({ text });
+
+        // Update document with new question uuid
+        document.questions.push(question.uuid);
+
+        Methods.updateDocument(uuid, { questions: document.questions });
+
+        return question;
+    },
+
+    /**
+     *
+     * @param {*} uuid
+     * @param {*} questionUuid
+     * @returns
+     */
+    deleteQuestionFromDocument: async (uuid, questionUuid) => {
         const document = JSON.parse(
             Fs.readFileSync(GetDocumentsPath(uuid)).toString()
         );
 
         // Remove the question from the list
-        document.questions = _.filter(
-            document.questions, (q => q.text !== question.text)
-        );
+        document.questions = _.filter(document.questions, (q => q !== questionUuid));
 
         Methods.updateDocument(uuid, { questions: document.questions });
 
-        // If question is already indexed, delete it as well
-        if (_.isString(question.uuid)) {
-            await Questions.deleteQuestion(question.uuid);
-        }
+        // Now delete the actual question
+        await Questions.deleteQuestion(questionUuid);
 
         return true;
     },

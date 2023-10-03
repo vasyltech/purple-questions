@@ -48,16 +48,6 @@ function ReadSettings() {
     // Append also some system info
     response._system = {
         defaultAppDataFolder: app.getPath('userData'),
-        supportedLlmModels: [
-            {
-                title: 'GPT-3.5',
-                value: 'gpt-3.5-turbo'
-            },
-            {
-                title: 'GPT-4',
-                value: 'gpt-4'
-            }
-        ]
     }
 
     return response;

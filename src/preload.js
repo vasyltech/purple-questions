@@ -24,14 +24,17 @@ contextBridge.exposeInMainWorld(
             readDocument: (uuid) => ipcRenderer.invoke(
                 'documents', ['readDocument', uuid]
             ),
-            deleteDocument: (uuid, deleteIndexedQuestions) => ipcRenderer.invoke(
-                'documents', ['deleteDocument', uuid, deleteIndexedQuestions]
+            deleteDocument: (uuid) => ipcRenderer.invoke(
+                'documents', ['deleteDocument', uuid]
             ),
             updateDocument: (uuid, data) => ipcRenderer.invoke(
                 'documents', ['updateDocument', uuid, data]
             ),
-            deleteDocumentQuestion: (uuid, question) => ipcRenderer.invoke(
-                'documents', ['deleteDocumentQuestion', uuid, question]
+            deleteQuestionFromDocument: (uuid, question) => ipcRenderer.invoke(
+                'documents', ['deleteQuestionFromDocument', uuid, question]
+            ),
+            addQuestionToDocument: (uuid, question) => ipcRenderer.invoke(
+                'documents', ['addQuestionToDocument', uuid, question]
             ),
         },
         questions: {
@@ -57,21 +60,24 @@ contextBridge.exposeInMainWorld(
             )
         },
         ai: {
-            analyzeDocumentContent: (uuid) => ipcRenderer.invoke(
-                'ai', ['analyzeDocumentContent', uuid]
+            getModelList: () => ipcRenderer.invoke(
+                'ai', ['getModelList']
+            ),
+            analyzeDocumentContent: (uuid, merge) => ipcRenderer.invoke(
+                'ai', ['analyzeDocumentContent', uuid, merge]
             ),
             analyzeMessageContent: (uuid) => ipcRenderer.invoke(
                 'ai', ['analyzeMessageContent', uuid]
             ),
-            indexDocumentQuestion: (uuid, question) => ipcRenderer.invoke(
-                'ai', ['indexDocumentQuestion', uuid, question]
-            ),
-            indexMessageQuestion: (messageUuid, text, answer) => ipcRenderer.invoke(
-                'ai', ['indexMessageQuestion', messageUuid, text, answer]
-            ),
             generateMessageAnswer: (uuid) => ipcRenderer.invoke(
                 'ai', ['generateMessageAnswer', uuid]
             ),
+            prepareAnswerFromDocument: (question, uuid) => ipcRenderer.invoke(
+                'ai', ['prepareAnswerFromDocument', question, uuid]
+            ),
+            fineTuneQuestion: (uuid, data) => ipcRenderer.invoke(
+                'ai', ['fineTuneQuestion', uuid, data]
+            )
         },
         messages: {
             getMessages: (page, limit) => ipcRenderer.invoke(
