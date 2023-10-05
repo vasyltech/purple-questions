@@ -21,7 +21,12 @@
         <v-divider></v-divider>
 
         <v-list>
-            <v-list-item v-for="[icon, text, href] in links" :key="icon" :prepend-icon="icon" :title="text" :to="href"
+            <v-list-item
+                v-for="[icon, text, href] in links"
+                :key="icon"
+                :prepend-icon="icon"
+                :title="text"
+                :to="href"
                 ></v-list-item>
         </v-list>
 
@@ -35,15 +40,17 @@
 
 <script>
 export default {
-    data: () => ({
-        drawer: null,
-        links: [
-            ['mdi-tape-drive', 'Documents', '/'],
-            ['mdi-message-processing-outline', 'Conversations', '/messages'],
-            // ['mdi-progress-question', 'Questions', '/questions'],
-            ['mdi-tune-variant', 'LLM Fine-Tuning', '/tuning'],
-            ['mdi-cog-outline', 'Settings', '/settings']
-        ],
-    }),
+    data: function() {
+        return {
+            drawer: null,
+            links: [
+                ['mdi-file-document-multiple', 'Documents', '/'],
+                ['mdi-message-processing-outline', 'Conversations', '/messages'],
+                // ['mdi-progress-question', 'Questions', '/questions'],
+                // ['mdi-tune-variant', 'LLM Fine-Tuning', '/tuning'],
+                ['mdi-cog-outline', 'Settings', '/settings']
+            ]
+        }
+    }
 }
 </script>

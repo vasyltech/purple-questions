@@ -6,6 +6,7 @@ import Questions from './main/questions';
 import Settings from './main/settings';
 import Ai from './main/ai';
 import Messages from './main/messages';
+import Tuning from './main/tuning';
 import Bridge from './main/bridge';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -55,6 +56,7 @@ const createWindow = () => {
   RegisterHandler('settings', Settings);
   RegisterHandler('ai', Ai);
   RegisterHandler('messages', Messages);
+  RegisterHandler('tuning', Tuning);
 
   // Finally load add-ons
   Bridge.loadAddOns();

@@ -60,8 +60,11 @@ contextBridge.exposeInMainWorld(
             )
         },
         ai: {
-            getModelList: () => ipcRenderer.invoke(
-                'ai', ['getModelList']
+            getLlmModelList: () => ipcRenderer.invoke(
+                'ai', ['getLlmModelList']
+            ),
+            getFineTuningModelList: () => ipcRenderer.invoke(
+                'ai', ['getFineTuningModelList']
             ),
             analyzeDocumentContent: (uuid, merge) => ipcRenderer.invoke(
                 'ai', ['analyzeDocumentContent', uuid, merge]
@@ -92,6 +95,9 @@ contextBridge.exposeInMainWorld(
             indexMessageIdentifiedQuestion: (uuid) => ipcRenderer.invoke(
                 'messages', ['indexMessageIdentifiedQuestion', uuid]
             ),
+            deleteQuestionFromMessage: (uuid, question) => ipcRenderer.invoke(
+                'messages', ['deleteQuestionFromMessage', uuid, question]
+            ),
             updateMessage: (uuid, data) => ipcRenderer.invoke(
                 'messages', ['updateMessage', uuid, data]
             ),
@@ -101,6 +107,14 @@ contextBridge.exposeInMainWorld(
             updateMessageStatus: (uuid, status) => ipcRenderer.invoke(
                 'messages', ['updateMessageStatus', uuid, status]
             ),
+        },
+        tuning: {
+            getTuningList: (page, limit) => ipcRenderer.invoke(
+                'tuning', ['getTuningList', page, limit]
+            ),
+            readTuning: (uuid) => ipcRenderer.invoke(
+                'tuning', ['readTuning', uuid]
+            )
         }
     }
 );

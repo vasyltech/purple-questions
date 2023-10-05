@@ -256,4 +256,7 @@ export default {
 .clickable {
     cursor: pointer;
 }
+.v-breadcrumbs {
+  font-size: 0.9rem;
+}
 </style>

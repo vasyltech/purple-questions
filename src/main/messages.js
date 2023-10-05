@@ -152,6 +152,7 @@ async function PrepareCandidates(question, similarity) {
             // conversation and questions get embedded and indexed automatically
             if (_.isString(similar.answer) && similar.answer.length > 0) {
                 candidates.push({
+                    uuid: match.uuid,
                     name: similar.text,
                     text: similar.answer,
                     similarity: Math.round(match._distance * 100)
@@ -226,6 +227,7 @@ const Methods = {
                 uuid: message.questions[i],
                 text: question.text,
                 answer: question.answer,
+                ft_method: question.ft_method,
                 candidates
             });
         }
@@ -244,6 +246,28 @@ const Methods = {
         const message = await Methods.readMessage(uuid);
 
         return message.questions;
+    },
+
+    /**
+     *
+     * @param {*} uuid
+     * @param {*} questionUuid
+     * @returns
+     */
+    deleteQuestionFromMessage: async (uuid, questionUuid) => {
+        const message = JSON.parse(
+            Fs.readFileSync(GetMessagesBasePath(uuid)).toString()
+        );
+
+        // Remove the question from the list
+        message.questions = _.filter(message.questions, (q => q !== questionUuid));
+
+        Methods.updateMessage(uuid, { questions: message.questions });
+
+        // Now delete the actual question
+        await Questions.deleteQuestion(questionUuid);
+
+        return true;
     },
 
     /**

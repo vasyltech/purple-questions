@@ -2,7 +2,7 @@
   <v-container class="fill-height">
     <v-app-bar>
       <template v-slot:prepend>
-        <v-icon icon="mdi-tape-drive"></v-icon>
+        <v-icon icon="mdi-file-document-multiple"></v-icon>
       </template>
 
       <v-app-bar-title>
@@ -59,7 +59,7 @@
         </template>
       </v-tooltip>
 
-      <v-tooltip v-if="currentDocument" text="Add New Question" location="bottom">
+      <v-tooltip v-if="currentDocument" text="Add New Curriculum" location="bottom">
         <template v-slot:activator="{ props }">
           <v-btn icon v-bind="props" @click="showAddQuestionModal = true">
             <v-icon>mdi-plus-box</v-icon>
@@ -326,7 +326,7 @@
       </v-container>
 
       <v-container v-if="hasAssociatedQuestions">
-        <div class="text-overline pb-2">Associated Questions</div>
+        <div class="text-overline pb-2">Curriculum</div>
 
         <v-list lines="false">
           <v-list-item
@@ -342,14 +342,14 @@
               <v-icon v-else>mdi-information-symbol</v-icon>
             </template>
             <template v-slot:append>
-              <v-tooltip text="Fine-Tune Model" location="bottom">
+              <v-tooltip text="Fine-Tune Curriculum" location="bottom">
                 <template v-slot:activator="{ props }">
                   <v-btn icon variant="plain" v-bind="props" @click.stop="selectQuestionForFineTuning(question)">
                     <v-icon>mdi-tune-variant</v-icon>
                   </v-btn>
                 </template>
               </v-tooltip>
-              <v-tooltip text="Delete Question" location="bottom">
+              <v-tooltip text="Delete Curriculum" location="bottom">
                 <template v-slot:activator="{ props }">
                   <v-btn icon variant="plain" v-bind="props" @click.stop="selectQuestionForDeletion(question)">
                     <v-icon>mdi-trash-can</v-icon>
@@ -383,10 +383,10 @@
 
       <v-dialog v-model="showDeleteQuestionModal" transition="dialog-bottom-transition" width="550">
         <v-card>
-          <v-toolbar title="Delete Question"></v-toolbar>
+          <v-toolbar title="Delete Curriculum"></v-toolbar>
           <v-card-text>
             <v-alert type="warning" prominent variant="outlined" color="grey-darken-2">
-              You are about to delete the <strong>"{{ selectedQuestion.text }}"</strong> question.
+              You are about to delete the <strong>"{{ selectedQuestion.text }}"</strong> curriculum.
               Please confirm.
             </v-alert>
           </v-card-text>
@@ -399,30 +399,34 @@
 
       <v-dialog v-model="showEditQuestionModal" transition="dialog-bottom-transition" width="800">
         <v-card>
-          <v-toolbar title="Edit Question"></v-toolbar>
+          <v-toolbar title="Edit Curriculum"></v-toolbar>
           <v-card-text>
             <v-text-field
               class="mt-6"
-              :label="stagedQuestionData.ft_method ? 'Question (read-only)' : 'Question'"
+              :label="stagedQuestionData.ft_method ? 'Subject (read-only)' : 'Subject'"
               v-model="stagedQuestionData.text"
               :readonly="stagedQuestionData.ft_method ? true : false"
               variant="outlined"
-              :hint="stagedQuestionData.ft_method ? 'The question was fine-tuned, thus it cannot be modified' : ''"
+              :hint="stagedQuestionData.ft_method ? 'The curriculum was fine-tuned, thus it cannot be modified' : ''"
             ></v-text-field>
 
             <v-textarea
               v-if="stagedQuestionData.answer"
               class="mt-4"
-              label="Answer (read-only)"
+              label="Answer"
               v-model="stagedQuestionData.answer"
-              readonly
               auto-grow
               variant="outlined"
-              hint="This shows how the system understands the question and what is kind of answer it may generate. You can change the answer manually or generate a new one on the fine-tuning modal."
             ></v-textarea>
           </v-card-text>
           <v-card-actions class="justify-end">
             <v-btn variant="text" @click="showDeleteQuestionModal = true">Delete</v-btn>
+            <v-btn
+              variant="text"
+              :disabled="generatingAnswer"
+              @click="generateAnswerForSelectedQuestion">
+                {{ generatingAnswer ? 'Generating...' : 'Generate Answer' }}
+            </v-btn>
             <v-btn variant="text" @click="showEditQuestionModal = false">Close</v-btn>
             <v-btn variant="text" @click="updateSelectedQuestion">Update</v-btn>
           </v-card-actions>
@@ -431,10 +435,10 @@
 
       <v-dialog v-model="showAddQuestionModal" transition="dialog-bottom-transition" width="800">
         <v-card>
-          <v-toolbar title="Add New Question"></v-toolbar>
+          <v-toolbar title="Add New Curriculum"></v-toolbar>
           <v-card-text>
             <v-container>
-              <v-text-field label="Question" v-model="newQuestion" variant="outlined"></v-text-field>
+              <v-text-field label="Subject" v-model="newQuestion" variant="outlined"></v-text-field>
             </v-container>
           </v-card-text>
           <v-card-actions class="justify-end">
@@ -446,11 +450,11 @@
 
       <v-dialog v-model="showFineTuneQuestionModal" transition="dialog-bottom-transition" width="1000">
         <v-card>
-          <v-toolbar title="Fine-Tune Question"></v-toolbar>
+          <v-toolbar title="Fine-Tune Curriculum"></v-toolbar>
           <v-card-text>
             <v-container>
               <v-text-field
-                label="Question (read-only)"
+                label="Subject (read-only)"
                 v-model="stagedQuestionData.text"
                 readonly
                 variant="outlined"
@@ -467,11 +471,12 @@
             </v-container>
 
             <v-radio-group
+              v-if="stagedQuestionData.answer"
               v-model="stagedQuestionData.ft_method"
               inline
               label="Fine-Tuning Method"
               persistent-hint
-              :hint="stagedQuestionData.ft_method === 'shallow' ? 'Only memorize the question and include the training material in the prompt in conversation.' : 'Memorize the question and queue the answer to this question for actual model fine-tuning.'"
+              :hint="stagedQuestionData.ft_method === 'shallow' ? 'Only memorize and include curriculum in prompts' : 'Memorize curriculum and queue for actual model fine-tuning'"
             >
               <v-radio label="Factual Learning" value="shallow"></v-radio>
               <v-radio label="New Skill" value="deep"></v-radio>
@@ -483,8 +488,10 @@
               :disabled="generatingAnswer"
               @click="generateAnswerForSelectedQuestion">
                 {{ generatingAnswer ? 'Generating...' : 'Generate Answer' }}
-              </v-btn>
-            <v-btn variant="text" @click="fineTuneSelectedQuestion">Fine-Tune</v-btn>
+            </v-btn>
+            <v-btn v-if="stagedQuestionData.answer && stagedQuestionData.ft_method" variant="text" :disabled="fineTuningQuestion" @click="fineTuneSelectedQuestion">
+              {{ fineTuningQuestion ? 'Fine-Tuning...' : 'Fine-Tune' }}
+            </v-btn>
             <v-btn variant="text" @click="showFineTuneQuestionModal = false">Close</v-btn>
           </v-card-actions>
         </v-card>
@@ -502,7 +509,7 @@
             <v-checkbox v-model="mergeNewQuestions" label="Merge New Questions"></v-checkbox>
           </v-card-text>
           <v-card-actions class="justify-end">
-            <v-btn variant="text" @click="analyzeDocumentContent">Analyze</v-btn>
+            <v-btn variant="text" :disabled="analyzingContent" @click="analyzeDocumentContent">{{ analyzingContent ? 'Analyzing...' : 'Analyze' }}</v-btn>
             <v-btn variant="text" @click="analyzeDocumentContentModal = false">Close</v-btn>
           </v-card-actions>
         </v-card>
@@ -579,7 +586,7 @@ export default {
     showFineTuneQuestionModal: false,
     showDeleteQuestionModal: false,
     generatingAnswer: false,
-
+    fineTuningQuestion: false,
 
     mergeNewQuestions: true,
     // The selected folder/document is the one that is selected from inline action
@@ -808,7 +815,8 @@ export default {
         });
     },
     fineTuneSelectedQuestion() {
-      const _this = this;
+      const _this             = this;
+      this.fineTuningQuestion = true;
 
       this.$api.ai.fineTuneQuestion(this.selectedQuestion.uuid, {
         answer: this.stagedQuestionData.answer,
@@ -825,6 +833,8 @@ export default {
         // Show success message
         _this.showSuccessMessage = true;
         _this.successMessage     = 'Question was fine-tuned!';
+      }).finally(() => {
+        _this.fineTuningQuestion = false;
       });
     },
 
@@ -887,7 +897,7 @@ export default {
           .then(document => _this.finalizeDocumentCreation(document));
       }
     },
-    saveDocumentChanges() {
+    saveDocumentChanges(silent = false, cb = null) {
       const _this = this;
 
       this.$api.documents
@@ -899,8 +909,14 @@ export default {
         .then((document) => {
           _this.currentDocument = Object.assign(_this.currentDocument, document);
 
-          _this.successMessage     = 'Changes saved!';
-          _this.showSuccessMessage = true;
+          if (silent !== true) {
+            _this.successMessage     = 'Changes saved!';
+            _this.showSuccessMessage = true;
+          }
+
+          if (cb) {
+            cb.call(_this);
+          }
         });
     },
     prepareDocumentTree(tree, parent = null) {
@@ -949,17 +965,19 @@ export default {
       }
     },
     analyzeDocumentContent() {
-      const _this           = this;
-      this.analyzingContent = true;
-
       // Save existing document first in case any changes to the content happened
-      this.saveDocumentChanges();
+      this.saveDocumentChanges(true, function() {
+        const _this           = this;
+        this.analyzingContent = true;
 
-      this.$api.ai
-        .analyzeDocumentContent(this.currentDocument.uuid, this.mergeNewQuestions)
-        .then((document) => {
-          _this.currentDocumentData = document;
-          _this.analyzingContent    = false;
+        this.$api.ai
+          .analyzeDocumentContent(this.currentDocument.uuid, this.mergeNewQuestions)
+          .then((document) => {
+            _this.currentDocumentData = document;
+          }).finally(() => {
+            _this.analyzingContent            = false;
+            _this.analyzeDocumentContentModal = false;
+          });
         });
     },
     handleSearchBlur() {
@@ -1018,5 +1036,9 @@ export default {
 <style scoped>
 .clickable {
   cursor: pointer;
+}
+
+.v-breadcrumbs {
+  font-size: 0.9rem;
 }
 </style>

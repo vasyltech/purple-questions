@@ -154,6 +154,7 @@ export default {
         tab: 'openai',
         settings: {},
         supportedLlmModels: [],
+        supportedFineTuningModels: [],
         showSuccessMessage: false
     }),
     computed: {
@@ -208,7 +209,23 @@ export default {
                     _this.successMessage     = 'Settings saved!'
                     _this.showSuccessMessage = true;
                     _this.settings           = response;
+
+                    _this.reload();
                 });
+        },
+        reload() {
+            const _this = this;
+
+            // Set some default values
+            if (!this.settings.similarityDistance) {
+                this.settings.similarityDistance = 25;
+            }
+
+            if (this.settings.apiKey) {
+                this.$api.ai.getLlmModelList().then((response) => {
+                    _this.supportedLlmModels = response;
+                });
+            }
         }
     },
     mounted() {
@@ -217,14 +234,7 @@ export default {
         this.$api.settings.readSettings().then((response) => {
             _this.settings = response;
 
-            // Set some default values
-            if (!_this.settings.similarityDistance) {
-                _this.settings.similarityDistance = 25;
-            }
-        });
-
-        this.$api.ai.getModelList().then((response) => {
-            _this.supportedLlmModels = response;
+            _this.reload();
         });
     }
 }
@@ -239,5 +249,9 @@ export default {
 .v-slider.v-input--horizontal .v-input__details {
     padding-inline-start: 16px;
     padding-inline-end: 16px;
+}
+
+.v-breadcrumbs {
+  font-size: 0.9rem;
 }
 </style>

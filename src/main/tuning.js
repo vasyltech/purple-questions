@@ -6,6 +6,7 @@ const _              = require('lodash');
 
 import OpenAiRepository from './repository/openai';
 import Settings from './settings';
+import Questions from './questions';
 
 /**
  * Get the base path to the tuning directory
@@ -26,6 +27,50 @@ function GetTuningBasePath(append = null) {
     }
 
     return append ? Path.join(basePath, append) : append;
+}
+
+/**
+ *
+ * @param {*} uuids
+ * @returns
+ */
+function UuidListToQuestions(uuids) {
+    const response = [];
+
+    // Iterate over the list of questions and enrich the return value
+    for(let i = 0; i < uuids.length; i++) {
+        const question = Questions.readQuestion(uuids[i]);
+
+        response.push({
+            uuid: uuids[i],
+            text: question.text,
+            answer: question.answer
+        });
+    }
+
+    return response;
+}
+
+/**
+ *
+ * @param {*} queue
+ * @param {*} uuid
+ * @returns
+ */
+async function OffloadQueue(queue, uuid) {
+    const result = await OpenAiRepository.createFineTuningJob(
+        UuidListToQuestions(queue)
+    );
+
+    if (_.get(result, 'status') !== 'failed') {
+        TuningIndex.update(uuid, Object.assign({}, {
+            updatedAt: (new Date()).getTime()
+        }, result));
+    } else {
+        console.log(result);
+    }
+
+    return result;
 }
 
 /**
@@ -111,7 +156,7 @@ const Methods = {
      * @param {*} page
      * @param {*} limit
      */
-    getTunings: (page = 0, limit = 500) => {
+    getTuningList: (page = 0, limit = 500) => {
         // Cloning the array to avoid issue with reverse
         const index = _.clone(TuningIndex.get(true));
         const start = page * limit;
@@ -127,7 +172,9 @@ const Methods = {
         const uuid     = uuidv4();
         const fullPath = GetTuningBasePath(uuid);
 
-        Fs.writeFileSync(fullPath, JSON.stringify([]));
+        Fs.writeFileSync(fullPath, JSON.stringify({
+            queue: []
+        }));
 
         return TuningIndex.add({
             uuid,
@@ -142,8 +189,17 @@ const Methods = {
      * @param {*} uuid
      * @returns
      */
-    readTuning: async (uuid) => {
-        return JSON.parse(Fs.readFileSync(GetTuningBasePath(uuid)).toString());
+    readTuning: (uuid, raw = false) => {
+        const tuning = JSON.parse(
+            Fs.readFileSync(GetTuningBasePath(uuid)).toString()
+        );
+
+        if (raw === false) {
+            // Enrich tuning job with more information
+            tuning.queue = UuidListToQuestions(tuning.queue);
+        }
+
+        return tuning;
     },
 
     /**
@@ -155,65 +211,26 @@ const Methods = {
         // when the queue size changed from higher to lower and offload the pending
         // queue before creating a new one
         const maxSize = Settings.getSetting('fineTuningBatchSize', 10);
-        let batch     = Methods.getTunings(0, 1);
+        let batch     = _.first(Methods.getTuningList(0, 1));
 
-        if (!_.isArray(batch) || batch.queued >= maxSize) {
+        if (!_.isObject(batch) || batch.queued >= maxSize) {
             batch = Methods.createTuning();
         }
 
         // Add the task to the queue
-        const tuning = Methods.readTuning(batch.uuid);
-        tuning.push(uuid);
+        const tuning = Methods.readTuning(batch.uuid, true);
 
-        // tuning.push([
-        //     {
-        //         role: 'system',
-        //         content: Settings.getSetting(
-        //             'fineTuningSystemPrompt',
-        //             'You are an invaluable virtual customer support representative.'
-        //         )
-        //     },
-        //     {
-        //         role: 'user',
-        //         'content': input
-        //     },
-        //     {
-        //         role: 'assistant',
-        //         content: output
-        //     }
-        // ]);
+        tuning.queue.push(uuid);
+
+        TuningIndex.update(batch.uuid, {
+            queued: tuning.queue.length
+        });
 
         // Saving the queue
-        Fs.writeFileSync(GetTuningBasePath(uuid), JSON.stringify(tuning));
-
-        // Offloading the queue if we hit the limit
-        // if (tuning.length >= maxSize) {
-        //     const result = await OpenAiRepository.createFineTuningJob(
-        //         Methods.readTuning(batch.uuid)
-        //     );
-
-        //     if (_.get(result, 'status') !== 'failed') {
-        //         TuningIndex.update(batch.uuid, Object.assign({}, {
-        //             updatedAt: (new Date()).getTime(),
-        //             queued: tuning.length
-        //         }, result));
-        //     } else {
-        //         console.log(result);
-        //     }
-        // }
+        Fs.writeFileSync(GetTuningBasePath(batch.uuid), JSON.stringify(tuning));
 
         return batch.uuid;
-    },
-
-    /**
-     *
-     * @param {*} uuid
-     * @returns
-     */
-    updateMessageStatus: (uuid, status) => MessageIndex.update(uuid, {
-        status,
-        updatedAt: (new Date()).getTime()
-    })
+    }
 
 }
 

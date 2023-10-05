@@ -1,15 +1,19 @@
 const _ = require('lodash');
 
 // Default prompt if persona is not defined
-const DEFAULT_SYSTEM_PROMPT = 'You are Aarmie, a polite customer support assistant. Use the best customer support guidances to answer user message. Translate the output into the language used in user message.';
+const DEFAULT_SYSTEM_PROMPT = 'You are a polite customer support assistant.';
 
 // The actual prompt that converts text into the list of questions
-const USER_PROMPT = `Use MY KNOWLEDGE BASE as your only source to generate response to the USER MESSAGE. Answer ONLY to questions listed in the QUESTIONS TO ANSWER section. Do not fabricate answers. Provide as detailed answer as possible with an example, if applicable. {constraint}
+const USER_PROMPT = `Use the best customer support guidances to answer user message.
 
-MY KNOWLEDGE BASE:
-"""
-{material}
-"""
+Follow these instructions:
+
+- Translate the output to the same language as in the USER MESSAGE.
+- Use "MY KNOWLEDGE BASE" as the additional source to generate response to the "USER MESSAGE".
+- Only answer questions listed in the "QUESTIONS TO ANSWER" section.
+- Provide as detailed answer as possible with an example, if applicable.
+- Do not fabricate any answers. Say that you do not know.
+- {constraint}
 
 USER MESSAGE:
 """
@@ -20,7 +24,11 @@ QUESTIONS TO ANSWER:
 """
 {questions}
 """
-`;
+
+MY KNOWLEDGE BASE:
+"""
+{material}
+"""`;
 
 /**
  *

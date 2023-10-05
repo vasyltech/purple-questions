@@ -344,23 +344,25 @@ const Methods = {
      *
      * @returns {Document}
      */
-    readDocument: (uuid) => {
+    readDocument: (uuid, raw = false) => {
         const document = JSON.parse(
             Fs.readFileSync(GetDocumentsPath(uuid)).toString()
         );
 
-        // Iterate over the list of questions and get answers
-        _.forEach(document.questions, (q, i) => {
-            const question = Questions.readQuestion(q);
+        if (raw === false) {
+            // Iterate over the list of questions and get answers
+            _.forEach(document.questions, (q, i) => {
+                const question = Questions.readQuestion(q);
 
-            // Enrich the question with additional information
-            document.questions[i] = {
-                uuid: q,
-                text: question.text,
-                answer: question.answer,
-                ft_method: _.get(question, 'ft_method', null)
-            }
-        });
+                // Enrich the question with additional information
+                document.questions[i] = {
+                    uuid: q,
+                    text: question.text,
+                    answer: question.answer,
+                    ft_method: _.get(question, 'ft_method', null)
+                }
+            });
+        }
 
         return document;
     },

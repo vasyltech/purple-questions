@@ -14,7 +14,13 @@ export default {
      *
      * @returns {Promise<Array>}
      */
-    getModelList: async () => OpenAiRepository.getModelList(),
+    getLlmModelList: async () => OpenAiRepository.getLlmModelList(),
+
+    /**
+     *
+     * @returns
+     */
+    getFineTuningModelList: () => OpenAiRepository.getFineTuningModelList(),
 
     /**
      * Analyze document content and convert it to the list of questions
@@ -26,7 +32,7 @@ export default {
      */
     analyzeDocumentContent: async (uuid, merge = true) => {
         // Step #1. Read the document data
-        const document = Documents.readDocument(uuid);
+        const document = Documents.readDocument(uuid, true);
 
         // Step #2. Generate the list of questions from the document
         const res1 = await OpenAiRepository.prepareQuestionListFromDocument(
@@ -170,6 +176,7 @@ export default {
 
         _.forEach(message.questions, (question) => {
             material.push(..._.map(question.candidates, (c) => ({
+                uuid: c.uuid,
                 name: c.name,
                 text: c.text,
                 // Duplicating this, so the question can be included in the
@@ -182,7 +189,7 @@ export default {
         if (material.length > 0) {
             const res1 = await OpenAiRepository.prepareAnswerForMessage(
                 message.text,
-                _.unionBy(material, 'text')
+                _.unionBy(material, 'uuid')
             );
 
             message.answer = res1.output;
@@ -234,7 +241,7 @@ export default {
         // Step #3. If this is a deep learning, then queue the question for the
         // model fine-tuning
         if (data.ft_method === 'deep') {
-            question.ft_batch_uuid = Tuning.queue(question.text, question.answer);
+            question.ft_batch_uuid = await Tuning.queue(uuid);
         }
 
         // Step #4. Finally store all the changes to the question

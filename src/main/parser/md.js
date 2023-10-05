@@ -43,6 +43,8 @@ function NormalizeTokens(block) {
 
     if (block.type === 'image') {
         result = '';
+    } else if (block.type === 'codespan') {
+        result = block.raw;
     } else if(_.isArray(block.tokens)) {
         _.forEach(block.tokens, (token) => {
             result = result.replace(
@@ -86,9 +88,7 @@ const Normalizer = {
      * @returns {String}
      */
     heading: (block) => {
-        const result = NormalizeTokens(block);
-
-        return `${result.toUpperCase().trim()}`
+        return block.raw.trim();
     },
 
     /**
@@ -116,8 +116,15 @@ const Normalizer = {
             response.push(NormalizeTokens(item.tokens[0]));
         });
 
-        return response.join('\n');
-    }
+        return response.map(r => `- ${r}`).join('\n');
+    },
+
+    /**
+     *
+     * @param {*} block
+     * @returns
+     */
+    code: (block) => `${block.raw}\n`
 
 };
 
@@ -133,6 +140,7 @@ export default {
             title: null,
             content: ''
         }
+
         const blocks = [];
         const tokens = Marked.Lexer.lex(content);
 

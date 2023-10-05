@@ -165,13 +165,13 @@
                             <v-expansion-panel-title>
                                 <v-icon
                                     color="grey"
-                                    :icon="question.candidates.length > 0 ? 'mdi-check' : 'mdi-alert-circle'"
+                                    :icon="getQuestionVisualIndicator(question)"
                                 ></v-icon>
                                 <span class="ml-2">{{ question.text }}</span>
                             </v-expansion-panel-title>
 
                             <v-expansion-panel-text>
-                                <div v-for="(candidate, i) in question.candidates" :key="i" class="mt-4">
+                                <div v-for="(candidate, i) in prepareQuestionCandidateList(question)" :key="i" class="mt-4">
                                     - <em>{{ candidate.name }}</em> <small>({{ candidate.similarity === 0 ? 'exact match' : `similarity: ${candidate.similarity}` }})</small>
                                 </div>
 
@@ -186,12 +186,17 @@
 
                                 <div class="d-flex justify-end">
                                     <v-btn
+                                        variant="text"
+                                        @click="selectQuestionForDeletion(question)"
+                                    >
+                                        Delete
+                                    </v-btn>
+                                    <v-btn
                                         v-if="question.answer"
                                         variant="text"
-                                        :disabled="isFineTuningQuestion(question)"
-                                        @click="fineTuneQuestion(question)"
+                                        @click="selectQuestionForFineTuning(question)"
                                     >
-                                        {{ isFineTuningQuestion(question) ? 'Processing...' : 'Fine-Tune' }}
+                                        Fine-Tune
                                     </v-btn>
                                     <v-btn
                                         variant="text"
@@ -223,7 +228,7 @@
                     </div>
                 </v-sheet>
 
-                <v-sheet v-if="hasAnyAnswer" class="d-flex align-center justify-center flex-wrap text-center mt-10 px-4" elevation="1"
+                <v-sheet v-if="hasAnyAnswer && !currentMessageData.answer" class="d-flex align-center justify-center flex-wrap text-center mt-10 px-4" elevation="1"
                     height="200" rounded width="100%" color="grey-lighten-3">
                     <div v-if="!generatingAnswer">
                         <p class="text-body-2 mb-4">
@@ -296,6 +301,50 @@
             </v-card-actions>
             </v-card>
         </v-dialog>
+
+        <v-dialog v-model="showFineTuningModal" transition="dialog-bottom-transition" width="700">
+            <v-card>
+                <v-toolbar title="Fine-Tune Curriculum"></v-toolbar>
+                <v-card-text>
+                    <v-container>
+                        <v-alert type="info" prominent variant="outlined" color="grey-darken-2">
+                            You are about to fine-tune a direct answer to the <strong>"{{ selectedQuestion.text }}"</strong> question.
+                            Please select the type of fine-tuning below.
+                        </v-alert>
+                    </v-container>
+
+                    <v-radio-group
+                        v-if="selectedQuestion.answer"
+                        class="mt-4"
+                        v-model="selectedQuestion.ft_method"
+                        label="Fine-Tuning Method"
+                    >
+                        <v-radio label="Factual Learning (Only memorize the curriculum and include it in a prompt)" value="shallow"></v-radio>
+                        <v-radio label="New Skill (Memorize curriculum and queue it for actual model fine-tuning)" value="deep"></v-radio>
+                    </v-radio-group>
+                </v-card-text>
+                <v-card-actions class="justify-end">
+                    <v-btn v-if="selectedQuestion.ft_method" variant="text" :disabled="isFineTuningQuestion" @click="fineTuneSelectedQuestion">{{ isFineTuningQuestion ? 'Fine-Tuning...' : 'Fine-Tune' }}</v-btn>
+                    <v-btn variant="text" @click="showFineTuningModal = false">Close</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <v-dialog v-model="showDeleteQuestionModal" transition="dialog-bottom-transition" width="550">
+            <v-card>
+                <v-toolbar title="Delete Question"></v-toolbar>
+                <v-card-text>
+                    <v-alert type="warning" prominent variant="outlined" color="grey-darken-2">
+                        You are about to delete the <strong>"{{ selectedQuestion.text }}"</strong> question.
+                        Please confirm.
+                    </v-alert>
+                </v-card-text>
+                <v-card-actions class="justify-end">
+                    <v-btn variant="text" @click="deleteSelectedQuestion">Delete</v-btn>
+                    <v-btn variant="text" @click="showDeleteQuestionModal = false">Close</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </v-container>
 </template>
 
@@ -313,15 +362,19 @@ export default {
             createMessageModal: false,
             deleteMessageModal: false,
             selectedMessage: null,
+            selectedQuestion: {},
             newMessage: null,
             currentMessage: null,
             currentMessageData: {},
             analyzingMessage: false,
             generatingAnswer: false,
             fineTuningQuestions: [],
+            isFineTuningQuestion: false,
             updatingQuestions: [],
             successMessage: null,
             showSuccessMessage: false,
+            showFineTuningModal: false,
+            showDeleteQuestionModal: false,
             reGenerateAnswerModal: false,
             showSearchInput: false,
             search: null,
@@ -383,15 +436,17 @@ export default {
                 });
         },
         analyzeMessage() {
-            const _this           = this;
-            this.analyzingMessage = true;
+            this.saveMessageChanges(true, function() {
+                const _this           = this;
+                this.analyzingMessage = true;
 
-            this.$api.ai
-                .analyzeMessageContent(this.currentMessage.uuid)
-                .then((data) => {
-                    _this.currentMessageData = data;
-                    _this.analyzingMessage   = false;
-                });
+                this.$api.ai
+                    .analyzeMessageContent(this.currentMessage.uuid)
+                    .then((data) => {
+                        _this.currentMessageData = data;
+                        _this.analyzingMessage   = false;
+                    });
+            });
         },
         generateAnswer() {
             const _this           = this;
@@ -406,7 +461,7 @@ export default {
                     _this.currentTab            = 'answer';
                 });
         },
-        saveMessageChanges() {
+        saveMessageChanges(silent = false, cb = null) {
             const _this = this;
 
             this.$api.messages
@@ -414,8 +469,14 @@ export default {
                     text: this.currentMessageData.text
                 })
                 .then(() => {
-                    _this.successMessage     = 'Changes saved!';
-                    _this.showSuccessMessage = true;
+                    if (silent !== true) {
+                        _this.successMessage     = 'Changes saved!';
+                        _this.showSuccessMessage = true;
+                    }
+
+                    if (cb) {
+                        cb.call(_this);
+                    }
                 });
         },
         createMessage() {
@@ -443,6 +504,10 @@ export default {
                 _this.currentMessageData = response;
             });
         },
+        prepareQuestionCandidateList(question) {
+            // Removing candidate that is a direct answer to this question
+            return question.candidates.filter(c => c.uuid !== question.uuid);
+        },
         getMessageStatusIcon(message) {
             let icon = 'mdi-bell-circle';
 
@@ -451,6 +516,19 @@ export default {
             }
 
             return icon;
+        },
+        getQuestionVisualIndicator(question) {
+            let response = 'mdi-alert-circle';
+
+            if (question.ft_method === 'shallow') {
+                response = 'mdi-memory';
+            } else if (question.ft_method === 'deep') {
+                response = 'mdi-tune-variant';
+            } else if (question.candidates.length > 0) {
+                response = 'mdi-check';
+            }
+
+            return response;
         },
         getMessageDate(message) {
             return (new Date(message.createdAt)).toLocaleDateString(
@@ -500,30 +578,47 @@ export default {
                 _this.selectedMessage    = null;
                 });
         },
-        fineTuneQuestion(question) {
+        selectQuestionForFineTuning(question) {
+            this.selectedQuestion    = question;
+            this.showFineTuningModal = true;
+        },
+        selectQuestionForDeletion(question) {
+            this.selectedQuestion        = question;
+            this.showDeleteQuestionModal = true;
+        },
+        fineTuneSelectedQuestion() {
+            const _this               = this;
+            this.isFineTuningQuestion = true;
+
+            this.$api.ai.fineTuneQuestion(this.selectedQuestion.uuid, {
+                answer: this.selectedQuestion.answer,
+                ft_method: this.selectedQuestion.ft_method
+            }).then(() => {
+                // Close the modal
+                _this.showFineTuningModal = false;
+                _this.selectedQuestion    = {};
+
+                // Show success message
+                _this.showSuccessMessage = true;
+                _this.successMessage     = 'Question was fine-tuned!';
+            }).finally(() => {
+                _this.isFineTuningQuestion = false;
+            });
+        },
+        deleteSelectedQuestion() {
             const _this = this;
 
-            const answer = question.answer ? question.answer.trim() : '';
+            this.$api.messages
+                .deleteQuestionFromMessage(this.currentMessage.uuid, this.selectedQuestion.uuid)
+                .then(() => {
+                    // Remove the question from the list of message questions
+                    _this.currentMessageData.questions = _this.currentMessageData.questions.filter(
+                        q => q !== _this.selectedQuestion
+                    );
 
-            if (answer.length > 0) {
-                this.indexingQuestions.push(question);
-
-                this.$api.ai
-                    .indexMessageQuestion(
-                        this.currentMessage.uuid,
-                        question.text,
-                        answer
-                    ).then(() => {
-                        _this.indexingQuestions = _this.indexingQuestions.filter(
-                            q => q !== question
-                        );
-
-                        _this.getMessageIdentifiedQuestions();
-
-                        _this.successMessage     = 'Question Indexed!';
-                        _this.showSuccessMessage = true;
-                    });
-            }
+                _this.showDeleteQuestionModal = false;
+                _this.selectedQuestion        = {};
+                });
         },
         updateQuestion(question) {
             const _this = this;
@@ -552,9 +647,6 @@ export default {
                 ).then((questions) => {
                     _this.currentMessageData.questions = questions;
                 });
-        },
-        isFineTuningQuestion(question) {
-            return this.fineTuningQuestions.includes(question);
         },
         isUpdatingQuestion(question) {
             return this.updatingQuestions.includes(question);
@@ -598,5 +690,9 @@ export default {
     border-radius: 0.5rem;
     white-space: pre-wrap;
     word-wrap: break-word;
+}
+
+.v-breadcrumbs {
+  font-size: 0.9rem;
 }
 </style>
