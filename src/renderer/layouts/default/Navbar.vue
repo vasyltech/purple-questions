@@ -47,7 +47,7 @@ export default {
                 ['mdi-file-document-multiple', 'Documents', '/'],
                 ['mdi-message-processing-outline', 'Conversations', '/messages'],
                 // ['mdi-progress-question', 'Questions', '/questions'],
-                // ['mdi-tune-variant', 'LLM Fine-Tuning', '/tuning'],
+                ['mdi-tune-variant', 'LLM Fine-Tuning', '/tuning'],
                 ['mdi-cog-outline', 'Settings', '/settings']
             ]
         }

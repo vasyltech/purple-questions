@@ -35,7 +35,7 @@ contextBridge.exposeInMainWorld(
             ),
             addQuestionToDocument: (uuid, question) => ipcRenderer.invoke(
                 'documents', ['addQuestionToDocument', uuid, question]
-            ),
+            )
         },
         questions: {
             getQuestions: (page, limit) => ipcRenderer.invoke(
@@ -112,8 +112,32 @@ contextBridge.exposeInMainWorld(
             getTuningList: (page, limit) => ipcRenderer.invoke(
                 'tuning', ['getTuningList', page, limit]
             ),
+            createTuning: () => ipcRenderer.invoke(
+                'tuning', ['createTuning']
+            ),
             readTuning: (uuid) => ipcRenderer.invoke(
                 'tuning', ['readTuning', uuid]
+            ),
+            readTuningEvents: (uuid) => ipcRenderer.invoke(
+                'tuning', ['readTuningEvents', uuid]
+            ),
+            updateTuning: (uuid, data) => ipcRenderer.invoke(
+                'tuning', ['updateTuning', uuid, data]
+            ),
+            deleteTuning: (uuid, deleteCurriculum) => ipcRenderer.invoke(
+                'tuning', ['deleteTuning', uuid, deleteCurriculum]
+            ),
+            addCurriculumToTuning: (uuid, curriculum) => ipcRenderer.invoke(
+                'tuning', ['addCurriculumToTuning', uuid, curriculum]
+            ),
+            bulkCurriculumUploadToTuning: (uuid, csvPath, skipFirstColumn) => ipcRenderer.invoke(
+                'tuning', ['bulkCurriculumUploadToTuning', uuid, csvPath, skipFirstColumn]
+            ),
+            deleteCurriculumFromTuning: (uuid, curriculum, del) => ipcRenderer.invoke(
+                'tuning', ['deleteCurriculumFromTuning', uuid, curriculum, del]
+            ),
+            offloadBatch: (uuid) => ipcRenderer.invoke(
+                'tuning', ['offloadBatch', uuid]
             )
         }
     }

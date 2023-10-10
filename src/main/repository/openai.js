@@ -134,6 +134,20 @@ const Methods = {
     },
 
     /**
+     *
+     * @param {*} id
+     * @returns
+     */
+    getFineTuningJob: async (id) => GetClient().fineTuning.jobs.retrieve(id),
+
+    /**
+     *
+     * @param {*} id
+     * @returns
+     */
+    getFineTuningJobEvents: async (id, limit = 99) => GetClient().fineTuning.jobs.listEvents(id, limit),
+
+    /**
      * Preparing the list of questions from the provided document
      *
      * @param {Document} document
@@ -318,59 +332,45 @@ const Methods = {
      * @param {*} questions
      * @returns
      */
-    createFineTuningJob: async (questions) => {
-        const response = { status: 'failed' };
+    createFineTuningJob: async (questions, settings) => {
+        const response = { status: 'failed', fine_tuning_logs: [] };
         const client   = GetClient();
 
         // Step #1. Uploading the file with tuning data
         const filepath = CreateTempFilepath(questions);
 
-        // const res1     = await GetClient().files.create({
-        //     file: Fs.createReadStream(filepath),
-        //     purpose: 'fine-tune'
-        // });
-        const res1 = {
-            "object":"file",
-            "id":"file-NNsZ22ukpBgUu3CPPI1r53zB",
-            "purpose":"fine-tune",
-            "filename":"8131cf99-1beb-4c5c-b709-6f2770598a0d.tmp",
-            "bytes":17551,
-            "created_at":1696364913,
-            "status":"uploaded",
-            "status_details":null
-        };
+        const res1     = await client.files.create({
+            file: Fs.createReadStream(filepath),
+            purpose: 'fine-tune'
+        });
+
+        response.fine_tuning_logs.push({
+            type: 'upload_file',
+            result: res1
+        });
 
         if (_.get(res1, 'status') === 'uploaded') {
-            response.fileId = res1.id;
-            response.status = 'uploaded';
+            response.file_id = res1.id;
+            response.status  = 'uploaded';
 
             // Step #2. Creating a fine tuning job
-            // const res2 = await GetClient().fineTuning.jobs.create({
-            //     training_file: res1.id,
-            //     model: Settings.getSetting('fineTuningBaseModel', 'gpt-3.5-turbo-0613')
-            // });
-            const res2 = {
-                "object":"fine_tuning.job",
-                "id":"ftjob-iBD8gAYr0wnqqYAUM1FqMhBs",
-                "model":"gpt-3.5-turbo-0613",
-                "created_at":1696365045,
-                "finished_at":null,
-                "fine_tuned_model":null,
-                "organization_id":"org-JuIp7Eo09NSxINJjYCkq2b8X",
-                "result_files":[],
-                "status":"validating_files",
-                "validation_file":null,
-                "training_file":"file-NNsZ22ukpBgUu3CPPI1r53zB",
-                "hyperparameters":{"n_epochs":"auto"},
-                "trained_tokens":null,
-                "error":null
-            }
+            const res2 = await client.fineTuning.jobs.create({
+                training_file: res1.id,
+                model: settings.base_model || 'gpt-3.5-turbo-0613',
+                hyperparameters: {
+                    n_epochs: parseInt(settings.n_epochs, 10) || 'auto'
+                },
+                suffix: settings.llm_suffix || null
+            });
 
-            console.log(JSON.stringify(res2));
+            response.fine_tuning_logs.push({
+                type: 'create_job',
+                result: res2
+            });
 
-            if (_.get(res2, 'status') === 'queued') {
-                response.fineTuningId = res2.id;
-                response.status       = 'queued';
+            if (['validating_files', 'queued'].includes(_.get(res2, 'status'))) {
+                response.fine_tuning_job_id = res2.id;
+                response.status             = 'queued';
             }
         }
 

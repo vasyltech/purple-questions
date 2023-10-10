@@ -59,14 +59,6 @@
         </template>
       </v-tooltip>
 
-      <v-tooltip v-if="currentDocument" text="Add New Curriculum" location="bottom">
-        <template v-slot:activator="{ props }">
-          <v-btn icon v-bind="props" @click="showAddQuestionModal = true">
-            <v-icon>mdi-plus-box</v-icon>
-          </v-btn>
-        </template>
-      </v-tooltip>
-
       <v-tooltip v-if="currentDocument" :text="hasAssociatedQuestions ? 'Re-Analyze Content' : 'Analyze Content'" location="bottom">
         <template v-slot:activator="{ props }">
           <v-btn icon v-bind="props" @click="analyzeContent" :disabled="analyzingContent">
@@ -326,7 +318,18 @@
       </v-container>
 
       <v-container v-if="hasAssociatedQuestions">
-        <div class="text-overline pb-2">Curriculum</div>
+        <v-toolbar density="compact">
+          <v-toolbar-title>Curriculum</v-toolbar-title>
+          <v-spacer></v-spacer>
+
+          <v-tooltip text="Add New Curriculum" location="bottom">
+            <template v-slot:activator="{ props }">
+              <v-btn icon v-bind="props" @click="showAddQuestionModal = true">
+                <v-icon>mdi-plus-box</v-icon>
+              </v-btn>
+            </template>
+          </v-tooltip>
+        </v-toolbar>
 
         <v-list lines="false">
           <v-list-item

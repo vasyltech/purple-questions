@@ -228,6 +228,10 @@ export default {
         if (!_.isArray(question.embedding)) {
             const res1 = await OpenAiRepository.prepareTextEmbedding(question.text);
 
+            if (!_.isArray(question.usage)) {
+                question.usage = [];
+            }
+
             // Add usage to the question
             question.usage.push(res1.usage);
 
