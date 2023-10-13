@@ -1,6 +1,6 @@
 <template>
   <v-container class="fill-height">
-    <v-app-bar>
+    <v-app-bar color="deep-purple-lighten-1">
       <template v-slot:prepend>
         <v-icon icon="mdi-file-document-multiple"></v-icon>
       </template>
@@ -87,7 +87,7 @@
 
     <v-responsive v-if="search" class="align-left fill-height">
       <v-container>
-        <v-sheet class="d-flex align-center justify-center flex-wrap text-center mx-auto px-4" elevation="1"
+        <v-sheet class="d-flex align-center justify-center flex-wrap text-center mx-auto px-4" elevation="0"
             height="150" rounded width="100%" color="grey-lighten-3">
             <div>
               <p class="text-body-2">
@@ -134,8 +134,8 @@
             </v-col>
           </v-row>
 
-          <v-sheet v-else class="d-flex align-center justify-center flex-wrap text-center mx-auto px-4" elevation="1"
-            height="200" rounded width="100%" color="grey-lighten-3">
+          <v-sheet v-else class="d-flex align-center justify-center flex-wrap text-center mx-auto" elevation="0"
+            height="150" rounded width="100%" color="grey-lighten-3">
             <div>
               <p class="text-body-2 mb-4">
                 There are no folders in the "{{ currentFolder.name }}" folder.
@@ -149,11 +149,11 @@
       <v-container v-if="currentFolder">
         <div class="text-overline pb-2">Documents</div>
 
-        <v-list lines="two" v-if="currentFolderHasChildren('document')">
+        <v-list lines="two" class="pa-0" v-if="currentFolderHasChildren('document')">
           <v-list-item v-for="document in getCurrentFolderChildren('document')" :key="document.uuid" :title="document.name"
             @click="openDocument(document)" :subtitle="getDocumentLastModified(document)">
             <template v-slot:prepend>
-              <v-avatar color="grey">
+              <v-avatar color="deep-purple">
                 <v-icon color="white">mdi-clipboard-text</v-icon>
               </v-avatar>
             </template>
@@ -177,7 +177,7 @@
           </v-list-item>
         </v-list>
 
-        <v-sheet v-else class="d-flex align-center justify-center flex-wrap text-center mx-auto px-4" elevation="1"
+        <v-sheet v-else class="d-flex align-center justify-center flex-wrap text-center mx-auto px-4" elevation="0"
           height="200" rounded width="100%" color="grey-lighten-3">
           <div>
             <p class="text-body-2 mb-4">
@@ -190,7 +190,7 @@
 
       <v-dialog v-model="createFolderModal" transition="dialog-bottom-transition" width="400">
         <v-card>
-          <v-toolbar title="Create New Folder"></v-toolbar>
+          <v-toolbar color="grey-darken-4" title="Create New Folder"></v-toolbar>
           <v-card-text>
             <v-text-field v-model="newFolderName"
               :rules="[inputValidationRules.required, inputValidationRules.folderName]" variant="outlined"
@@ -206,7 +206,7 @@
 
       <v-dialog v-model="createDocumentModal" transition="dialog-bottom-transition" width="550">
         <v-card>
-          <v-toolbar title="Create New Document"></v-toolbar>
+          <v-toolbar color="grey-darken-4" title="Create New Document"></v-toolbar>
           <v-card-text>
             <v-tabs
               v-model="addNewDocumentType"
@@ -276,14 +276,14 @@
 
       <v-dialog v-model="deleteFolderModal" transition="dialog-bottom-transition" width="400">
         <v-card>
-          <v-toolbar title="Delete Folder"></v-toolbar>
+          <v-toolbar color="red-darken-4" title="Delete Folder"></v-toolbar>
           <v-card-text>
-            <v-alert type="warning" prominent variant="outlined" color="grey-darken-2">
+            <v-alert type="warning" prominent variant="outlined" color="red-darken-4">
               You are about to delete the <strong v-if="selectedFolder">"{{ selectedFolder.name }}"</strong> folder. Please confirm.
             </v-alert>
           </v-card-text>
           <v-card-actions class="justify-end">
-            <v-btn variant="text" @click="deleteSelectedFolder">Delete</v-btn>
+            <v-btn variant="text" color="red-darken-4" @click="deleteSelectedFolder">Delete</v-btn>
             <v-btn variant="text" @click="deleteFolderModal = false">Close</v-btn>
           </v-card-actions>
         </v-card>
@@ -293,11 +293,11 @@
     <v-responsive v-else class="align-left fill-height">
       <v-container>
         <div class="text-overline pb-2">Document Name</div>
-        <v-text-field v-model="currentDocumentData.name" variant="outlined"></v-text-field>
+        <v-text-field v-model="currentDocumentData.name" bg-color="white" variant="outlined"></v-text-field>
 
         <div v-if="currentDocumentData && currentDocumentData.origin && currentDocumentData.origin.type === 'link'">
           <div class="text-overline pb-2">Document Origin</div>
-          <v-text-field v-model="currentDocumentData.origin.link" variant="outlined"></v-text-field>
+          <v-text-field v-model="currentDocumentData.origin.link" bg-color="white" variant="outlined"></v-text-field>
         </div>
 
         <div class="text-overline pb-2">Content</div>
@@ -307,6 +307,7 @@
           :style="{
             height: '400px',
             border: '1px solid #CCCCCC',
+            backgroundColor: '#FFFFFF',
             borderRadius: '0.3rem'
           }"
           :autofocus="true"
@@ -364,7 +365,7 @@
         </v-list>
       </v-container>
       <v-container v-else>
-        <v-sheet class="d-flex align-center justify-center flex-wrap text-center mx-auto px-4" elevation="1"
+        <v-sheet class="d-flex align-center justify-center flex-wrap text-center mx-auto px-4" elevation="0"
           height="150" rounded width="100%" color="grey-lighten-3">
           <div v-if="!analyzingContent">
             <p class="text-body-2 mb-4">
@@ -386,15 +387,15 @@
 
       <v-dialog v-model="showDeleteQuestionModal" transition="dialog-bottom-transition" width="550">
         <v-card>
-          <v-toolbar title="Delete Curriculum"></v-toolbar>
+          <v-toolbar color="red-darken-4" title="Delete Curriculum"></v-toolbar>
           <v-card-text>
-            <v-alert type="warning" prominent variant="outlined" color="grey-darken-2">
+            <v-alert type="warning" prominent variant="outlined" color="red-darken-4">
               You are about to delete the <strong>"{{ selectedQuestion.text }}"</strong> curriculum.
               Please confirm.
             </v-alert>
           </v-card-text>
           <v-card-actions class="justify-end">
-            <v-btn variant="text" @click="deleteSelectedQuestion">Delete</v-btn>
+            <v-btn variant="text" color="red-darken-4" @click="deleteSelectedQuestion">Delete</v-btn>
             <v-btn variant="text" @click="showDeleteQuestionModal = false">Close</v-btn>
           </v-card-actions>
         </v-card>
@@ -402,7 +403,7 @@
 
       <v-dialog v-model="showEditQuestionModal" transition="dialog-bottom-transition" width="800">
         <v-card>
-          <v-toolbar title="Edit Curriculum"></v-toolbar>
+          <v-toolbar color="grey-darken-4" title="Edit Curriculum"></v-toolbar>
           <v-card-text>
             <v-text-field
               class="mt-6"
@@ -423,7 +424,7 @@
             ></v-textarea>
           </v-card-text>
           <v-card-actions class="justify-end">
-            <v-btn variant="text" @click="showDeleteQuestionModal = true">Delete</v-btn>
+            <v-btn variant="text" color="red-darken-4" @click="showDeleteQuestionModal = true">Delete</v-btn>
             <v-btn
               variant="text"
               :disabled="generatingAnswer"
@@ -438,7 +439,7 @@
 
       <v-dialog v-model="showAddQuestionModal" transition="dialog-bottom-transition" width="800">
         <v-card>
-          <v-toolbar title="Add New Curriculum"></v-toolbar>
+          <v-toolbar color="grey-darken-4" title="Add New Curriculum"></v-toolbar>
           <v-card-text>
             <v-container>
               <v-text-field label="Subject" v-model="newQuestion" variant="outlined"></v-text-field>
@@ -453,7 +454,7 @@
 
       <v-dialog v-model="showFineTuneQuestionModal" transition="dialog-bottom-transition" width="1000">
         <v-card>
-          <v-toolbar title="Fine-Tune Curriculum"></v-toolbar>
+          <v-toolbar color="grey-darken-4" title="Fine-Tune Curriculum"></v-toolbar>
           <v-card-text>
             <v-container>
               <v-text-field
@@ -502,14 +503,14 @@
 
       <v-dialog v-model="analyzeDocumentContentModal" transition="dialog-bottom-transition" width="550">
         <v-card>
-          <v-toolbar title="Re-Analyze Question"></v-toolbar>
+          <v-toolbar color="grey-darken-4" title="Re-Analyze Question"></v-toolbar>
           <v-card-text>
-            <v-alert type="warning" prominent variant="outlined" color="grey-darken-2">
+            <v-alert type="warning" prominent variant="outlined">
               You are on the verge of reevaluating the content of the current document.
               Unless you opt to combine the new set, all existing questions will be removed.
             </v-alert>
 
-            <v-checkbox v-model="mergeNewQuestions" label="Merge New Questions"></v-checkbox>
+            <v-checkbox hide-details v-model="mergeNewQuestions" label="Merge New Questions"></v-checkbox>
           </v-card-text>
           <v-card-actions class="justify-end">
             <v-btn variant="text" :disabled="analyzingContent" @click="analyzeDocumentContent">{{ analyzingContent ? 'Analyzing...' : 'Analyze' }}</v-btn>
@@ -531,15 +532,15 @@
 
     <v-dialog v-model="deleteDocumentModal" transition="dialog-bottom-transition" width="450">
       <v-card>
-        <v-toolbar title="Delete Document"></v-toolbar>
+        <v-toolbar color="red-darken-4" title="Delete Document"></v-toolbar>
         <v-card-text>
-          <v-alert type="warning" prominent variant="outlined" color="grey-darken-2">
+          <v-alert type="warning" prominent variant="outlined" color="red-darken-4">
             You are about to delete the <strong v-if="selectedDocument">"{{ selectedDocument.name }}"</strong> document.
             {{ hasAssociatedQuestions ? 'All the associated questions will be deleted as well.' : '' }} Please confirm.
           </v-alert>
         </v-card-text>
         <v-card-actions class="justify-end">
-          <v-btn variant="text" @click="deleteSelectedDocument">Delete</v-btn>
+          <v-btn variant="text" color="red-darken-4" @click="deleteSelectedDocument">Delete</v-btn>
           <v-btn variant="text" @click="deleteDocumentModal = false">Close</v-btn>
         </v-card-actions>
       </v-card>

@@ -1,6 +1,6 @@
 <template>
     <v-container class="fill-height">
-        <v-app-bar>
+        <v-app-bar color="deep-purple-lighten-1">
             <template v-slot:prepend>
                 <v-icon icon="mdi-progress-question"></v-icon>
             </template>

@@ -1,11 +1,11 @@
 <template>
     <v-container class="fill-height">
-        <v-app-bar>
+        <v-app-bar color="deep-purple-lighten-1">
             <template v-slot:prepend>
                 <v-icon icon="mdi-cog-outline"></v-icon>
             </template>
 
-            <v-app-bar-title>Settings</v-app-bar-title>
+            <v-app-bar-title class="title">Settings</v-app-bar-title>
 
             <template v-slot:append>
                 <v-btn icon @click="saveSettings">
@@ -250,8 +250,7 @@ export default {
     padding-inline-start: 16px;
     padding-inline-end: 16px;
 }
-
-.v-breadcrumbs {
+.title {
   font-size: 0.9rem;
 }
 </style>

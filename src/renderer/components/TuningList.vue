@@ -1,6 +1,6 @@
 <template>
     <v-container class="fill-height">
-        <v-app-bar>
+        <v-app-bar color="deep-purple-lighten-1">
             <template v-slot:prepend>
                 <v-icon icon="mdi-tune-variant"></v-icon>
             </template>
@@ -75,13 +75,13 @@
             </v-container>
 
             <v-container v-else>
-                <div class="text-overline pb-2">Batch ID</div>
+                <div class="text-overline">Batch ID (read-only)</div>
                 <v-text-field :value="currentTuning.uuid" readonly variant="outlined"></v-text-field>
 
                 <v-expansion-panels>
                     <v-expansion-panel title="Fine-Tuning Batch Attributes">
                         <v-expansion-panel-text>
-                            <div class="text-overline pb-2">Base LLM Model</div>
+                            <div class="text-overline">Base LLM Model</div>
                             <v-select
                                 v-model="currentTuningData.base_model"
                                 :readonly="currentTuningData.isReadOnly"
@@ -90,22 +90,20 @@
                                 :items="supportedFineTuningModels"
                             ></v-select>
 
-                            <div class="text-overline pb-2">Number of Training Cycles (n_epochs)</div>
+                            <div class="text-overline">Number of Training Cycles (n_epochs)</div>
                             <v-text-field
                                 v-model="currentTuningData.n_epochs"
                                 :readonly="currentTuningData.isReadOnly"
                                 variant="outlined"
-                                persistent-hint
                                 hint="The number of epochs to train the model for. An epoch refers to one full cycle through the training dataset. Default is auto."
                             ></v-text-field>
 
                             <div v-if="currentTuningData.base_model && currentTuningData.base_model.indexOf('ft:') !==0">
-                                <div class="text-overline pb-2">Custom Model Suffix</div>
+                                <div class="text-overline">Custom Model Suffix</div>
                                 <v-text-field
                                     v-model="currentTuningData.llm_suffix"
                                     :readonly="currentTuningData.isReadOnly"
                                     variant="outlined"
-                                    persistent-hint
                                     hint="A string of up to 18 characters that will be added to your fine-tuned model name. Default is lowercased persona's name."
                                 ></v-text-field>
                             </div>
@@ -217,10 +215,10 @@
 
             <v-dialog v-if="currentTuning && !currentTuningData.isReadOnly" v-model="showImportCurriculumModal" transition="dialog-bottom-transition" width="550">
                 <v-card>
-                    <v-toolbar title="Import Curriculum"></v-toolbar>
+                    <v-toolbar color="grey-darken-4" title="Import Curriculum"></v-toolbar>
                     <v-card-text>
-                        <v-alert type="info" prominent variant="outlined" color="grey-darken-2">
-                            Imported curriculum will be automatically fine-tuned as factual learning and added to the queue for new skill tuning.
+                        <v-alert type="info" prominent variant="outlined" color="deep-purple-darken-4">
+                            Imported curriculum will be automatically indexed as factual learning and added to the queue for new skill tuning.
                         </v-alert>
 
                         <v-file-input
@@ -234,7 +232,7 @@
                             hint="Select .csv file that has two columns: subject and answer"
                         ></v-file-input>
 
-                        <v-checkbox v-model="skipFirstColumn" label="Ignore the first column in the CSV because it is a header" />
+                        <v-checkbox hide-details v-model="skipFirstColumn" label="Ignore the first column in the CSV because it is a header" />
                     </v-card-text>
                     <v-card-actions class="justify-end">
                         <v-btn variant="text" :disabled="uploadingCurriculum" @click="uploadBulkCurriculum">{{ uploadingCurriculum ? 'Uploading...' : 'Upload' }}</v-btn>
@@ -245,7 +243,7 @@
 
             <v-dialog v-if="currentTuning && !currentTuningData.isReadOnly" v-model="showAddCurriculumModal" transition="dialog-bottom-transition" width="800">
                 <v-card>
-                    <v-toolbar title="Add New Curriculum"></v-toolbar>
+                    <v-toolbar color="grey-darken-4" title="Add New Curriculum"></v-toolbar>
                     <v-card-text>
                         <v-text-field
                             label="Subject"
@@ -277,7 +275,7 @@
 
             <v-dialog v-if="currentTuning" v-model="showEditCurriculumModal" transition="dialog-bottom-transition" width="800">
                 <v-card>
-                    <v-toolbar title="Edit Curriculum"></v-toolbar>
+                    <v-toolbar color="grey-darken-4" title="Edit Curriculum"></v-toolbar>
                     <v-card-text>
                         <v-text-field
                             label="Subject (read-only)"
@@ -311,10 +309,10 @@
 
             <v-dialog v-if="currentTuning" v-model="showDeleteTuningModal" transition="dialog-bottom-transition" width="600">
                 <v-card>
-                    <v-toolbar title="Delete Batch"></v-toolbar>
+                    <v-toolbar color="red-darken-4" title="Delete Batch"></v-toolbar>
 
                     <v-card-text>
-                        <v-alert type="warning" prominent variant="outlined" color="grey-darken-2">
+                        <v-alert type="warning" prominent variant="outlined" color="red-darken-4">
                             You are about to delete the <strong v-if="currentTuning">"{{ currentTuning.uuid }}"</strong> batch with <strong>{{ currentTuning.queued }}</strong> queued curriculum{{ currentTuning.queued === 1 ? '' : 's' }}.
                             Please confirm.
                         </v-alert>
@@ -322,7 +320,7 @@
                         <v-checkbox v-if="currentTuning.queued > 0" v-model="deleteCurriculum" label="Also delete directly created or imported curriculum" />
                     </v-card-text>
                     <v-card-actions class="justify-end">
-                        <v-btn variant="text" @click="deleteCurrentTuning">Delete</v-btn>
+                        <v-btn variant="text" color="red-darken-4" @click="deleteCurrentTuning">Delete</v-btn>
                         <v-btn variant="text" @click="showDeleteTuningModal = false">Close</v-btn>
                     </v-card-actions>
                 </v-card>
@@ -330,10 +328,10 @@
 
             <v-dialog v-if="currentTuning && !currentTuningData.isReadOnly" v-model="showDeleteCurriculumModal" transition="dialog-bottom-transition" width="600">
                 <v-card>
-                    <v-toolbar title="Remove Curriculum From Batch"></v-toolbar>
+                    <v-toolbar color="red-darken-4" title="Remove Curriculum From Batch"></v-toolbar>
 
                     <v-card-text>
-                        <v-alert type="warning" prominent variant="outlined" color="grey-darken-2">
+                        <v-alert type="warning" prominent variant="outlined" color="red-darken-4">
                             You are about to remove the <strong v-if="selectedCurriculum">"{{ selectedCurriculum.text }}"</strong> curriculum from the batch.
                             Please confirm.
                         </v-alert>
@@ -343,6 +341,7 @@
                     <v-card-actions class="justify-end">
                         <v-btn
                             variant="text"
+                            color="red-darken-4"
                             :disabled="deletingCurriculum"
                             @click="deleteSelectedCurriculum"
                         >{{ deletingCurriculum ? 'Removing...' : 'Remove' }}</v-btn>
@@ -353,10 +352,10 @@
 
             <v-dialog v-if="currentTuning" v-model="showOffloadModal" transition="dialog-bottom-transition" width="600">
                 <v-card>
-                    <v-toolbar title="Offload Batch"></v-toolbar>
+                    <v-toolbar color="grey-darken-4" title="Offload Batch"></v-toolbar>
 
                     <v-card-text>
-                        <v-alert type="warning" prominent variant="outlined" color="grey-darken-2">
+                        <v-alert type="warning" prominent variant="outlined" color="deep-purple-darken-4">
                             You are about to offload the <strong v-if="currentTuning">"{{ currentTuning.uuid }}"</strong> batch with <strong>{{ currentTuning.queued }}</strong> queued curriculum{{ currentTuning.queued === 1 ? '' : 's' }}.
                             Please confirm.
                         </v-alert>

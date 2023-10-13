@@ -2,7 +2,7 @@
   "name": "purple-questions",
   "productName": "Purple Question",
   "version": "0.1.0",
-  "description": "AI-driven Customer Support Automation",
+  "description": "LLM Integrated Development Environment",
   "main": ".vite/build/main.js",
   "scripts": {
     "start": "electron-forge start",

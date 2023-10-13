@@ -1,6 +1,6 @@
 <template>
-    <v-navigation-drawer v-model="drawer">
-        <v-sheet color="grey-lighten-4" class="pa-4 text-center">
+    <v-navigation-drawer v-model="drawer" color="deep-purple-lighten-1">
+        <v-sheet color="grey-darken-4" class="pa-4 text-center">
             <v-avatar size="96">
                 <svg width="1046px" height="1046px" viewBox="0 0 1046 1046" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
                     <defs>
@@ -20,7 +20,7 @@
 
         <v-divider></v-divider>
 
-        <v-list>
+        <v-list class="pa-0">
             <v-list-item
                 v-for="[icon, text, href] in links"
                 :key="icon"
@@ -31,8 +31,8 @@
         </v-list>
 
         <template v-slot:append>
-            <v-sheet color="grey-lighten-4" class="pa-4 text-center">
-                ---
+            <v-sheet color="grey-darken-4" class="pa-4 text-center">
+                <span class="text-overline text-white">Version 0.0.1</span>
             </v-sheet>
         </template>
     </v-navigation-drawer>
