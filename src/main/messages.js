@@ -6,6 +6,7 @@ const _              = require('lodash');
 const Crypto         = require('crypto');
 
 import DbRepository from './repository/db';
+import OpenAiRepository from './repository/openai';
 import Questions from './questions';
 import Settings from './settings';
 
@@ -182,15 +183,18 @@ const Methods = {
     /**
      *
      * @param {*} text
+     * @param {*} metadata
+     *
      * @returns
      */
-    createMessage: (text) => {
+    createMessage: (text, metadata) => {
         const uuid     = uuidv4();
         const fullPath = GetMessagesBasePath(uuid);
 
         const data = {
             text: text.trim(),
-            questions: []
+            questions: [],
+            metadata
         };
 
         Fs.writeFileSync(fullPath, JSON.stringify(data));
@@ -266,6 +270,32 @@ const Methods = {
 
         // Now delete the actual question
         await Questions.deleteQuestion(questionUuid);
+
+        return true;
+    },
+
+    /**
+     *
+     * @param {*} uuid
+     * @param {*} data
+     * @returns
+     */
+    addQuestionToMessage: async (uuid, data) => {
+        const message = JSON.parse(
+            Fs.readFileSync(GetMessagesBasePath(uuid)).toString()
+        );
+
+        // Embed the message
+        const res1 = await OpenAiRepository.prepareTextEmbedding(data.text);
+
+        const question = await Questions.createQuestion({
+            text: res1.output.text,
+            embedding: res1.output.embedding,
+            usage: [ res1.usage ]
+        });
+
+        message.questions.push(question.uuid);
+        Methods.updateMessage(uuid, { questions: message.questions });
 
         return true;
     },

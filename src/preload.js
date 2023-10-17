@@ -98,6 +98,9 @@ contextBridge.exposeInMainWorld(
             deleteQuestionFromMessage: (uuid, question) => ipcRenderer.invoke(
                 'messages', ['deleteQuestionFromMessage', uuid, question]
             ),
+            addQuestionToMessage: (uuid, data) => ipcRenderer.invoke(
+                'messages', ['addQuestionToMessage', uuid, data]
+            ),
             updateMessage: (uuid, data) => ipcRenderer.invoke(
                 'messages', ['updateMessage', uuid, data]
             ),
@@ -139,6 +142,11 @@ contextBridge.exposeInMainWorld(
             offloadBatch: (uuid) => ipcRenderer.invoke(
                 'tuning', ['offloadBatch', uuid]
             )
-        }
+        },
+        addons: {
+            getAddons: (page, limit) => ipcRenderer.invoke(
+                'addons', ['getAddons', page, limit]
+            )
+        },
     }
 );

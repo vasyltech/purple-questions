@@ -100,6 +100,17 @@ const routes = [
     ],
   },
   {
+    path: '/addons',
+    component: () => import('@/layouts/default/Default.vue'),
+    children: [
+      {
+        path: '',
+        name: 'Addons',
+        component: () => import('@/views/Addons.vue'),
+      },
+    ],
+  },
+  {
     path: '/settings',
     component: () => import('@/layouts/default/Default.vue'),
     children: [

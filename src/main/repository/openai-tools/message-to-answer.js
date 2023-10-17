@@ -12,6 +12,7 @@ Follow these instructions:
 - Use "MY KNOWLEDGE BASE" as the additional source to generate response to the "USER MESSAGE".
 - Only answer questions listed in the "QUESTIONS TO ANSWER" section.
 - Provide as detailed answer as possible with an example, if applicable.
+- Do not include any external references or sources in the output.
 - Do not fabricate any answers. Say that you do not know.
 - {constraint}
 

@@ -1,5 +1,6 @@
 const { app, BrowserWindow, screen, ipcMain } = require('electron');
-const path = require('path');
+const path                                    = require('path');
+const _                                       = require('lodash');
 
 import Documents from './main/documents';
 import Questions from './main/questions';
@@ -7,7 +8,9 @@ import Settings from './main/settings';
 import Ai from './main/ai';
 import Messages from './main/messages';
 import Tuning from './main/tuning';
-import Bridge from './main/bridge';
+//import Bridge from './main/bridge';
+import Addons from './main/addons';
+import Debug from './main/libs/debug';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -20,11 +23,35 @@ if (require('electron-squirrel-startup')) {
  * @param {*} handler
  */
 function RegisterHandler(channel, handler) {
-  ipcMain.handle(channel, (_, args) => {
-    const method = args.shift();
-    const type   = typeof handler[method];
+  ipcMain.handle(channel, (event, args) => {
+    let response;
 
-    return type === 'function' ? handler[method](...args) : undefined;
+    const method = args.shift();
+
+    if (_.isFunction(handler[method])) {
+      // If function is async, then register catch
+      if (handler[method].constructor.name === 'AsyncFunction') {
+        response = handler[method](...args).catch((error) => {
+          Debug.error(channel, method, args, error);
+
+          response = new Error(error.message);
+        });
+      } else {
+        try {
+          response = handler[method](...args);
+        } catch (error) {
+          Debug.error(channel, method, args, error);
+
+          response = new Error(error.message);
+        }
+      }
+    } else {
+      response = new Error(`Channel ${channel} does not have ${method} method`);
+
+      Debug.error(channel, method, args, response);
+    }
+
+    return response;
   });
 }
 
@@ -57,9 +84,10 @@ const createWindow = () => {
   RegisterHandler('ai', Ai);
   RegisterHandler('messages', Messages);
   RegisterHandler('tuning', Tuning);
+  RegisterHandler('addons', Addons);
 
   // Finally load add-ons
-  Bridge.loadAddOns();
+  //Bridge.loadAddOns();
 };
 
 // This method will be called when Electron has finished

@@ -224,6 +224,8 @@ export default {
             if (this.settings.apiKey) {
                 this.$api.ai.getLlmModelList().then((response) => {
                     _this.supportedLlmModels = response;
+                }).catch((error) => {
+                    console.log(error);
                 });
             }
         }
@@ -235,6 +237,8 @@ export default {
             _this.settings = response;
 
             _this.reload();
+        }).catch((error) => {
+            console.log(error);
         });
     }
 }

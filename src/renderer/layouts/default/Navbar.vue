@@ -48,6 +48,7 @@ export default {
                 ['mdi-message-processing-outline', 'Conversations', '/messages'],
                 // ['mdi-progress-question', 'Questions', '/questions'],
                 ['mdi-tune-variant', 'LLM Fine-Tuning', '/tuning'],
+                //['mdi-puzzle', 'Add-Ons', '/addons'],
                 ['mdi-cog-outline', 'Settings', '/settings']
             ]
         }

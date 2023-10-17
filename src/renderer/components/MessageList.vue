@@ -102,7 +102,7 @@
                     </v-virtual-scroll>
                 </v-col>
                 <v-col cols="9" class="flex-grow-1 flex-shrink-0 pl-6 pr-4 py-4" style="max-height: calc(100vh - 64px); overflow-y: scroll;">
-                    <div v-if="currentMessage">
+                    <div v-if="currentMessage" class="pb-12">
                         <v-tabs
                             v-model="currentTab"
                             color="grey-darken-1"
@@ -122,58 +122,47 @@
                         </v-window>
 
                         <div v-if="hasAssociatedQuestions">
-                            <div class="text-overline pb-2">Associated Questions</div>
+                            <v-toolbar density="compact">
+                                <v-toolbar-title class="text-overline">Associated Questions</v-toolbar-title>
+                                <v-spacer></v-spacer>
 
-                            <v-expansion-panels>
-                                <v-expansion-panel v-for="(question, index) in currentMessageData.questions" :key="index">
-                                    <v-expansion-panel-title>
-                                        <v-icon
-                                            color="grey"
-                                            :icon="getQuestionVisualIndicator(question)"
-                                        ></v-icon>
-                                        <span class="ml-2">{{ question.text }}</span>
-                                    </v-expansion-panel-title>
+                                <v-tooltip text="Add New Question" location="bottom">
+                                    <template v-slot:activator="{ props }">
+                                    <v-btn icon v-bind="props" @click="showAddQuestionModal = true">
+                                        <v-icon>mdi-plus-box</v-icon>
+                                    </v-btn>
+                                    </template>
+                                </v-tooltip>
+                            </v-toolbar>
 
-                                    <v-expansion-panel-text>
-                                        <div v-for="(candidate, i) in prepareQuestionCandidateList(question)" :key="i" class="mt-4">
-                                            - <em>{{ candidate.name }}</em> <small>({{ candidate.similarity === 0 ? 'exact match' : `similarity: ${candidate.similarity}` }})</small>
-                                        </div>
-
-                                        <v-textarea
-                                            label="Direct Answer"
-                                            variant="outlined"
-                                            auto-grow
-                                            :rules="[inputValidationRules.required]"
-                                            class="mt-6"
-                                            v-model="question.answer"
-                                        ></v-textarea>
-
-                                        <div class="d-flex justify-end">
-                                            <v-btn
-                                                variant="text"
-                                                color="red-darken-4"
-                                                @click="selectQuestionForDeletion(question)"
-                                            >
-                                                Delete
-                                            </v-btn>
-                                            <v-btn
-                                                v-if="question.answer"
-                                                variant="text"
-                                                @click="selectQuestionForFineTuning(question)"
-                                            >
-                                                Fine-Tune
-                                            </v-btn>
-                                            <v-btn
-                                                variant="text"
-                                                :disabled="isUpdatingQuestion(question)"
-                                                @click="updateQuestion(question)"
-                                            >
-                                                {{ isUpdatingQuestion(question) ? 'Updating...' : 'Update' }}
-                                            </v-btn>
-                                        </div>
-                                    </v-expansion-panel-text>
-                                </v-expansion-panel>
-                            </v-expansion-panels>
+                            <v-list lines="false">
+                                <v-list-item
+                                    v-for="(question, index) in currentMessageData.questions"
+                                    :key="index"
+                                    :title="question.text"
+                                    @click="selectQuestionForEditing(question)"
+                                >
+                                    <template v-slot:prepend>
+                                        <v-icon :icon="getQuestionVisualIndicator(question)"></v-icon>
+                                    </template>
+                                    <template v-slot:append>
+                                        <v-tooltip text="Manage Question" location="bottom">
+                                            <template v-slot:activator="{ props }">
+                                                <v-btn icon variant="plain" v-bind="props" @click.stop="selectQuestionForEditing(question)">
+                                                    <v-icon>mdi-pencil</v-icon>
+                                                </v-btn>
+                                            </template>
+                                        </v-tooltip>
+                                        <v-tooltip text="Delete Question" location="bottom">
+                                            <template v-slot:activator="{ props }">
+                                                <v-btn icon variant="plain" v-bind="props" @click.stop="selectQuestionForDeletion(question)">
+                                                    <v-icon>mdi-trash-can</v-icon>
+                                                </v-btn>
+                                            </template>
+                                        </v-tooltip>
+                                    </template>
+                                </v-list-item>
+                            </v-list>
                         </div>
 
                         <v-sheet v-else class="d-flex align-center justify-center flex-wrap text-center mx-auto px-4" elevation="1"
@@ -214,6 +203,18 @@
                     </div>
                 </v-col>
             </v-row>
+
+            <v-tooltip text="Start New Conversation" location="left">
+                <template v-slot:activator="{ props }">
+                    <v-btn
+                        class="add-btn"
+                        icon="mdi-plus"
+                        v-bind="props"
+                        color="deep-purple"
+                        @click="createMessageModal = true" size="large"
+                    ></v-btn>
+                </template>
+            </v-tooltip>
         </v-responsive>
 
         <v-dialog v-model="reGenerateAnswerModal" transition="dialog-bottom-transition" width="450">
@@ -243,7 +244,7 @@
 
         <v-dialog v-model="createMessageModal" transition="dialog-bottom-transition" width="600">
             <v-card>
-                <v-toolbar color="grey-darken-4" title="Create New Message"></v-toolbar>
+                <v-toolbar color="grey-darken-4" title="Start New Conversation"></v-toolbar>
                 <v-card-text>
                     <v-textarea autofocus label="Message" v-model="newMessage" variant="outlined"></v-textarea>
                 </v-card-text>
@@ -269,30 +270,106 @@
             </v-card>
         </v-dialog>
 
-        <v-dialog v-model="showFineTuningModal" transition="dialog-bottom-transition" width="700">
+        <v-dialog v-model="showAddQuestionModal" transition="dialog-bottom-transition" width="800">
             <v-card>
-                <v-toolbar color="grey-darken-4" title="Fine-Tune Curriculum"></v-toolbar>
+                <v-toolbar color="grey-darken-4">
+                    <v-toolbar-title>Add New Question</v-toolbar-title>
+                    <v-spacer></v-spacer>
+                    <v-toolbar-items>
+                        <v-btn icon @click="showAddQuestionModal = false">
+                            <v-icon>mdi-close</v-icon>
+                        </v-btn>
+                    </v-toolbar-items>
+                </v-toolbar>
                 <v-card-text>
                     <v-container>
-                        <v-alert type="info" prominent variant="outlined" color="deep-purple-darken-4">
-                            You are about to fine-tune a direct answer to the <strong>"{{ selectedQuestion.text }}"</strong> question.
-                            Please select the type of fine-tuning below.
-                        </v-alert>
+                        <v-text-field
+                            label="Question"
+                            v-model="newQuestionText"
+                            variant="outlined"
+                            :rules="[inputValidationRules.required]"
+                        ></v-text-field>
                     </v-container>
-
-                    <v-radio-group
-                        v-if="selectedQuestion.answer"
-                        class="mt-4"
-                        v-model="selectedQuestion.ft_method"
-                        label="Fine-Tuning Method"
-                    >
-                        <v-radio label="Factual Learning (Only memorize the curriculum and include it in a prompt)" value="shallow"></v-radio>
-                        <v-radio label="New Skill (Memorize curriculum and queue it for actual model fine-tuning)" value="deep"></v-radio>
-                    </v-radio-group>
                 </v-card-text>
                 <v-card-actions class="justify-end">
-                    <v-btn v-if="selectedQuestion.ft_method" variant="text" :disabled="isFineTuningQuestion" @click="fineTuneSelectedQuestion">{{ isFineTuningQuestion ? 'Fine-Tuning...' : 'Fine-Tune' }}</v-btn>
-                    <v-btn variant="text" @click="showFineTuningModal = false">Close</v-btn>
+                    <v-btn variant="text" @click="addNewQuestion">Add</v-btn>
+                    <v-btn variant="text" @click="showAddQuestionModal = false">Close</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <v-dialog v-model="showEditQuestionModal" transition="dialog-bottom-transition" fullscreen>
+            <v-card>
+                <v-toolbar color="grey-darken-4">
+                    <v-icon class="ml-2" :icon="getQuestionVisualIndicator(stagedQuestionData)"></v-icon>
+                    <v-toolbar-title>Manage Question</v-toolbar-title>
+                    <v-spacer></v-spacer>
+                    <v-toolbar-items>
+                        <v-btn icon dark @click="showEditQuestionModal = false">
+                            <v-icon>mdi-close</v-icon>
+                        </v-btn>
+                    </v-toolbar-items>
+                </v-toolbar>
+                <v-card-text>
+                    <v-container>
+                        <v-text-field
+                            label="Subject (read-only)"
+                            v-model="stagedQuestionData.text"
+                            readonly
+                            variant="outlined"
+                        ></v-text-field>
+
+                        <v-expansion-panels class="mb-6" v-if="prepareQuestionCandidateList(stagedQuestionData).length > 0">
+                            <v-expansion-panel :title="`Similar Questions (${prepareQuestionCandidateList(stagedQuestionData).length})`">
+                                <v-expansion-panel-text>
+                                    <v-list lines="false">
+                                        <v-list-item
+                                            v-for="(candidate, index) in prepareQuestionCandidateList(stagedQuestionData)"
+                                            :key="index"
+                                            :title="candidate.name"
+                                        >
+                                            <template v-slot:prepend>
+                                                <v-badge :content="candidate.similarity === 0 ? 'exact match' : `similarity: ${candidate.similarity}`" inline></v-badge>
+                                            </template>
+                                        </v-list-item>
+                                    </v-list>
+                                </v-expansion-panel-text>
+                            </v-expansion-panel>
+                        </v-expansion-panels>
+
+                        <v-textarea
+                            label="Direct Answer"
+                            v-model="stagedQuestionData.answer"
+                            auto-grow
+                            persistent-hint
+                            variant="outlined"
+                            hint="Provide the high-quality answer to improve results."
+                        ></v-textarea>
+
+                        <v-radio-group
+                            v-if="stagedQuestionData.answer"
+                            class="mt-6"
+                            v-model="stagedQuestionData.ft_method"
+                            inline
+                            label="Fine-Tuning Method"
+                            persistent-hint
+                            :hint="stagedQuestionData.ft_method === 'shallow' ? 'Only memorize and include curriculum in prompts' : 'Memorize curriculum and queue for actual model fine-tuning'"
+                        >
+                            <v-radio label="Factual Learning" value="shallow"></v-radio>
+                            <v-radio label="New Skill" value="deep"></v-radio>
+                        </v-radio-group>
+                    </v-container>
+                </v-card-text>
+                <v-card-actions class="justify-end">
+                    <v-btn color="red-darken-4" variant="text" @click="showDeleteQuestionModal = true">Delete</v-btn>
+                    <v-btn
+                        v-if="stagedQuestionData.answer && stagedQuestionData.ft_method"
+                        variant="text"
+                        :disabled="isFineTuningQuestion"
+                        @click="fineTuneSelectedQuestion"
+                    >{{ isFineTuningQuestion ? 'Fine-Tuning...' : 'Fine-Tune' }}</v-btn>
+                    <v-btn variant="text" @click="updateSelectedQuestion">Update</v-btn>
+                    <v-btn variant="text" @click="showEditQuestionModal = false">Close</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -330,18 +407,20 @@ export default {
             deleteMessageModal: false,
             selectedMessage: null,
             selectedQuestion: {},
+            stagedQuestionData: {},
             newMessage: null,
+            newQuestionText: null,
             currentMessage: null,
             currentMessageData: {},
             analyzingMessage: false,
             generatingAnswer: false,
-            fineTuningQuestions: [],
             isFineTuningQuestion: false,
             updatingQuestions: [],
             successMessage: null,
             showSuccessMessage: false,
-            showFineTuningModal: false,
             showDeleteQuestionModal: false,
+            showAddQuestionModal: false,
+            showEditQuestionModal: false,
             reGenerateAnswerModal: false,
             showSearchInput: false,
             search: null,
@@ -545,9 +624,10 @@ export default {
                 _this.selectedMessage    = null;
                 });
         },
-        selectQuestionForFineTuning(question) {
-            this.selectedQuestion    = question;
-            this.showFineTuningModal = true;
+        selectQuestionForEditing(question) {
+            this.selectedQuestion      = question;
+            this.stagedQuestionData    = Object.assign({}, question);
+            this.showEditQuestionModal = true;
         },
         selectQuestionForDeletion(question) {
             this.selectedQuestion        = question;
@@ -558,19 +638,37 @@ export default {
             this.isFineTuningQuestion = true;
 
             this.$api.ai.fineTuneQuestion(this.selectedQuestion.uuid, {
-                answer: this.selectedQuestion.answer,
-                ft_method: this.selectedQuestion.ft_method
+                answer: this.stagedQuestionData.answer,
+                ft_method: this.stagedQuestionData.ft_method
             }).then(() => {
                 // Close the modal
-                _this.showFineTuningModal = false;
-                _this.selectedQuestion    = {};
+                _this.showEditQuestionModal = false;
+                _this.selectedQuestion      = {};
 
                 // Show success message
                 _this.showSuccessMessage = true;
                 _this.successMessage     = 'Question was fine-tuned!';
+
+                // Re-load all questions
+                _this.getMessageIdentifiedQuestions();
             }).finally(() => {
                 _this.isFineTuningQuestion = false;
             });
+        },
+        addNewQuestion() {
+            const _this = this;
+
+            this.$api.messages
+                .addQuestionToMessage(this.currentMessage.uuid, {
+                    text: this.newQuestionText
+                })
+                .then(() => {
+                    _this.showAddQuestionModal = false;
+                    _this.selectedQuestion     = {};
+
+                    // Re-init the list of all questions
+                    _this.getMessageIdentifiedQuestions();
+                });
         },
         deleteSelectedQuestion() {
             const _this = this;
@@ -583,26 +681,22 @@ export default {
                         q => q !== _this.selectedQuestion
                     );
 
-                _this.showDeleteQuestionModal = false;
-                _this.selectedQuestion        = {};
+                    _this.showDeleteQuestionModal = false;
+                    _this.selectedQuestion        = {};
                 });
         },
-        updateQuestion(question) {
+        updateSelectedQuestion() {
             const _this = this;
 
-            this.updatingQuestions.push(question);
-
             this.$api.questions
-                .updateQuestion(
-                    question.uuid,
-                    { answer: question.answer }
-                ).then(() => {
-                    _this.updatingQuestions = _this.updatingQuestions.filter(
-                        q => q !== question
-                    );
-
+                .updateQuestion(this.selectedQuestion.uuid,{
+                    answer: this.stagedQuestionData.answer
+                }).then(() => {
                     _this.successMessage     = 'Changes saved!';
                     _this.showSuccessMessage = true;
+
+                    // Re-load all questions
+                    _this.getMessageIdentifiedQuestions();
                 });
         },
         getMessageIdentifiedQuestions() {
@@ -666,6 +760,12 @@ export default {
 
 .v-breadcrumbs {
   font-size: 0.9rem;
+}
+
+.add-btn {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
 }
 
 .v-expansion-panel-title {

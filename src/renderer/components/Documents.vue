@@ -320,7 +320,7 @@
 
       <v-container v-if="hasAssociatedQuestions">
         <v-toolbar density="compact">
-          <v-toolbar-title>Curriculum</v-toolbar-title>
+          <v-toolbar-title class="text-overline">Curriculum</v-toolbar-title>
           <v-spacer></v-spacer>
 
           <v-tooltip text="Add New Curriculum" location="bottom">
@@ -346,10 +346,10 @@
               <v-icon v-else>mdi-information-symbol</v-icon>
             </template>
             <template v-slot:append>
-              <v-tooltip text="Fine-Tune Curriculum" location="bottom">
+              <v-tooltip text="Edit Curriculum" location="bottom">
                 <template v-slot:activator="{ props }">
-                  <v-btn icon variant="plain" v-bind="props" @click.stop="selectQuestionForFineTuning(question)">
-                    <v-icon>mdi-tune-variant</v-icon>
+                  <v-btn icon variant="plain" v-bind="props" @click.stop="selectQuestionForEditing(question)">
+                    <v-icon>mdi-pencil</v-icon>
                   </v-btn>
                 </template>
               </v-tooltip>
@@ -401,42 +401,6 @@
         </v-card>
       </v-dialog>
 
-      <v-dialog v-model="showEditQuestionModal" transition="dialog-bottom-transition" width="800">
-        <v-card>
-          <v-toolbar color="grey-darken-4" title="Edit Curriculum"></v-toolbar>
-          <v-card-text>
-            <v-text-field
-              class="mt-6"
-              :label="stagedQuestionData.ft_method ? 'Subject (read-only)' : 'Subject'"
-              v-model="stagedQuestionData.text"
-              :readonly="stagedQuestionData.ft_method ? true : false"
-              variant="outlined"
-              :hint="stagedQuestionData.ft_method ? 'The curriculum was fine-tuned, thus it cannot be modified' : ''"
-            ></v-text-field>
-
-            <v-textarea
-              v-if="stagedQuestionData.answer"
-              class="mt-4"
-              label="Answer"
-              v-model="stagedQuestionData.answer"
-              auto-grow
-              variant="outlined"
-            ></v-textarea>
-          </v-card-text>
-          <v-card-actions class="justify-end">
-            <v-btn variant="text" color="red-darken-4" @click="showDeleteQuestionModal = true">Delete</v-btn>
-            <v-btn
-              variant="text"
-              :disabled="generatingAnswer"
-              @click="generateAnswerForSelectedQuestion">
-                {{ generatingAnswer ? 'Generating...' : 'Generate Answer' }}
-            </v-btn>
-            <v-btn variant="text" @click="showEditQuestionModal = false">Close</v-btn>
-            <v-btn variant="text" @click="updateSelectedQuestion">Update</v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
-
       <v-dialog v-model="showAddQuestionModal" transition="dialog-bottom-transition" width="800">
         <v-card>
           <v-toolbar color="grey-darken-4" title="Add New Curriculum"></v-toolbar>
@@ -452,51 +416,76 @@
         </v-card>
       </v-dialog>
 
-      <v-dialog v-model="showFineTuneQuestionModal" transition="dialog-bottom-transition" width="1000">
+      <v-dialog v-model="showEditQuestionModal" transition="dialog-bottom-transition" fullscreen>
         <v-card>
-          <v-toolbar color="grey-darken-4" title="Fine-Tune Curriculum"></v-toolbar>
+          <v-toolbar color="grey-darken-4">
+            <v-icon class="ml-2" v-if="stagedQuestionData.ft_method">
+                {{ stagedQuestionData.ft_method === 'shallow' ? 'mdi-memory' : 'mdi-tune-variant'  }}
+              </v-icon>
+              <v-icon v-else class="ml-2">mdi-information-symbol</v-icon>
+            <v-toolbar-title>Edit Curriculum</v-toolbar-title>
+            <v-spacer></v-spacer>
+            <v-toolbar-items>
+                <v-btn icon @click="showEditQuestionModal = false">
+                    <v-icon>mdi-close</v-icon>
+                </v-btn>
+            </v-toolbar-items>
+          </v-toolbar>
           <v-card-text>
             <v-container>
               <v-text-field
-                label="Subject (read-only)"
+                class="mt-6"
+                :label="stagedQuestionData.ft_method ? 'Subject (read-only)' : 'Subject'"
                 v-model="stagedQuestionData.text"
-                readonly
+                :readonly="stagedQuestionData.ft_method ? true : false"
                 variant="outlined"
+                :hint="stagedQuestionData.ft_method ? 'The curriculum was fine-tuned, thus it cannot be modified' : ''"
               ></v-text-field>
 
               <v-textarea
                 label="Answer"
+                class="mt-6"
                 v-model="stagedQuestionData.answer"
                 auto-grow
-                persistent-hint
                 variant="outlined"
                 hint="Provide the high-quality answer to improve results."
               ></v-textarea>
-            </v-container>
 
-            <v-radio-group
-              v-if="stagedQuestionData.answer"
-              v-model="stagedQuestionData.ft_method"
-              inline
-              label="Fine-Tuning Method"
-              persistent-hint
-              :hint="stagedQuestionData.ft_method === 'shallow' ? 'Only memorize and include curriculum in prompts' : 'Memorize curriculum and queue for actual model fine-tuning'"
-            >
-              <v-radio label="Factual Learning" value="shallow"></v-radio>
-              <v-radio label="New Skill" value="deep"></v-radio>
-            </v-radio-group>
+              <v-radio-group
+                class="mt-6"
+                v-if="stagedQuestionData.answer"
+                v-model="stagedQuestionData.ft_method"
+                inline
+                label="Fine-Tuning Method"
+                persistent-hint
+                :hint="stagedQuestionData.ft_method === 'shallow' ? 'Only memorize and include curriculum in prompts' : 'Memorize curriculum and queue for actual model fine-tuning'"
+              >
+                <v-radio label="Factual Learning" value="shallow"></v-radio>
+                <v-radio label="New Skill" value="deep"></v-radio>
+              </v-radio-group>
+            </v-container>
           </v-card-text>
           <v-card-actions class="justify-end">
+            <v-btn
+              variant="text"
+              color="red-darken-4"
+              @click="showDeleteQuestionModal = true"
+            >Delete</v-btn>
+
             <v-btn
               variant="text"
               :disabled="generatingAnswer"
               @click="generateAnswerForSelectedQuestion">
                 {{ generatingAnswer ? 'Generating...' : 'Generate Answer' }}
             </v-btn>
+
             <v-btn v-if="stagedQuestionData.answer && stagedQuestionData.ft_method" variant="text" :disabled="fineTuningQuestion" @click="fineTuneSelectedQuestion">
               {{ fineTuningQuestion ? 'Fine-Tuning...' : 'Fine-Tune' }}
             </v-btn>
-            <v-btn variant="text" @click="showFineTuneQuestionModal = false">Close</v-btn>
+
+            <v-btn variant="text" @click="updateSelectedQuestion">Update</v-btn>
+
+            <v-btn variant="text" @click="showEditQuestionModal = false">Close</v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>
@@ -587,7 +576,6 @@ export default {
     selectedQuestion: null,
     stagedQuestionData: {},
     showEditQuestionModal: false,
-    showFineTuneQuestionModal: false,
     showDeleteQuestionModal: false,
     generatingAnswer: false,
     fineTuningQuestion: false,
@@ -751,15 +739,6 @@ export default {
           _this.generatingAnswer = false;
         });
     },
-    selectQuestionForFineTuning(question) {
-      this.selectedQuestion = question;
-
-      // The "staged" question data is used as temporary holder for updated question
-      // data
-      this.stagedQuestionData = Object.assign({}, question);
-
-      this.showFineTuneQuestionModal = true;
-    },
     selectQuestionForEditing(question) {
       this.selectedQuestion = question;
 
@@ -830,9 +809,9 @@ export default {
         _this.selectedQuestion.ft_method = _this.stagedQuestionData.ft_method;
 
         // Close the modal
-        _this.showFineTuneQuestionModal = false;
-        _this.selectedQuestion          = null;
-        _this.stagedQuestionData        = {};
+        _this.showEditQuestionModal = false;
+        _this.selectedQuestion      = null;
+        _this.stagedQuestionData    = {};
 
         // Show success message
         _this.showSuccessMessage = true;
