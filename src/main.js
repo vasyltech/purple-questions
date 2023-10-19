@@ -8,7 +8,7 @@ import Settings from './main/settings';
 import Ai from './main/ai';
 import Messages from './main/messages';
 import Tuning from './main/tuning';
-//import Bridge from './main/bridge';
+import Bridge from './main/bridge';
 import Addons from './main/addons';
 import Debug from './main/libs/debug';
 
@@ -87,7 +87,7 @@ const createWindow = () => {
   RegisterHandler('addons', Addons);
 
   // Finally load add-ons
-  //Bridge.loadAddOns();
+  Bridge.init();
 };
 
 // This method will be called when Electron has finished

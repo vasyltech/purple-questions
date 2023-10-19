@@ -1,14 +1,15 @@
-const Fs             = require('fs');
-const Path           = require('path');
-const { app }        = require('electron');
-const { v4: uuidv4 } = require('uuid');
-const _              = require('lodash');
-const Crypto         = require('crypto');
+const Fs                       = require('fs');
+const Path                     = require('path');
+const { app }                  = require('electron');
+const { v4: uuidv4, validate } = require('uuid');
+const _                        = require('lodash');
+const Crypto                   = require('crypto');
 
 import DbRepository from './repository/db';
 import OpenAiRepository from './repository/openai';
 import Questions from './questions';
 import Settings from './settings';
+import Bridge from './bridge';
 
 /**
  * Get the base path to the messages directory
@@ -101,6 +102,15 @@ const MessageIndex = (() => {
     /**
      *
      * @param {*} uuid
+     * @returns
+     */
+    function Has(uuid) {
+        return Read().filter(m => m.uuid === uuid).length > 0;
+    }
+
+    /**
+     *
+     * @param {*} uuid
      */
     function Remove(uuid) {
         index = Read().filter(m => m.uuid !== uuid);
@@ -112,7 +122,8 @@ const MessageIndex = (() => {
         get: Read,
         add: Add,
         update: Update,
-        remove: Remove
+        remove: Remove,
+        has: Has
     }
 })();
 
@@ -165,6 +176,23 @@ async function PrepareCandidates(question, similarity) {
     return candidates;
 }
 
+/**
+ *
+ * @param {*} data
+ * @returns
+ */
+function GenerateUuidFromChecksum(data) {
+    const cs  = Crypto.createHash('md5').update(JSON.stringify(data)).digest('hex');
+    const pts = [
+        cs.substring(0, 7),
+        cs.substring(8, 11),
+        cs.substring(12, 15),
+        cs.substring(16)
+    ];
+
+    return pts.join('-');
+}
+
 const Methods = {
 
     /**
@@ -182,28 +210,58 @@ const Methods = {
 
     /**
      *
-     * @param {*} text
-     * @param {*} metadata
+     */
+    pullMessages: async () => {
+        const results = await Bridge.triggerHook('pq-pull-messages');
+
+        // Store only new messages/conversations
+        if (_.isArray(results)) {
+            _.forEach(results, (row) => {
+                const message = {};
+
+                if (_.isString(row.text)) {
+                    message.text = row.text;
+                }
+
+                if (_.isObject(row.metadata)) {
+                    message.metadata = row.metadata;
+                }
+
+                // Create UUID
+                let uuid;
+
+                if (validate(row.uuid)) {
+                    uuid = row.uuid;
+                } else {
+                    uuid = GenerateUuidFromChecksum(message);
+                }
+
+                if (validate(row.uuid) && !MessageIndex.has(row.uuid)) {
+                    Methods.createMessage(message, uuid)
+                }
+            });
+        }
+    },
+
+    /**
+     *
+     * @param {*} data
+     * @param {*} id
      *
      * @returns
      */
-    createMessage: (text, metadata) => {
-        const uuid     = uuidv4();
+    createMessage: (data, id) => {
+        const uuid     = id || uuidv4();
         const fullPath = GetMessagesBasePath(uuid);
+        const message  = Object.assign({}, data, { questions: [] });
 
-        const data = {
-            text: text.trim(),
-            questions: [],
-            metadata
-        };
-
-        Fs.writeFileSync(fullPath, JSON.stringify(data));
+        Fs.writeFileSync(fullPath, JSON.stringify(message));
 
         return MessageIndex.add({
             uuid,
             createdAt: (new Date()).getTime(),
-            excerpt: PrepareExcerpt(data.text),
-            checksum: Crypto.createHash('md5').update(data.text).digest('hex'),
+            excerpt: PrepareExcerpt(message.text),
+            checksum: Crypto.createHash('md5').update(message.text).digest('hex'),
             status: 'new'
         });
     },

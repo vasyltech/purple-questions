@@ -90,8 +90,8 @@
                             </v-list>
                         </v-menu>
                     </v-toolbar>
-                    <v-virtual-scroll v-if="messages.length" :items="messages" item-height="96">
-                        <template v-slot:default="{ item }">
+                    <v-infinite-scroll v-if="messages.length" :items="messages" item-height="96" @load="loadMore">
+                        <template v-for="(item) in messages" :key="item">
                             <v-list-item @click="openMessage(item)" lines="two" :title="getMessageDate(item)" :active="currentMessage === item" color="deep-purple-darken-1">
                                 <template v-slot:prepend>
                                     <v-icon size="large" :icon="getMessageStatusIcon(item)"></v-icon>
@@ -99,7 +99,7 @@
                                 <v-list-item-subtitle>{{ item.excerpt }}</v-list-item-subtitle>
                             </v-list-item>
                         </template>
-                    </v-virtual-scroll>
+                    </v-infinite-scroll>
                 </v-col>
                 <v-col cols="9" class="flex-grow-1 flex-shrink-0 pl-6 pr-4 py-4" style="max-height: calc(100vh - 64px); overflow-y: scroll;">
                     <div v-if="currentMessage" class="pb-12">
@@ -407,6 +407,7 @@ export default {
             deleteMessageModal: false,
             selectedMessage: null,
             selectedQuestion: {},
+            page: 0,
             stagedQuestionData: {},
             newMessage: null,
             newQuestionText: null,
@@ -529,7 +530,7 @@ export default {
             const _this = this;
 
             this.$api.messages
-                .createMessage(this.newMessage)
+                .createMessage({ text: this.newMessage })
                 .then((message) => {
                     _this.messages.unshift(message);
 
@@ -716,6 +717,26 @@ export default {
             if (this.search === '' || this.search === null) {
                 this.showSearchInput = false;
             }
+        },
+        async loadMore({ done }) {
+            const n = await this.loadMessages();
+
+            done(n < 10 ? 'empty' : 'ok');
+        },
+        loadMessages() {
+            const _this = this;
+
+            return this.$api.messages.getMessages(this.page, 10).then((response) => {
+                _this.messages.push(...response);
+                _this.page += 1;
+
+                // Open the first message on the list
+                if (!_this.currentMessage && response.length > 0) {
+                    _this.openMessage(response[0]);
+                }
+
+                return response.length;
+            });
         }
     },
     watch: {
@@ -728,18 +749,13 @@ export default {
         },
     },
     mounted() {
-        const _this = this;
+        this.loadMessages();
 
-        this.$api.messages.getMessages().then((response) => {
-            _this.messages = response;
-
-            // Open the first message on the list
-            if (response.length > 0) {
-                _this.openMessage(response[0]);
-            }
-        });
+       // this.$api.messages.pullMessages();
 
         this.assembleBreadcrumb();
+    },
+    unmounted() {
     }
 }
 </script>

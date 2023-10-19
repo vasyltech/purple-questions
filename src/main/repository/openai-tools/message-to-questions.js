@@ -4,9 +4,10 @@ const _ = require('lodash');
 const DEFAULT_SYSTEM_PROMPT = 'You are a helpful assistant.';
 
 // The actual prompt that converts message into the list of questions
-const USER_PROMPT = `Analyze user support request. Translate to English if necessary. Output how you understand the support request as a list of 1-sentence questions that user is asking. Return the list ONLY as valid JSON array.
+const USER_PROMPT = `Analyze user message. Translate to English if necessary and rewrite. If the message is a support request and contains questions, rewrite it as a list of 1-sentence questions. Otherwise, return an empty array. Return the list ONLY as valid JSON object in the following format:
 
-USER SUPPORT REQUEST:
+{"rewrite": "translated and rewritten user message", "questions": ["array of 1-sentence questions"]}
+
 """
 {message}
 """`;

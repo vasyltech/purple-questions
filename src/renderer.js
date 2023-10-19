@@ -34,14 +34,17 @@ import 'vuetify/styles'
 import '@mdi/font/css/materialdesignicons.css'
 
 import { createVuetify } from 'vuetify'
-import * as components from 'vuetify/components'
-import * as directives from 'vuetify/directives'
+//import * as components from 'vuetify/components'
+//import * as directives from 'vuetify/directives'
 
-import { createRouter, createWebHashHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router';
+import { VInfiniteScroll } from 'vuetify/labs/VInfiniteScroll'
 
 const vuetify = createVuetify({
-  components,
-  directives,
+  components: {
+    VInfiniteScroll
+  },
+ // directives,
   theme: {
     themes: {
       light: {

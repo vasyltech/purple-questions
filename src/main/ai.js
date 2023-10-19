@@ -130,10 +130,14 @@ export default {
 
             message.usage = [res1.usage];  // Cost?
 
-            if (res1.output.length > 0) {
+            // Capture rewrite & list of questions
+            message.rewrite = _.get(res1, 'output.rewrite');
+            const questions = _.get(res1, 'output.questions', []);
+
+            if (questions.length > 0) {
                 // Prepare the list of embeddings for each question
                 const res2 = await OpenAiRepository.prepareQuestionListEmbedding(
-                    res1.output
+                    questions
                 );
 
                 // Updating usage

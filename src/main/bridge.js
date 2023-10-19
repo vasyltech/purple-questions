@@ -5,9 +5,7 @@ const _       = require('lodash');
 
 import Settings from './settings';
 
-const Hooks = {
-
-};
+const Hooks = {};
 
 const Bridge = {
 
@@ -43,7 +41,7 @@ function LoadAddOns() {
             }));
 
             if (_.isFunction(addon.init)) {
-                addon.init();
+                addon.init(Bridge);
             }
         }
     }
@@ -56,10 +54,28 @@ export default {
      */
     init: () => {
         LoadAddOns();
+    },
 
-        setInterval(() => {
+    /**
+     *
+     * @param {*} hook
+     * @returns
+     */
+    triggerHook: async (hook) => {
+        const results = [];
 
-        }, 30000);
+        if (!_.isUndefined(Hooks[hook])) {
+            for(let i = 0; i < Hooks[hook].length; i++) {
+                const cb = Hooks[hook][i];
+                let res  = await cb();
+
+                if (_.isArray(res)) {
+                    results.push(...res);
+                }
+            }
+        }
+
+        return results.length > 0 ? results : null;
     }
 
 }
