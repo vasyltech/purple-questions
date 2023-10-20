@@ -91,7 +91,40 @@ const Methods = {
         return _.isUndefined(value)
                 || _.isNull(value)
                 || (_.isString(value) && value.length === 0) ? def : value;
-    }
+    },
+
+    /**
+     *
+     * @param {*} setting
+     *
+     * @returns
+     */
+    getAddonSetting: (addon, def = null) => {
+        return Methods.getSetting(`addons.${addon}`, def);
+    },
+
+    /**
+     *
+     * @param {*} path
+     * @param {*} value
+     */
+    setSetting: (path, value) => {
+        const settings = ReadSettings();
+
+        _.set(settings, path, value);
+
+        Methods.saveSettings(settings);
+    },
+
+    /**
+     *
+     * @param {*} setting
+     *
+     * @returns
+     */
+    setAddonSetting: (addon, setting, value) => {
+        return Methods.setSetting(`addons.${addon}.${setting}`, value);
+    },
 
 }
 

@@ -15,24 +15,31 @@
 
             <v-spacer></v-spacer>
 
-            <v-tooltip v-if="!currentMessage" text="Add New Add-On" location="bottom">
+            <v-tooltip v-if="!currentAddon" text="Add New Add-On" location="bottom">
                 <template v-slot:activator="{ props }">
                     <v-btn icon v-bind="props" @click="createMessageModal = true">
                         <v-icon>mdi-message-plus-outline</v-icon>
                     </v-btn>
                 </template>
             </v-tooltip>
-            <v-tooltip v-if="currentMessage" text="Save Message" location="bottom">
+            <v-tooltip v-if="currentAddon" text="Uninstall AddOn" location="bottom">
                 <template v-slot:activator="{ props }">
-                <v-btn icon v-bind="props" @click="saveMessageChanges">
-                    <v-icon>mdi-content-save</v-icon>
+                <v-btn icon v-bind="props">
+                    <v-icon>mdi-trash-can</v-icon>
                 </v-btn>
                 </template>
             </v-tooltip>
-            <v-tooltip v-if="currentMessage" text="Delete Message" location="bottom">
+            <v-tooltip v-if="currentAddon" text="Deactivate AddOn" location="bottom">
                 <template v-slot:activator="{ props }">
-                <v-btn icon v-bind="props" @click="deleteCurrentMessage">
-                    <v-icon>mdi-trash-can</v-icon>
+                <v-btn icon v-bind="props">
+                    <v-icon>mdi-puzzle-minus</v-icon>
+                </v-btn>
+                </template>
+            </v-tooltip>
+            <v-tooltip v-if="currentAddon" text="Save Settings" location="bottom">
+                <template v-slot:activator="{ props }">
+                <v-btn icon v-bind="props">
+                    <v-icon>mdi-content-save</v-icon>
                 </v-btn>
                 </template>
             </v-tooltip>
@@ -48,7 +55,6 @@
                             variant="outlined"
                             label="Search..."
                             append-inner-icon="mdi-magnify"
-                            @blur="handleSearchBlur"
                             v-model="search"
                             class="mt-6"
                         ></v-text-field>
@@ -57,7 +63,7 @@
                         <template v-slot:default="{ item }">
                             <v-list-item @click="openAddon(item)" lines="two" :title="item.name" :active="currentAddon === item" color="deep-purple-darken-1">
                                 <template v-slot:prepend>
-                                    <v-icon size="large" :icon="getAddonStatusIcon(item)"></v-icon>
+                                    <v-icon size="large" icon="mdi-puzzle"></v-icon>
                                 </template>
                                 <v-list-item-subtitle>{{ item.description }}</v-list-item-subtitle>
                             </v-list-item>
@@ -65,7 +71,18 @@
                     </v-virtual-scroll>
                     <p v-else class="text-center py-4">No addons available</p>
                 </v-col>
-                <v-col cols="8" class="flex-grow-1 flex-shrink-0 pl-6 pr-4 py-4" style="max-height: calc(100vh - 64px); overflow-y: scroll;">
+                <v-col cols="8" v-if="currentAddonData" class="flex-grow-1 flex-shrink-0 pl-6 pr-4 py-4" style="max-height: calc(100vh - 64px); overflow-y: scroll;">
+                    <p class="text-overline mb-4">Add-On Configurations</p>
+
+                    <div v-for="(param, index) in currentAddonData.params" :key="index">
+                        <v-text-field
+                            v-if="param.type === 'secret'"
+                            v-model="settings[param.name]"
+                            type="password"
+                            :label="param.label"
+                            variant="outlined"
+                        ></v-text-field>
+                    </div>
                 </v-col>
             </v-row>
         </v-responsive>
@@ -120,9 +137,11 @@ export default {
         return {
             breadcrumb: [],
             addons: [],
+            settings: {},
             createMessageModal: false,
             deleteMessageModal: false,
             currentAddon: null,
+            currentAddonData: null,
             successMessage: null,
             showSuccessMessage: false,
             search: null
@@ -140,6 +159,14 @@ export default {
             }
 
             return icon;
+        },
+        openAddon(addon) {
+            const _this       = this;
+            this.currentAddon = addon;
+
+            this.$api.addons.readAddon(addon.path).then((response) => {
+                _this.currentAddonData = response;
+            });
         },
         assembleBreadcrumb() {
             const breadcrumb = [{
@@ -169,7 +196,7 @@ export default {
         const _this = this;
 
         this.$api.addons.getAddons().then((response) => {
-            _this.messages = response;
+            _this.addons = response;
 
             // Open the first addon on the list
             if (response.length > 0) {

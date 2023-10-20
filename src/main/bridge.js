@@ -20,6 +20,10 @@ const Bridge = {
         }
 
         Hooks[hook].push(func);
+    },
+
+    api: {
+        settings: Settings
     }
 }
 

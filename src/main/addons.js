@@ -48,6 +48,25 @@ const Methods = {
         const list  = index.reverse().slice(start, start + limit);
 
         return list;
+    },
+
+    /**
+     *
+     * @param {*} path
+     * @returns
+     */
+    readAddon: async (path) => {
+        const response = {};
+        const filepath = Path.join(path, 'package.json');
+
+        if (Fs.existsSync(filepath)) {
+            // Reading the package.json
+            const details = JSON.parse(Fs.readFileSync(filepath).toString());
+
+            response.params = details.params || []
+        }
+
+        return response;
     }
 
 }

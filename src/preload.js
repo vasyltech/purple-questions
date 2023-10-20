@@ -149,6 +149,9 @@ contextBridge.exposeInMainWorld(
         addons: {
             getAddons: (page, limit) => ipcRenderer.invoke(
                 'addons', ['getAddons', page, limit]
+            ),
+            readAddon: (path) => ipcRenderer.invoke(
+                'addons', ['readAddon', path]
             )
         },
     }

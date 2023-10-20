@@ -36,13 +36,6 @@
                     </v-btn>
                 </template>
             </v-tooltip>
-            <v-tooltip v-if="currentMessage && currentMessageData.answer" text="Re-Generate Answer" location="bottom">
-                <template v-slot:activator="{ props }">
-                <v-btn icon v-bind="props" @click="reGenerateAnswerModal = true">
-                    <v-icon>mdi-refresh</v-icon>
-                </v-btn>
-                </template>
-            </v-tooltip>
             <v-tooltip v-if="currentMessage" text="Save Message" location="bottom">
                 <template v-slot:activator="{ props }">
                 <v-btn icon v-bind="props" @click="saveMessageChanges">
@@ -109,6 +102,7 @@
                             align-tabs="start"
                         >
                             <v-tab value="original">Message</v-tab>
+                            <v-tab value="rewrite" v-if="currentMessageData.rewrite">Rewrite</v-tab>
                             <v-tab value="answer" v-if="currentMessageData.answer">Answer</v-tab>
                         </v-tabs>
 
@@ -116,56 +110,67 @@
                             <v-window-item value="original" class="pt-4">
                                 <v-textarea auto-grow variant="outlined" bg-color="white" v-model="currentMessageData.text"></v-textarea>
                             </v-window-item>
+                            <v-window-item value="rewrite" class="pt-4">
+                                <v-textarea auto-grow label="(read-only)" variant="outlined" readonly bg-color="white" v-model="currentMessageData.rewrite"></v-textarea>
+                            </v-window-item>
                             <v-window-item value="answer" class="pt-4">
-                                    <v-textarea auto-grow readonly variant="outlined" v-model="currentMessageData.answer"></v-textarea>
+                                <v-textarea auto-grow variant="outlined" v-model="currentMessageData.answer"></v-textarea>
+                                <div class="d-flex justify-end">
+                                    <v-btn variant="text" @click="showGenerateAnswerModal = true">Generate New Answer</v-btn>
+                                </div>
                             </v-window-item>
                         </v-window>
 
-                        <div v-if="hasAssociatedQuestions">
-                            <v-toolbar density="compact">
-                                <v-toolbar-title class="text-overline">Associated Questions</v-toolbar-title>
-                                <v-spacer></v-spacer>
+                        <v-toolbar class="mt-6" density="compact">
+                            <v-toolbar-title class="text-overline">Associated Curriculum</v-toolbar-title>
+                            <v-spacer></v-spacer>
 
-                                <v-tooltip text="Add New Question" location="bottom">
-                                    <template v-slot:activator="{ props }">
-                                    <v-btn icon v-bind="props" @click="showAddQuestionModal = true">
-                                        <v-icon>mdi-plus-box</v-icon>
+                            <v-tooltip v-if="currentMessageData.rewrite" text="Provide Direct Answer" location="bottom">
+                                <template v-slot:activator="{ props }">
+                                    <v-btn icon v-bind="props" @click="prepareDirectAnswerModal">
+                                        <v-icon>mdi-feather</v-icon>
                                     </v-btn>
-                                    </template>
-                                </v-tooltip>
-                            </v-toolbar>
+                                </template>
+                            </v-tooltip>
+                            <v-tooltip text="Add New Curriculum" location="bottom">
+                                <template v-slot:activator="{ props }">
+                                <v-btn icon v-bind="props" @click="showAddCurriculumModal = true">
+                                    <v-icon>mdi-plus-box</v-icon>
+                                </v-btn>
+                                </template>
+                            </v-tooltip>
+                        </v-toolbar>
 
-                            <v-list lines="false">
-                                <v-list-item
-                                    v-for="(question, index) in currentMessageData.questions"
-                                    :key="index"
-                                    :title="question.text"
-                                    @click="selectQuestionForEditing(question)"
-                                >
-                                    <template v-slot:prepend>
-                                        <v-icon :icon="getQuestionVisualIndicator(question)"></v-icon>
-                                    </template>
-                                    <template v-slot:append>
-                                        <v-tooltip text="Manage Question" location="bottom">
-                                            <template v-slot:activator="{ props }">
-                                                <v-btn icon variant="plain" v-bind="props" @click.stop="selectQuestionForEditing(question)">
-                                                    <v-icon>mdi-pencil</v-icon>
-                                                </v-btn>
-                                            </template>
-                                        </v-tooltip>
-                                        <v-tooltip text="Delete Question" location="bottom">
-                                            <template v-slot:activator="{ props }">
-                                                <v-btn icon variant="plain" v-bind="props" @click.stop="selectQuestionForDeletion(question)">
-                                                    <v-icon>mdi-trash-can</v-icon>
-                                                </v-btn>
-                                            </template>
-                                        </v-tooltip>
-                                    </template>
-                                </v-list-item>
-                            </v-list>
-                        </div>
+                        <v-list v-if="hasAssociatedQuestions" lines="false">
+                            <v-list-item
+                                v-for="(question, index) in currentMessageData.questions"
+                                :key="index"
+                                :title="question.text"
+                                @click="selectQuestionForEditing(question)"
+                            >
+                                <template v-slot:prepend>
+                                    <v-icon :icon="getQuestionVisualIndicator(question)"></v-icon>
+                                </template>
+                                <template v-slot:append>
+                                    <v-tooltip text="Manage Question" location="bottom">
+                                        <template v-slot:activator="{ props }">
+                                            <v-btn icon variant="plain" v-bind="props" @click.stop="selectQuestionForEditing(question)">
+                                                <v-icon>mdi-pencil</v-icon>
+                                            </v-btn>
+                                        </template>
+                                    </v-tooltip>
+                                    <v-tooltip text="Delete Question" location="bottom">
+                                        <template v-slot:activator="{ props }">
+                                            <v-btn icon variant="plain" v-bind="props" @click.stop="selectQuestionForDeletion(question)">
+                                                <v-icon>mdi-trash-can</v-icon>
+                                            </v-btn>
+                                        </template>
+                                    </v-tooltip>
+                                </template>
+                            </v-list-item>
+                        </v-list>
 
-                        <v-sheet v-else class="d-flex align-center justify-center flex-wrap text-center mx-auto px-4" elevation="1"
+                        <v-sheet v-else-if="!currentMessageData.rewrite" class="d-flex align-center justify-center flex-wrap text-center mx-auto px-4"
                             height="150" rounded width="100%" color="grey-lighten-3">
                             <div v-if="!analyzingMessage">
                                 <p class="text-body-2 mb-4">
@@ -181,8 +186,14 @@
                                 <v-progress-circular indeterminate color="grey"></v-progress-circular>
                             </div>
                         </v-sheet>
+                        <v-sheet v-else class="d-flex align-center justify-center flex-wrap text-center mx-auto px-4"
+                            rounded height="100" width="100%" color="grey-lighten-3">
+                            <p class="text-body-2 mb-4">
+                                There is no material available to answer user message.
+                            </p>
+                        </v-sheet>
 
-                        <v-sheet v-if="hasAnyAnswer && !currentMessageData.answer" class="d-flex align-center justify-center flex-wrap text-center mt-10 px-4" elevation="1"
+                        <v-sheet v-if="hasAnyAnswer && !currentMessageData.answer" class="d-flex align-center justify-center flex-wrap text-center mt-10 px-4"
                             height="200" rounded width="100%" color="grey-lighten-3">
                             <div v-if="!generatingAnswer">
                                 <p class="text-body-2 mb-4">
@@ -217,7 +228,7 @@
             </v-tooltip>
         </v-responsive>
 
-        <v-dialog v-model="reGenerateAnswerModal" transition="dialog-bottom-transition" width="450">
+        <v-dialog v-model="showGenerateAnswerModal" transition="dialog-bottom-transition" width="450">
             <v-card>
                 <v-toolbar color="grey-darken-4" title="Re-Generate Answer"></v-toolbar>
                 <v-card-text>
@@ -226,8 +237,8 @@
                     </v-alert>
                 </v-card-text>
                 <v-card-actions class="justify-end">
-                <v-btn variant="text" :disabled="generatingAnswer" @click="generateAnswer">{{ generatingAnswer ? 'Generating...' : 'Generate' }}</v-btn>
-                <v-btn variant="text" @click="reGenerateAnswerModal = false">Close</v-btn>
+                    <v-btn variant="text" :disabled="generatingAnswer" @click="generateAnswer">{{ generatingAnswer ? 'Generating...' : 'Generate' }}</v-btn>
+                    <v-btn variant="text" @click="showGenerateAnswerModal = false">Close</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -270,30 +281,40 @@
             </v-card>
         </v-dialog>
 
-        <v-dialog v-model="showAddQuestionModal" transition="dialog-bottom-transition" width="800">
+        <v-dialog v-model="showAddCurriculumModal" transition="dialog-bottom-transition" fullscreen>
             <v-card>
                 <v-toolbar color="grey-darken-4">
-                    <v-toolbar-title>Add New Question</v-toolbar-title>
+                    <v-toolbar-title>Add New Curriculum</v-toolbar-title>
                     <v-spacer></v-spacer>
                     <v-toolbar-items>
-                        <v-btn icon @click="showAddQuestionModal = false">
+                        <v-btn icon @click="showAddCurriculumModal = false">
                             <v-icon>mdi-close</v-icon>
                         </v-btn>
                     </v-toolbar-items>
                 </v-toolbar>
                 <v-card-text>
                     <v-container>
-                        <v-text-field
-                            label="Question"
+                        <v-textarea
+                            label="Subject"
                             v-model="newQuestionText"
                             variant="outlined"
+                            rows="2"
                             :rules="[inputValidationRules.required]"
-                        ></v-text-field>
+                        ></v-textarea>
+
+                        <v-textarea
+                            label="Best Answer (optional)"
+                            v-model="newQuestionAnswer"
+                            auto-grow
+                            persistent-hint
+                            variant="outlined"
+                            hint="Provide the high-quality answer to improve results."
+                        ></v-textarea>
                     </v-container>
                 </v-card-text>
                 <v-card-actions class="justify-end">
-                    <v-btn variant="text" @click="addNewQuestion">Add</v-btn>
-                    <v-btn variant="text" @click="showAddQuestionModal = false">Close</v-btn>
+                    <v-btn variant="text" @click="addNewCurriculum">Add</v-btn>
+                    <v-btn variant="text" @click="showAddCurriculumModal = false">Close</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -408,9 +429,11 @@ export default {
             selectedMessage: null,
             selectedQuestion: {},
             page: 0,
+            pullInterval: null,
             stagedQuestionData: {},
             newMessage: null,
             newQuestionText: null,
+            newQuestionAnswer: null,
             currentMessage: null,
             currentMessageData: {},
             analyzingMessage: false,
@@ -420,9 +443,9 @@ export default {
             successMessage: null,
             showSuccessMessage: false,
             showDeleteQuestionModal: false,
-            showAddQuestionModal: false,
+            showAddCurriculumModal: false,
             showEditQuestionModal: false,
-            reGenerateAnswerModal: false,
+            showGenerateAnswerModal: false,
             showSearchInput: false,
             search: null,
             inputValidationRules: {
@@ -502,10 +525,10 @@ export default {
             this.$api.ai
                 .generateMessageAnswer(this.currentMessage.uuid)
                 .then((data) => {
-                    _this.currentMessageData    = data;
-                    _this.reGenerateAnswerModal = false;
-                    _this.generatingAnswer      = false;
-                    _this.currentTab            = 'answer';
+                    _this.currentMessageData      = data;
+                    _this.showGenerateAnswerModal = false;
+                    _this.generatingAnswer        = false;
+                    _this.currentTab              = 'answer';
                 });
         },
         saveMessageChanges(silent = false, cb = null) {
@@ -549,6 +572,9 @@ export default {
                 _this.currentMessage     = message;
                 _this.currentTab         = 'original';
                 _this.currentMessageData = response;
+
+                // Override the message status
+                message.status = response.status;
             });
         },
         prepareQuestionCandidateList(question) {
@@ -560,6 +586,8 @@ export default {
 
             if (message.status === 'done') {
                 icon = 'mdi-check-circle';
+            } else if (message.status === 'read') {
+                icon = 'mdi-help-circle';
             }
 
             return icon;
@@ -656,16 +684,20 @@ export default {
                 _this.isFineTuningQuestion = false;
             });
         },
-        addNewQuestion() {
+        prepareDirectAnswerModal() {
+            this.newQuestionText        = this.currentMessageData.rewrite;
+            this.showAddCurriculumModal = true;
+        },
+        addNewCurriculum() {
             const _this = this;
 
             this.$api.messages
                 .addQuestionToMessage(this.currentMessage.uuid, {
-                    text: this.newQuestionText
+                    text: this.newQuestionText,
+                    answer: this.newQuestionAnswer
                 })
                 .then(() => {
-                    _this.showAddQuestionModal = false;
-                    _this.selectedQuestion     = {};
+                    _this.showAddCurriculumModal = false;
 
                     // Re-init the list of all questions
                     _this.getMessageIdentifiedQuestions();
@@ -747,15 +779,32 @@ export default {
                 this.showSuccessMessage = false;
             }
         },
+        showAddCurriculumModal(value) {
+            if (value === false) {
+                this.newQuestionText   = null;
+                this.newQuestionAnswer = null;
+            }
+        }
     },
     mounted() {
+        const _this = this;
+
         this.loadMessages();
 
-       // this.$api.messages.pullMessages();
+        this.pullInterval = setInterval(function() {
+            _this.$api.messages.pullMessages().then((response) => {
+                if (response.length > 0) {
+                    _this.messages.unshift(...response);
+                }
+            });
+        }, 30000);
 
         this.assembleBreadcrumb();
     },
     unmounted() {
+        if (this.pullInterval) {
+            this.pullInterval = clearInterval(this.pullInterval);
+        }
     }
 }
 </script>
