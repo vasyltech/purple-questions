@@ -4,6 +4,7 @@ const { app }        = require('electron');
 const { v4: uuidv4 } = require('uuid');
 const _              = require('lodash');
 const Crypto         = require('crypto');
+const TextConvertor  = require('html-to-text');
 
 import DbRepository from './repository/db';
 import OpenAiRepository from './repository/openai';
@@ -139,12 +140,13 @@ const MessageIndex = (() => {
 
 /**
  *
- * @param {*} text
+ * @param {*} html
  * @param {*} wCount
  *
  * @returns {String}
  */
-function PrepareExcerpt(text, wCount = 30) {
+function PrepareExcerpt(html, wCount = 30) {
+    const text  = TextConvertor.convert(html);
     const parts = text.split(/\r\n|\n|\s|\t/g).filter(p => p.trim().length > 0);
 
     return parts.slice(0, wCount).join(' ') + (parts.length > wCount ? '...' : '');

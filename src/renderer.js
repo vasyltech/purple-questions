@@ -34,15 +34,15 @@ import 'vuetify/styles'
 import '@mdi/font/css/materialdesignicons.css'
 
 import { createVuetify } from 'vuetify'
-//import * as components from 'vuetify/components'
-//import * as directives from 'vuetify/directives'
 
 import { createRouter, createWebHashHistory } from 'vue-router';
-import { VInfiniteScroll } from 'vuetify/labs/VInfiniteScroll'
+import { VInfiniteScroll } from 'vuetify/labs/VInfiniteScroll';
+import Editor from './renderer/components/Editor';
 
 const vuetify = createVuetify({
   components: {
-    VInfiniteScroll
+    VInfiniteScroll,
+    Editor
   },
  // directives,
   theme: {
@@ -64,8 +64,8 @@ const routes = [
     children: [
       {
         path: '',
-        name: 'Home',
-        component: () => import('@/views/Home.vue'),
+        name: 'Messages',
+        component: () => import('@/views/Messages.vue'),
       },
     ],
   },
@@ -81,13 +81,13 @@ const routes = [
     ],
   },
   {
-    path: '/messages',
+    path: '/documents',
     component: () => import('@/layouts/default/Default.vue'),
     children: [
       {
         path: '',
-        name: 'Messages',
-        component: () => import('@/views/Messages.vue'),
+        name: 'Documents',
+        component: () => import('@/views/Documents.vue'),
       },
     ],
   },

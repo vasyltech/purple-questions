@@ -11,6 +11,7 @@ const USER_PROMPT = `Use the best customer support guidances to answer user mess
 - Only answer questions listed in the "QUESTIONS TO ANSWER" section.
 - Provide as detailed answer as possible with an example, if applicable.
 - Output only answer without references to external sources.
+- Always finish with sentence "Keep me posted if anything".
 - {constraint}
 
 USER MESSAGE:

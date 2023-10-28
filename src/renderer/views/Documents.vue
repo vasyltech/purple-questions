@@ -301,21 +301,7 @@
         </div>
 
         <div class="text-overline pb-2">Content</div>
-        <codemirror
-          v-model="currentDocumentData.text"
-          placeholder="Content goes here..."
-          :style="{
-            height: '400px',
-            border: '1px solid #CCCCCC',
-            backgroundColor: '#FFFFFF',
-            borderRadius: '0.3rem'
-          }"
-          :autofocus="true"
-          :indent-with-tab="true"
-          :tab-size="2"
-          theme="ayuLight"
-          :extensions="extensions"
-        />
+        <editor v-model="currentDocumentData.text"></editor>
       </v-container>
 
       <v-container v-if="hasAssociatedQuestions">
@@ -442,14 +428,8 @@
                 :hint="stagedQuestionData.ft_method ? 'The curriculum was fine-tuned, thus it cannot be modified' : ''"
               ></v-text-field>
 
-              <v-textarea
-                label="Answer"
-                class="mt-6"
-                v-model="stagedQuestionData.answer"
-                auto-grow
-                variant="outlined"
-                hint="Provide the high-quality answer to improve results."
-              ></v-textarea>
+
+              <editor v-model="stagedQuestionData.answer"></editor>
 
               <v-radio-group
                 class="mt-6"
@@ -538,15 +518,7 @@
 </template>
 
 <script>
-import { Codemirror } from 'vue-codemirror';
-import { EditorView } from 'codemirror';
-import { markdown } from '@codemirror/lang-markdown';
-import { Compartment } from "@codemirror/state";
-
 export default {
-  components: {
-    Codemirror
-  },
   data: () => ({
     documentTree: {},
     currentFolder: null,
@@ -986,32 +958,6 @@ export default {
 
       _this.assembleBreadcrumb();
     });
-  },
-  setup() {
-    const lineWrapping = new Compartment();
-    const theme        = new Compartment();
-
-    return {
-      extensions: [
-        markdown(),
-        lineWrapping.of(EditorView.lineWrapping),
-        theme.of(EditorView.theme({
-          '&': {
-            padding: '0.5rem 0rem 0.5rem 0.6rem'
-          },
-          '&.cm-focused': {
-            outline: 'none',
-            border: '2px solid #333333'
-          },
-          '.cm-gutters': {
-            display: 'none'
-          },
-          '.cm-activeLine': {
-            backgroundColor: 'transparent'
-          }
-        }))
-      ]
-    }
   }
 }
 </script>
@@ -1020,7 +966,6 @@ export default {
 .clickable {
   cursor: pointer;
 }
-
 .v-breadcrumbs {
   font-size: 0.9rem;
 }

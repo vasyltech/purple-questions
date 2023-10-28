@@ -1,4 +1,6 @@
-const _ = require('lodash');
+const _             = require('lodash');
+const HtmlConvertor = require('html-to-md');
+const MdConvertor   = require('marked');
 
 import OpenAiRepository from './repository/openai';
 import DbRepository from './repository/db';
@@ -182,10 +184,10 @@ export default {
             material.push(..._.map(question.candidates, (c) => ({
                 uuid: c.uuid,
                 name: c.name,
-                text: c.text,
+                text: HtmlConvertor(c.text),
                 // Duplicating this, so the question can be included in the
                 // QUESTIONS TO ANSWER section inside the prompt
-                question: question.text
+                question: question.name
             })));
         });
 
@@ -196,7 +198,8 @@ export default {
                 _.unionBy(material, 'uuid')
             );
 
-            message.answer = res1.output;
+            // Covert the answer to HTML
+            message.answer = MdConvertor.parse(res1.output).replace(/\n/g, '')
 
             if (!_.isArray(message.usage)) {
                 message.usage = [];
@@ -254,6 +257,6 @@ export default {
 
         // Step #4. Finally store all the changes to the question
         Questions.updateQuestion(uuid, question);
-    },
+    }
 
 }

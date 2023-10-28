@@ -31,25 +31,23 @@
     "vite-plugin-vuetify": "^1.0.2"
   },
   "dependencies": {
-    "@codemirror/lang-javascript": "^6.2.1",
-    "@codemirror/lang-markdown": "^6.2.1",
-    "@codemirror/lang-php": "^6.0.1",
     "@mdi/font": "^7.2.96",
     "cheerio": "^1.0.0-rc.12",
-    "codemirror": "^6.0.1",
     "csv-parse": "^5.5.1",
     "electron-squirrel-startup": "^1.0.0",
     "entities": "^4.5.0",
+    "highlight.js": "^11.9.0",
     "html-to-md": "^0.8.3",
+    "html-to-text": "^9.0.5",
     "lodash": "^4.17.21",
-    "marked": "^7.0.4",
+    "marked": "^9.1.2",
     "openai": "^4.2.0",
     "superagent": "^8.1.2",
     "uuid": "^9.0.0",
     "vectordb": "^0.2.4",
     "vue": "^3.3.4",
-    "vue-codemirror": "^6.1.1",
     "vue-router": "^4.2.4",
+    "vue3-editor": "^0.1.1",
     "vuetify": "^3.3.13"
   }
 }

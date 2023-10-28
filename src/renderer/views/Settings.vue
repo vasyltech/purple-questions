@@ -1,7 +1,260 @@
 <template>
-    <Settings />
+    <v-container class="fill-height">
+        <v-app-bar color="deep-purple-lighten-1">
+            <template v-slot:prepend>
+                <v-icon icon="mdi-cog-outline"></v-icon>
+            </template>
+
+            <v-app-bar-title class="title">Settings</v-app-bar-title>
+
+            <template v-slot:append>
+                <v-btn icon @click="saveSettings">
+                    <v-icon>mdi-content-save</v-icon>
+                </v-btn>
+            </template>
+        </v-app-bar>
+
+        <v-responsive class="align-left fill-height">
+            <v-container>
+                <v-tabs
+                    v-model="tab"
+                    color="grey"
+                    align-tabs="left"
+                >
+                    <v-tab value="openai">OpenAI</v-tab>
+                    <v-tab v-if="settings.apiKey" value="persona">Personas</v-tab>
+                    <v-tab v-if="settings.apiKey" value="application">Application</v-tab>
+                </v-tabs>
+                <v-window v-model="tab">
+                    <v-window-item value="openai" class="pt-6">
+                        <v-text-field
+                            v-model="settings.apiKey"
+                            label="OpenAI API Key"
+                            placeholder="sk-****"
+                            persistent-hint
+                            variant="outlined"
+                            hint="The OpenAI API key. It should start with sk-"
+                        ></v-text-field>
+                        <v-select
+                            v-if="settings.apiKey"
+                            v-model="settings.llmModel"
+                            label="LLM Model"
+                            class="mt-6"
+                            hint="Select the LLM model to use. Default is GPT-3.5"
+                            persistent-hint
+                            return-object
+                            variant="outlined"
+                            :items="supportedLlmModels"
+                        ></v-select>
+                    </v-window-item>
+                    <v-window-item value="persona" class="pt-6">
+                        <div v-if="settings.persona && settings.persona.length > 0">
+                            <v-expansion-panels class="pb-4 pr-2 pl-2">
+                                <v-expansion-panel
+                                    v-for="(persona, i) in settings.persona"
+                                    :key="i"
+                                >
+                                    <v-expansion-panel-title>{{ persona.name || 'New Persona' }}</v-expansion-panel-title>
+                                    <v-expansion-panel-text>
+                                        <v-text-field
+                                            v-model="persona.name"
+                                            class="mt-4"
+                                            label="Persona Name"
+                                            variant="outlined"
+                                            persistent-hint
+                                            hint="How should we call this persona?"
+                                        ></v-text-field>
+
+                                        <v-textarea
+                                            class="mt-4"
+                                            label="Persona Description"
+                                            v-model="persona.description"
+                                            auto-grow
+                                            variant="outlined"
+                                            persistent-hint
+                                            hint="How would you describe "
+                                        ></v-textarea>
+
+                                        <v-textarea
+                                            class="mt-4"
+                                            label="Answer Constraint"
+                                            v-model="persona.constraint"
+                                            auto-grow
+                                            variant="outlined"
+                                            persistent-hint
+                                            hint="Limit what LLM model can use in the message response (e.g. allow referring only to specific WordPress plugins)"
+                                        ></v-textarea>
+
+                                        <div class="d-flex justify-end mt-6">
+                                            <v-btn variant="text" @click="deletePersona(persona)">Delete</v-btn>
+                                        </div>
+                                    </v-expansion-panel-text>
+                                </v-expansion-panel>
+                            </v-expansion-panels>
+                            <div class="d-flex justify-end">
+                                <v-btn variant="text" @click="createNewPersona">Add New Persona</v-btn>
+                            </div>
+                        </div>
+
+                        <v-sheet
+                            v-else
+                            class="text-center mx-auto py-6"
+                            elevation="1"
+                            rounded
+                            width="100%"
+                            color="grey-lighten-3"
+                        >
+                            <p class="text-body-2 mb-4">
+                                You haven't defined any personas yet.
+                            </p>
+                            <v-btn @click="createNewPersona">Create First Persona</v-btn>
+                        </v-sheet>
+                    </v-window-item>
+                    <v-window-item value="application" class="pt-6">
+                        <div>
+                            <span class="text-caption">Similarity Distance</span>
+                        </div>
+                        <v-slider
+                            v-model="settings.similarityDistance"
+                            :thumb-size="24"
+                            thumb-label="always"
+                            step="1"
+                            persistent-hint
+                            hint="What degree of similarity between two questions should be considered as indicative of them being similar?"
+                        ></v-slider>
+                        <v-text-field
+                            class="mt-6"
+                            variant="outlined"
+                            label="Application Data Location"
+                            prepend-inner-icon="mdi-folder"
+                            v-model="settings.appDataFolder"
+                            persistent-hint
+                            :hint="`The location were all application data is stored. Default path is ${defaultAppDataFolder}`"
+                        ></v-text-field>
+                    </v-window-item>
+                </v-window>
+            </v-container>
+
+            <v-snackbar v-model="showSuccessMessage">
+                {{ successMessage }}
+
+                <template v-slot:actions>
+                    <v-btn variant="text" @click="showSuccessMessage = false">
+                        Close
+                    </v-btn>
+                </template>
+            </v-snackbar>
+        </v-responsive>
+    </v-container>
 </template>
 
-<script setup>
-    import Settings from '@/components/Settings.vue'
+<script>
+export default {
+    data: () => ({
+        tab: 'openai',
+        settings: {},
+        supportedLlmModels: [],
+        supportedFineTuningModels: [],
+        showSuccessMessage: false
+    }),
+    computed: {
+        defaultAppDataFolder() {
+            return this.settings
+                && this.settings._system ? this.settings._system.defaultAppDataFolder : '...';
+        }
+    },
+    methods: {
+        createNewPersona() {
+            if (!Array.isArray(this.settings.persona)) {
+                this.settings.persona = [];
+            }
+
+            this.settings.persona.push({
+                name: '',
+                description: '',
+                constraint: ''
+            });
+        },
+        deletePersona(persona) {
+            this.settings.persona = this.settings.persona.filter(
+                p => p !== persona
+            );
+        },
+        saveSettings() {
+            const _this = this;
+
+            // Prepare the array of settings
+            const settings = {};
+
+            for(const property in this.settings) {
+                const value = this.settings[property];
+                if (property === 'apiKey') {
+                    if (/^sk-[a-zA-Z\d]+$/.test(value) || value === '') {
+                        settings[property] = value;
+                    }
+                } else if (property === 'persona') {
+                    settings[property] = value.map(p => ({
+                        name: p.name,
+                        description: p.description,
+                        constraint: p.constraint
+                    }));
+                } else if (property !== '_system') {
+                    settings[property] = value;
+                }
+            }
+
+            this.$api.settings
+                .saveSettings(settings)
+                .then((response) => {
+                    _this.successMessage     = 'Settings saved!'
+                    _this.showSuccessMessage = true;
+                    _this.settings           = response;
+
+                    _this.reload();
+                });
+        },
+        reload() {
+            const _this = this;
+
+            // Set some default values
+            if (!this.settings.similarityDistance) {
+                this.settings.similarityDistance = 25;
+            }
+
+            if (this.settings.apiKey) {
+                this.$api.ai.getLlmModelList().then((response) => {
+                    _this.supportedLlmModels = response;
+                }).catch((error) => {
+                    console.log(error);
+                });
+            }
+        }
+    },
+    mounted() {
+        const _this = this;
+
+        this.$api.settings.readSettings().then((response) => {
+            _this.settings = response;
+
+            _this.reload();
+        }).catch((error) => {
+            console.log(error);
+        });
+    }
+}
 </script>
+
+<style scoped>
+.v-slider.v-input--horizontal {
+    margin-inline-start: 0;
+    margin-inline-end: 0;
+}
+
+.v-slider.v-input--horizontal .v-input__details {
+    padding-inline-start: 16px;
+    padding-inline-end: 16px;
+}
+.title {
+  font-size: 0.9rem;
+}
+</style>

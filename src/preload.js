@@ -6,6 +6,9 @@ contextBridge.exposeInMainWorld(
             getDocumentTree: () => ipcRenderer.invoke(
                 'documents', ['getDocumentTree']
             ),
+            getDocumentList: (type) => ipcRenderer.invoke(
+                'documents', ['getDocumentList', type]
+            ),
             createFolder: (parentFolder, name) => ipcRenderer.invoke(
                 'documents', ['createFolder', parentFolder, name]
             ),

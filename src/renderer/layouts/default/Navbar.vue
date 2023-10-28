@@ -44,8 +44,8 @@ export default {
         return {
             drawer: null,
             links: [
-                ['mdi-file-document-multiple', 'Documents', '/'],
-                ['mdi-message-processing-outline', 'Conversations', '/messages'],
+            ['mdi-message-processing-outline', 'Conversations', '/'],
+                ['mdi-file-document-multiple', 'Documents', '/documents'],
                 // ['mdi-progress-question', 'Questions', '/questions'],
                 ['mdi-tune-variant', 'LLM Fine-Tuning', '/tuning'],
                 ['mdi-puzzle', 'Add-Ons', '/addons'],

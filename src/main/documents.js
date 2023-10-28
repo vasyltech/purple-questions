@@ -205,6 +205,34 @@ const Methods = {
 
     /**
      *
+     * @param {*} type
+     * @param {*} parent
+     * @returns
+     */
+    getDocumentList: (type = null, parent = null) => {
+        const response = [];
+        const base     = _.isNull(parent) ? DocumentIndex.get(true) : parent;
+
+        _.forEach(base.children, (item) => {
+            if (_.isNull(type) || item.type === type) {
+                response.push({
+                    uuid: item.uuid,
+                    name: item.name,
+                    type: item.type,
+                    parent: base.uuid
+                });
+            }
+
+            if (_.isArray(item.children)) {
+                response.push(...Methods.getDocumentList(type, item));
+            }
+        });
+
+        return response;
+    },
+
+    /**
+     *
      * @param {*} parentFolder
      * @param {*} name
      * @returns
@@ -418,6 +446,27 @@ const Methods = {
     },
 
     /**
+     * Link a given question UUID to the document
+     *
+     * @param {String} uuid
+     * @param {String} question
+     *
+     * @returns {Boolean}
+     */
+    linkQuestionToDocument: async (uuid, question) => {
+        const document = JSON.parse(
+            Fs.readFileSync(GetDocumentsPath(uuid)).toString()
+        );
+
+        // Update document with new question uuid
+        document.questions.push(question);
+
+        Methods.updateDocument(uuid, { questions: document.questions });
+
+        return true;
+    },
+
+    /**
      *
      * @param {*} uuid
      * @param {*} questionUuid
@@ -435,6 +484,27 @@ const Methods = {
 
         // Now delete the actual question
         await Questions.deleteQuestion(questionUuid);
+
+        return true;
+    },
+
+    /**
+     * Unlink a given question UUID from the document
+     *
+     * @param {String} uuid
+     * @param {String} question
+     *
+     * @returns {Boolean}
+     */
+    unlinkQuestionFromDocument: async (uuid, question) => {
+        const document = JSON.parse(
+            Fs.readFileSync(GetDocumentsPath(uuid)).toString()
+        );
+
+        // Remove question from the list
+        document.questions = _.filter(document.questions, (q => q !== question));
+
+        Methods.updateDocument(uuid, { questions: document.questions });
 
         return true;
     },
