@@ -14,7 +14,7 @@ import Settings from './settings';
  */
 function GetQuestionsPath(append = null) {
     const basePath = Path.join(
-        Settings.getSetting('appDataFolder', app.getPath('userData')),
+        Settings.getAppSetting('appDataFolder', app.getPath('userData')),
         'store/questions'
     );
 

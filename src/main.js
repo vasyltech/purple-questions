@@ -55,6 +55,9 @@ function RegisterHandler(channel, handler) {
   });
 }
 
+/**
+ *
+ */
 const createWindow = () => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -112,5 +115,5 @@ app.on('activate', () => {
   }
 });
 
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and import them here.
+// Set the app protocol pq://
+app.setAsDefaultProtocolClient('pg');

@@ -16,7 +16,7 @@ import Questions from './questions';
  */
 function GetTuningBasePath(append = null) {
     const basePath = Path.join(
-        Settings.getSetting('appDataFolder', app.getPath('userData')),
+        Settings.getAppSetting('appDataFolder', app.getPath('userData')),
         'store/tuning'
     );
 
@@ -250,7 +250,7 @@ const Methods = {
             tuning.queue = UuidListToQuestions(tuning.queue, uuid);
 
             // Determining if batch can be offloaded
-            const max         = Settings.getSetting('fineTuningBatchSize', 10);
+            const max         = Settings.getAppSetting('fineTuningBatchSize', 10);
             tuning.canOffload = tuning.queue.length >= max;
 
             // If we already have the fine tuning job, then it is pointless to modify
@@ -460,7 +460,7 @@ const Methods = {
      */
     queue: async (uuid) => {
         const batches   = await Methods.getTuningList(0, 1);
-        const maxSize   = Settings.getSetting('fineTuningBatchSize', 10);
+        const maxSize   = Settings.getAppSetting('fineTuningBatchSize', 10);
         let latestBatch = _.first(batches);
 
         if (!_.isObject(latestBatch) || latestBatch.queued >= maxSize) {

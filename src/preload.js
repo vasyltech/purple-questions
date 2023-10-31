@@ -55,11 +55,11 @@ contextBridge.exposeInMainWorld(
             ),
         },
         settings: {
-            readSettings: () => ipcRenderer.invoke(
-                'settings', ['readSettings']
+            getAppSettings: () => ipcRenderer.invoke(
+                'settings', ['getAppSettings']
             ),
-            saveSettings: (settings) => ipcRenderer.invoke(
-                'settings', ['saveSettings', settings]
+            saveAppSettings: (settings) => ipcRenderer.invoke(
+                'settings', ['saveAppSettings', settings]
             )
         },
         ai: {

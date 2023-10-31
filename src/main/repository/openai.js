@@ -22,7 +22,7 @@ let ModelListCache = null;
  */
 function ConvertToJsonl(questions) {
     const list    = [];
-    const persona = _.get(Settings.getSetting('persona', []), '[0]');
+    const persona = _.get(Settings.getAppSetting('persona', []), '[0]');
 
     _.forEach(questions, (question) => {
         list.push(JSON.stringify({
@@ -76,7 +76,7 @@ function CreateTempFilepath(questions) {
 function GetClient() {
     if (_.isNull(Client)) {
         Client = new OpenAI({
-            apiKey: Settings.getSetting('apiKey')
+            apiKey: Settings.getAppSetting('apiKey')
         });
     }
 
@@ -157,11 +157,11 @@ const Methods = {
     prepareQuestionListFromDocument: async (document) => {
         const corpus = Document2QuestionsTool.getCorpus(
             document,
-            _.get(Settings.getSetting('persona', []), '[0]')
+            _.get(Settings.getAppSetting('persona', []), '[0]')
         );
 
         const result = await GetClient().chat.completions.create(Object.assign(
-            { model: Settings.getSetting('llmModel', 'gpt-3.5-turbo') },
+            { model: Settings.getAppSetting('llmModel', 'gpt-3.5-turbo') },
             corpus
         ));
 
@@ -185,14 +185,14 @@ const Methods = {
      * @returns {Promise<Object>}
      */
     prepareAnswerFromDocument: async (question, document) => {
-        const persona = _.get(Settings.getSetting('persona', []), '[0]');
+        const persona = _.get(Settings.getAppSetting('persona', []), '[0]');
         const corpus  = Question2AnswerTool.getCorpus({
             question,
             document,
         }, persona);
 
         const result = await GetClient().chat.completions.create(Object.assign(
-            { model: Settings.getSetting('llmModel', 'gpt-3.5-turbo') },
+            { model: Settings.getAppSetting('llmModel', 'gpt-3.5-turbo') },
             corpus
         ));
 
@@ -217,11 +217,11 @@ const Methods = {
     prepareQuestionListFromMessage: async (message) => {
         const corpus = Message2QuestionsTool.getCorpus(
             message,
-            _.get(Settings.getSetting('persona', []), '[0]')
+            _.get(Settings.getAppSetting('persona', []), '[0]')
         );
 
         const result = await GetClient().chat.completions.create(Object.assign(
-            { model: Settings.getSetting('llmModel', 'gpt-3.5-turbo') },
+            { model: Settings.getAppSetting('llmModel', 'gpt-3.5-turbo') },
             corpus
         ));
 
@@ -305,12 +305,12 @@ const Methods = {
         const corpus = Message2AnswerTool.getCorpus({
             message,
             material,
-            constraint: Settings.getSetting('answerConstraints', '')
-        }, _.get(Settings.getSetting('persona', []), '[0]'));
+            constraint: Settings.getAppSetting('answerConstraints', '')
+        }, _.get(Settings.getAppSetting('persona', []), '[0]'));
 
         const result = await GetClient().chat.completions.create(Object.assign(
             {
-                model: Settings.getSetting('llmModel', 'gpt-3.5-turbo'),
+                model: Settings.getAppSetting('llmModel', 'gpt-3.5-turbo'),
                 temperature: 0
             },
             corpus

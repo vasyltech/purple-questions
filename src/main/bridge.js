@@ -29,7 +29,7 @@ const Bridge = {
 
 function LoadAddOns() {
     const basepath = Path.join(
-        Settings.getSetting('appDataFolder', app.getPath('userData')),
+        Settings.getAppSetting('appDataFolder', app.getPath('userData')),
         'store/addons'
     );
 

@@ -129,7 +129,7 @@
                             prepend-inner-icon="mdi-folder"
                             v-model="settings.appDataFolder"
                             persistent-hint
-                            :hint="`The location were all application data is stored. Default path is ${defaultAppDataFolder}`"
+                            hint="The location were all application data is stored."
                         ></v-text-field>
                     </v-window-item>
                 </v-window>
@@ -157,12 +157,6 @@ export default {
         supportedFineTuningModels: [],
         showSuccessMessage: false
     }),
-    computed: {
-        defaultAppDataFolder() {
-            return this.settings
-                && this.settings._system ? this.settings._system.defaultAppDataFolder : '...';
-        }
-    },
     methods: {
         createNewPersona() {
             if (!Array.isArray(this.settings.persona)) {
@@ -198,13 +192,13 @@ export default {
                         description: p.description,
                         constraint: p.constraint
                     }));
-                } else if (property !== '_system') {
+                } else {
                     settings[property] = value;
                 }
             }
 
             this.$api.settings
-                .saveSettings(settings)
+                .saveAppSettings(settings)
                 .then((response) => {
                     _this.successMessage     = 'Settings saved!'
                     _this.showSuccessMessage = true;
@@ -215,11 +209,6 @@ export default {
         },
         reload() {
             const _this = this;
-
-            // Set some default values
-            if (!this.settings.similarityDistance) {
-                this.settings.similarityDistance = 25;
-            }
 
             if (this.settings.apiKey) {
                 this.$api.ai.getLlmModelList().then((response) => {
@@ -233,7 +222,7 @@ export default {
     mounted() {
         const _this = this;
 
-        this.$api.settings.readSettings().then((response) => {
+        this.$api.settings.getAppSettings().then((response) => {
             _this.settings = response;
 
             _this.reload();

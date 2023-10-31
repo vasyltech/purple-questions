@@ -100,8 +100,7 @@
                     </v-infinite-scroll>
                     <div v-else class="text-center my-4">No items.</div>
                 </v-col>
-                <v-col cols="9" class="flex-grow-1 flex-shrink-0 pl-6 pr-4 py-4"
-                    style="max-height: calc(100vh - 64px); overflow-y: scroll;">
+                <v-col cols="9" class="flex-grow-1 flex-shrink-0 pl-6 pr-4 py-4 msg-body">
                     <div v-if="currentMessage" class="pb-12">
                         <v-tabs v-model="currentTab" color="grey-darken-1" align-tabs="start">
                             <v-tab value="original">Message</v-tab>
@@ -282,7 +281,7 @@
                     <editor v-model="newMessage"></editor>
                 </v-card-text>
                 <v-card-actions class="justify-end">
-                    <v-btn variant="text" @click="createMessage">Create</v-btn>
+                    <v-btn v-if="newMessage" variant="text" @click="createMessage">Create</v-btn>
                     <v-btn variant="text" @click="createMessageModal = false">Close</v-btn>
                 </v-card-actions>
             </v-card>
@@ -317,8 +316,14 @@
                 </v-toolbar>
                 <v-card-text>
                     <v-container>
-                        <v-textarea label="Subject" v-model="newQuestionText" variant="outlined" rows="2"
-                            :rules="[inputValidationRules.required]"></v-textarea>
+                        <v-textarea
+                            label="Subject"
+                            v-model="newQuestionText"
+                            variant="outlined"
+                            auto-grow
+                            rows="2"
+                            :rules="[inputValidationRules.required]"
+                        ></v-textarea>
 
                         <editor v-model="newQuestionAnswer"></editor>
                     </v-container>
@@ -846,5 +851,10 @@ export default {
 
 .v-window {
     overflow: visible;
+}
+
+.msg-body {
+    max-height: calc(100vh - 64px);
+    overflow-y: scroll;
 }
 </style>

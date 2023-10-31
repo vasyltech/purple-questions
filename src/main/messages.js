@@ -19,7 +19,7 @@ import Bridge from './bridge';
  */
 function GetMessagesBasePath(append = null) {
     const basePath = Path.join(
-        Settings.getSetting('appDataFolder', app.getPath('userData')),
+        Settings.getAppSetting('appDataFolder', app.getPath('userData')),
         'store/messages'
     );
 
@@ -276,9 +276,8 @@ const Methods = {
         const message = JSON.parse(
             Fs.readFileSync(GetMessagesBasePath(uuid)).toString()
         );
-        const similarity = Settings.getSetting('similarityDistance', 25) / 100;
-
-        const questions = [];
+        const similarity = Settings.getAppSetting('similarityDistance', 25) / 100;
+        const questions  = [];
 
         // Dynamically find the best answer candidates
         for (let i = 0; i < message.questions.length; i++) {

@@ -12,7 +12,7 @@ import Settings from '../settings';
  */
 function GetLogsBasePath(suffix = null) {
     const basePath = Path.join(
-        Settings.getSetting('appDataFolder', app.getPath('userData')),
+        Settings.getAppSetting('appDataFolder', app.getPath('userData')),
         'store/logs'
     );
 

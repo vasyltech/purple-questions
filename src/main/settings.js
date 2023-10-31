@@ -43,50 +43,69 @@ function PrepareSettings(settings) {
  */
 function ReadSettings() {
     const fullPath = GetSettingsPath();
-    const response = JSON.parse(Fs.readFileSync(fullPath).toString());
 
-    // Append also some system info
-    response._system = {
-        defaultAppDataFolder: app.getPath('userData'),
-    }
-
-    return response;
+    return JSON.parse(Fs.readFileSync(fullPath).toString());
 }
 
+/**
+ *
+ * @returns
+ */
+function SaveSettings(settings) {
+    Fs.writeFileSync(GetSettingsPath(), JSON.stringify(settings));
+}
+
+/**
+ *
+ */
 const Methods = {
 
     /**
+     * Get all app settings
      *
-     * @param {*} settings
-     * @returns
+     * @returns {Object}
      */
-    saveSettings: (settings) => {
-        const fullPath    = GetSettingsPath();
-        const oldSettings = JSON.parse(Fs.readFileSync(fullPath).toString());
+    getAppSettings: (raw = false) => {
+        const settings = _.get(ReadSettings(), 'app', {});
 
-        const newSettings = Object.assign({}, oldSettings, settings);
+        if (!settings.appDataFolder) {
+            settings.appDataFolder = app.getPath('userData');
+        }
 
-        Fs.writeFileSync(fullPath, JSON.stringify(newSettings));
+        if (!settings.similarityDistance) {
+            settings.similarityDistance = 25;
+        }
 
-        return PrepareSettings(newSettings);
+        return raw ? settings : PrepareSettings(settings);
     },
 
     /**
+     * Save app settings
      *
-     * @param {*} filePath
-     * @returns
+     * @param {Object} settings
+     *
+     * @returns {Object}
      */
-    readSettings: () => PrepareSettings(ReadSettings()),
+    saveAppSettings: (settings) => {
+        const original = ReadSettings();
+
+        // Override the old app settings
+        original.app = Object.assign({}, _.get(original, 'app', {}), settings);
+
+        SaveSettings(original);
+
+        return PrepareSettings(original.app);
+    },
 
     /**
+     * Get app setting
      *
-     * @param {*} setting
+     * @param {String} setting
      *
-     * @returns
+     * @returns {Mixed}
      */
-    getSetting: (setting, def = null) => {
-        const settings = ReadSettings();
-        const value    = _.get(settings, setting);
+    getAppSetting: (setting, def = null) => {
+        const value = _.get(Methods.getAppSettings(true), setting);
 
         return _.isUndefined(value)
                 || _.isNull(value)
@@ -94,26 +113,15 @@ const Methods = {
     },
 
     /**
+     * Get addon settings
      *
-     * @param {*} setting
+     * @param {String} addon
+     * @param {Mixed}  def
      *
-     * @returns
+     * @returns {Mixed}
      */
     getAddonSetting: (addon, def = null) => {
-        return Methods.getSetting(`addons.${addon}`, def);
-    },
-
-    /**
-     *
-     * @param {*} path
-     * @param {*} value
-     */
-    setSetting: (path, value) => {
-        const settings = ReadSettings();
-
-        _.set(settings, path, value);
-
-        Methods.saveSettings(settings);
+        return _.get(ReadSettings(), `addons.${addon}`, def);
     },
 
     /**
@@ -123,7 +131,14 @@ const Methods = {
      * @returns
      */
     setAddonSetting: (addon, setting, value) => {
-        return Methods.setSetting(`addons.${addon}.${setting}`, value);
+        const original = ReadSettings();
+
+        // Override the addon setting
+        _.set(original, `addons.${addon}.${setting}`, value);
+
+        SaveSettings(original);
+
+        return true;
     },
 
 }
