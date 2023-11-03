@@ -106,13 +106,16 @@ export default {
 
         question.usage.push(res1.usage);  // Cost?
 
+        // Convert answer to HTML
+        const answer = MdConvertor.parse(res1.output).replace(/\n/g, '');
+
         // Now, we got the answer. Let's store it in the db
         Questions.updateQuestion(questionUuid, {
             usage: question.usage,
-            answer: res1.output
+            answer
         });
 
-        return res1.output;
+        return answer;
     },
 
     /**
@@ -222,14 +225,9 @@ export default {
      * @param {*} uuid
      * @param {*} data
      */
-    fineTuneQuestion: async (uuid, data) => {
+    fineTuneQuestion: async (uuid, data = {}) => {
         // Step #1. Read question data and update it based on incoming values
-        const question = Questions.readQuestion(uuid);
-
-        // We should allow updating only two question properties during fine-tuning
-        // process
-        question.answer    = data.answer;
-        question.ft_method = data.ft_method;
+        const question = Object.assign({}, Questions.readQuestion(uuid), data);
 
         // Step #2. Indexing the question if it not yet indexed
         if (!_.isArray(question.embedding)) {
@@ -244,14 +242,14 @@ export default {
 
             // Add embedding
             question.embedding = res1.output.embedding;
-
-            // Index question
-            await DbRepository.indexQuestion(uuid, question.embedding);
         }
+
+        // Index question
+        await DbRepository.indexQuestion(uuid, question.embedding);
 
         // Step #3. If this is a deep learning, then queue the question for the
         // model fine-tuning
-        if (data.ft_method === 'deep') {
+        if (question.ft_method === 'deep') {
             question.ft_batch_uuid = await Tuning.queue(uuid);
         }
 

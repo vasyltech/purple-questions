@@ -204,14 +204,22 @@ const Methods = {
     },
 
     /**
+     * Get the list of documents
      *
-     * @param {*} type
-     * @param {*} parent
-     * @returns
+     * @param {String} type
+     * @param {Object} parent
+     * @param {Array}  breadcrumb
+     *
+     * @returns {Array}
      */
-    getDocumentList: (type = null, parent = null) => {
+    getDocumentList: (type = null, parent = null, breadcrumb = []) => {
         const response = [];
         const base     = _.isNull(parent) ? DocumentIndex.get(true) : parent;
+
+        // Build a breadcrumb
+        if (!_.isNull(parent)) {
+            breadcrumb.push(parent.name);
+        }
 
         _.forEach(base.children, (item) => {
             if (_.isNull(type) || item.type === type) {
@@ -219,12 +227,15 @@ const Methods = {
                     uuid: item.uuid,
                     name: item.name,
                     type: item.type,
-                    parent: base.uuid
+                    parent: base.uuid,
+                    breadcrumb: breadcrumb.length > 0 ?  breadcrumb : ['Root']
                 });
             }
 
             if (_.isArray(item.children)) {
-                response.push(...Methods.getDocumentList(type, item));
+                response.push(
+                    ...Methods.getDocumentList(type, item, _.clone(breadcrumb))
+                );
             }
         });
 
@@ -427,15 +438,15 @@ const Methods = {
     /**
      *
      * @param {*} uuid
-     * @param {*} question
+     * @param {*} data
      * @returns
      */
-    addQuestionToDocument: async (uuid, text) => {
+    addQuestionToDocument: async (uuid, data) => {
         const document = JSON.parse(
             Fs.readFileSync(GetDocumentsPath(uuid)).toString()
         );
 
-        const question = await Questions.createQuestion({ text });
+        const question = await Questions.createQuestion(data);
 
         // Update document with new question uuid
         document.questions.push(question.uuid);

@@ -677,13 +677,13 @@ export default {
 
       // Let first validate that the provided question is legit and is not a
       // duplicate
-      const sanitized = this.newQuestion.trim();
+      const text = this.newQuestion.trim();
 
-      if (sanitized.length
-          && (this.currentDocumentData.questions.filter(q => q.text === sanitized).length === 0)
+      if (text.length
+          && (this.currentDocumentData.questions.filter(q => q.text === text).length === 0)
       ) {
         this.$api.documents
-          .addQuestionToDocument(this.currentDocument.uuid, sanitized)
+          .addQuestionToDocument(this.currentDocument.uuid, { text })
           .then((result) => {
             // Add new question to the list of document questions
             if (result !== false) {

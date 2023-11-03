@@ -335,6 +335,53 @@
             </v-card>
         </v-dialog>
 
+        <v-dialog v-model="showLinkQuestionModal" transition="dialog-bottom-transition" width="1000">
+            <v-card>
+                <v-toolbar color="grey-darken-4">
+                    <v-toolbar-title>Link Question To Documents</v-toolbar-title>
+                </v-toolbar>
+                <v-card-text>
+                    <v-container>
+                        <v-alert type="info" prominent variant="outlined">
+                            Carefully choose one or more documents from the list. Upon confirming selections, the <strong>"{{ stagedQuestionData.text }}"</strong> question will be duplicated and attached to each selected document.
+                            The best possible answer will be automatically generated based on document's material.
+                        </v-alert>
+
+                        <v-combobox
+                            v-model="linkedDocuments"
+                            class="mt-6"
+                            multiple
+                            chips
+                            variant="outlined"
+                            label="Link Question To"
+                            :return-object="false"
+                            prepend-inner-icon="mdi-clipboard-text"
+                            :items="documents"
+                        >
+                        <template v-slot:item="{ item, props }">
+                            <v-list-item v-bind="props" :title="item.title" :subtitle="item.value.breadcrumb">
+                                <template v-slot:prepend="{ isActive }">
+                                    <v-list-item-action start>
+                                        <v-checkbox-btn :model-value="isActive"></v-checkbox-btn>
+                                    </v-list-item-action>
+                                </template>
+                            </v-list-item>
+                        </template>
+                        </v-combobox>
+                    </v-container>
+                </v-card-text>
+                <v-card-actions class="justify-end">
+                    <v-btn
+                        v-if="linkedDocuments.length > 0"
+                        :disabled="isLinkingDocuments"
+                        variant="text"
+                        @click="linkSelectedQuestionToDocuments"
+                    >{{ isLinkingDocuments ? 'Linking' : 'Link' }}</v-btn>
+                    <v-btn variant="text" @click="showLinkQuestionModal = false">Close</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
         <v-dialog v-model="showEditQuestionModal" transition="dialog-bottom-transition" fullscreen>
             <v-card>
                 <v-toolbar color="grey-darken-4">
@@ -349,25 +396,36 @@
                 </v-toolbar>
                 <v-card-text>
                     <v-container>
-                        <v-text-field label="Subject (read-only)" v-model="stagedQuestionData.text" readonly
-                            variant="outlined"></v-text-field>
+                        <v-text-field
+                            label="Question (read-only)"
+                            v-model="stagedQuestionData.text"
+                            readonly
+                            variant="outlined"
+                        ></v-text-field>
 
-                        <v-expansion-panels class="mb-6" v-if="prepareQuestionCandidateList(stagedQuestionData).length > 0">
-                            <v-expansion-panel
-                                v-for="(candidate, index) in prepareQuestionCandidateList(stagedQuestionData)" :key="index">
-                                <v-expansion-panel-title>
-                                    <span class="font-weight-bold text-uppercase text-deep-purple">{{ candidate.similarity
-                                        === 0 ? 'exact match' : `Distance ${candidate.similarity}` }}:</span>&nbsp;&nbsp;{{
-        candidate.name }}
-                                </v-expansion-panel-title>
-                                <v-expansion-panel-text>
-                                    <v-textarea class="mt-6" variant="outlined" readonly auto-grow
-                                        v-model="candidate.text"></v-textarea>
-                                </v-expansion-panel-text>
-                            </v-expansion-panel>
-                        </v-expansion-panels>
+                        <v-tabs
+                            v-model="questionTab"
+                            align-tabs="start"
+                        >
+                            <v-tab value="direct">Direct Answer</v-tab>
+                            <v-tab value="similar" v-if="prepareQuestionCandidateList(stagedQuestionData).length > 0">Similar Questions ({{ prepareQuestionCandidateList(stagedQuestionData).length }})</v-tab>
+                        </v-tabs>
 
-                        <editor v-model="stagedQuestionData.answer"></editor>
+                        <v-window v-model="questionTab" class="mt-4">
+                            <v-window-item value="direct">
+                                <editor v-model="stagedQuestionData.answer"></editor>
+                            </v-window-item>
+                            <v-window-item value="similar">
+                                <v-list class="candidates">
+                                    <v-list-item v-for="(item, index) in prepareQuestionCandidateList(stagedQuestionData)" :key="index">
+                                        <v-list-item-title class="candidate-title">
+                                            <span class="font-weight-bold text-uppercase text-deep-purple">{{ item.similarity === 0 ? 'exact match' : `Distance ${item.similarity}` }}:</span>&nbsp;&nbsp;{{ item.name }}
+                                        </v-list-item-title>
+                                        <div class="candidate-text" v-html="item.text"></div>
+                                    </v-list-item>
+                                </v-list>
+                            </v-window-item>
+                        </v-window>
 
                         <v-radio-group v-if="stagedQuestionData.answer" class="mt-6" v-model="stagedQuestionData.ft_method"
                             inline label="Fine-Tuning Method" persistent-hint
@@ -379,6 +437,7 @@
                 </v-card-text>
                 <v-card-actions class="justify-end">
                     <v-btn color="red-darken-4" variant="text" @click="showDeleteQuestionModal = true">Delete</v-btn>
+                    <v-btn variant="text" @click="showLinkQuestionModal = true">Link</v-btn>
                     <v-btn v-if="stagedQuestionData.answer && stagedQuestionData.ft_method" variant="text"
                         :disabled="isFineTuningQuestion" @click="fineTuneSelectedQuestion">{{ isFineTuningQuestion ?
                             'Fine-Tuning...' : 'Fine-Tune' }}</v-btn>
@@ -416,8 +475,11 @@ export default {
         return {
             currentTab: 'original',
             currentStatus: null,
+            questionTab: 'direct',
             breadcrumb: [],
+            documents: [],
             messages: [],
+            linkedDocuments: [],
             createMessageModal: false,
             deleteMessageModal: false,
             selectedMessage: null,
@@ -433,12 +495,14 @@ export default {
             analyzingMessage: false,
             generatingAnswer: false,
             isFineTuningQuestion: false,
+            isLinkingDocuments: false,
             updatingQuestions: [],
             successMessage: null,
             showSuccessMessage: false,
             showDeleteQuestionModal: false,
             showAddCurriculumModal: false,
             showEditQuestionModal: false,
+            showLinkQuestionModal: false,
             showGenerateAnswerModal: false,
             showSearchInput: false,
             search: null,
@@ -666,9 +730,10 @@ export default {
                 });
         },
         selectQuestionForEditing(question) {
-            this.selectedQuestion = question;
-            this.stagedQuestionData = Object.assign({}, question);
+            this.selectedQuestion      = question;
+            this.stagedQuestionData    = Object.assign({}, question);
             this.showEditQuestionModal = true;
+            this.linkedDocuments       = [];
         },
         selectQuestionForDeletion(question) {
             this.selectedQuestion = question;
@@ -735,13 +800,37 @@ export default {
 
             this.$api.questions
                 .updateQuestion(this.selectedQuestion.uuid, {
-                    answer: this.stagedQuestionData.answer
+                    answer: this.stagedQuestionData.answer,
+                    linkedDocuments: this.stagedQuestionData.linkedDocuments
                 }).then(() => {
                     _this.successMessage = 'Changes saved!';
                     _this.showSuccessMessage = true;
 
                     // Re-load all questions
                     _this.getMessageIdentifiedQuestions();
+
+                    // Close the modal and reset form
+                    _this.showLinkQuestionModal = false;
+                    _this.linkedDocuments       = [];
+                });
+        },
+        linkSelectedQuestionToDocuments() {
+            const _this             = this;
+            this.isLinkingDocuments = true;
+
+            this.$api.questions
+                .linkQuestion(this.selectedQuestion.uuid, Object.values(this.linkedDocuments)).then(() => {
+                    _this.successMessage     = 'Question linked!';
+                    _this.showSuccessMessage = true;
+
+                    // Close the edit modal
+                    _this.showEditQuestionModal = false;
+
+                    // Re-load all questions
+                    _this.getMessageIdentifiedQuestions();
+                }).finally(() => {
+                    _this.isLinkingDocuments    = false;
+                    _this.showLinkQuestionModal = false;
                 });
         },
         getMessageIdentifiedQuestions() {
@@ -806,6 +895,14 @@ export default {
             });
         }, 30000);
 
+        this.$api.documents.getDocumentList('document').then((response) => {
+            _this.documents = Array.isArray(response) ? response.map(i => ({
+                title: i.name,
+                value: i.uuid,
+                breadcrumb: i.breadcrumb.join(' / ')
+            })) : [];
+        });
+
         this.assembleBreadcrumb();
     },
     unmounted() {
@@ -816,7 +913,7 @@ export default {
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .clickable {
     cursor: pointer;
 }
@@ -834,27 +931,59 @@ export default {
     white-space: pre-wrap;
     word-wrap: break-word;
 }
-
 .v-breadcrumbs {
     font-size: 0.9rem;
 }
-
 .add-btn {
     position: absolute;
     bottom: 20px;
     right: 20px;
 }
 
-.v-expansion-panel-title {
-    line-height: 1.25rem;
-}
-
 .v-window {
     overflow: visible;
 }
-
 .msg-body {
     max-height: calc(100vh - 64px);
     overflow-y: scroll;
+}
+
+.candidates {
+    padding: 0;
+
+    .v-list-item--density-default:not(.v-list-item--nav).v-list-item--one-line {
+        padding-inline-start: 0;
+        padding-inline-end: 0
+    }
+}
+
+.candidate-title {
+    padding: 10px;
+    background-color: #F0F0F0;
+}
+
+.candidate-text {
+    margin: 0rem 0 2rem 0;
+    padding: 10px;
+    background-color: #FAFAFA;
+}
+
+:deep(.candidate-text p) {
+    margin-bottom: 1.25rem !important;
+}
+
+:deep(.candidate-text ul) {
+    margin-bottom: 1.25rem !important;
+    margin-left: 20px
+}
+
+:deep(.candidate-text ol) {
+    margin-bottom: 1.25rem !important;
+    margin-left: 20px
+}
+
+:deep(.candidate-text a) {
+    color: #673ab7 !important;
+    text-decoration: none;
 }
 </style>

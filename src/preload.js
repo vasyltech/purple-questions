@@ -50,6 +50,9 @@ contextBridge.exposeInMainWorld(
             updateQuestion: (uuid, data) => ipcRenderer.invoke(
                 'questions', ['updateQuestion', uuid, data]
             ),
+            linkQuestion: (uuid, documents) => ipcRenderer.invoke(
+                'questions', ['linkQuestion', uuid, documents]
+            ),
             deleteQuestion: (uuid) => ipcRenderer.invoke(
                 'questions', ['deleteQuestion', uuid]
             ),

@@ -6,6 +6,8 @@ const _              = require('lodash');
 
 import DbRepository from './repository/db';
 import Settings from './settings';
+import Documents from './documents';
+import Ai from './ai';
 
 /**
  * Get the base path to the questions directory
@@ -142,8 +144,9 @@ const Methods = {
 
         Fs.writeFileSync(GetQuestionsPath(uuid), JSON.stringify(data));
 
-        // Index the question in the vector store if embedding is included
-        if (_.isArray(data.embedding)) {
+        // Index the question in the vector store if embedding is included & there
+        // is an answer. Otherwise do not index
+        if (_.isArray(data.embedding) && data.answer) {
             await DbRepository.indexQuestion(uuid, data.embedding);
         }
 
@@ -188,6 +191,28 @@ const Methods = {
     },
 
     /**
+     * Link question to one or more documents
+     *
+     * @param {String}        uuid
+     * @param {Array<String>} documents
+     *
+     */
+    linkQuestion: async (uuid, documents) => {
+        const copy = Methods.readQuestion(uuid);
+
+        // Adding the question to the document
+        for (let i = 0; i < documents.length; i++) {
+            const q = await Documents.addQuestionToDocument(documents[i], copy);
+
+            // If there are no direct answer provided, then generate a new answer
+            // from the document
+            if (!copy.answer) {
+                await Ai.prepareAnswerFromDocument(q.uuid, documents[i]);
+            }
+        }
+    },
+
+    /**
      *
      * @param {*} uuid
      *
@@ -219,6 +244,7 @@ const Methods = {
     readQuestion: (uuid) => {
         return JSON.parse(Fs.readFileSync(GetQuestionsPath(uuid)).toString());
     }
+
 }
 
 export default Methods;
