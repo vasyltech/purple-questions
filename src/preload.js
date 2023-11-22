@@ -61,6 +61,9 @@ contextBridge.exposeInMainWorld(
             getAppSettings: () => ipcRenderer.invoke(
                 'settings', ['getAppSettings']
             ),
+            getAppSetting: (setting) => ipcRenderer.invoke(
+                'settings', ['getAppSetting', setting]
+            ),
             saveAppSettings: (settings) => ipcRenderer.invoke(
                 'settings', ['saveAppSettings', settings]
             )
@@ -75,8 +78,8 @@ contextBridge.exposeInMainWorld(
             analyzeDocumentContent: (uuid, merge) => ipcRenderer.invoke(
                 'ai', ['analyzeDocumentContent', uuid, merge]
             ),
-            analyzeMessageContent: (uuid) => ipcRenderer.invoke(
-                'ai', ['analyzeMessageContent', uuid]
+            prepareConversationContext: (uuid) => ipcRenderer.invoke(
+                'ai', ['prepareConversationContext', uuid]
             ),
             generateMessageAnswer: (uuid) => ipcRenderer.invoke(
                 'ai', ['generateMessageAnswer', uuid]
@@ -88,36 +91,42 @@ contextBridge.exposeInMainWorld(
                 'ai', ['fineTuneQuestion', uuid, data]
             )
         },
-        messages: {
-            getMessages: (page, limit) => ipcRenderer.invoke(
-                'messages', ['getMessages', page, limit]
+        conversations: {
+            getList: (page, limit) => ipcRenderer.invoke(
+                'conversations', ['getList', page, limit]
             ),
-            pullMessages: () => ipcRenderer.invoke(
-                'messages', ['pullMessages']
+            pull: () => ipcRenderer.invoke(
+                'conversations', ['pull']
             ),
-            createMessage: (data) => ipcRenderer.invoke(
-                'messages', ['createMessage', data]
+            create: (data) => ipcRenderer.invoke(
+                'conversations', ['create', data]
             ),
-            readMessage: (uuid) => ipcRenderer.invoke(
-                'messages', ['readMessage', uuid]
+            read: (uuid) => ipcRenderer.invoke(
+                'conversations', ['read', uuid]
             ),
-            indexMessageIdentifiedQuestion: (uuid) => ipcRenderer.invoke(
-                'messages', ['indexMessageIdentifiedQuestion', uuid]
+            getTopicList: (uuid) => ipcRenderer.invoke(
+                'conversations', ['getTopicList', uuid]
             ),
-            deleteQuestionFromMessage: (uuid, question) => ipcRenderer.invoke(
-                'messages', ['deleteQuestionFromMessage', uuid, question]
+            deleteTopic: (uuid, question) => ipcRenderer.invoke(
+                'conversations', ['deleteTopic', uuid, question]
             ),
-            addQuestionToMessage: (uuid, data) => ipcRenderer.invoke(
-                'messages', ['addQuestionToMessage', uuid, data]
+            addTopic: (uuid, data) => ipcRenderer.invoke(
+                'conversations', ['addTopic', uuid, data]
             ),
-            updateMessage: (uuid, data) => ipcRenderer.invoke(
-                'messages', ['updateMessage', uuid, data]
+            update: (uuid, data) => ipcRenderer.invoke(
+                'conversations', ['update', uuid, data]
             ),
-            deleteMessage: (uuid) => ipcRenderer.invoke(
-                'messages', ['deleteMessage', uuid]
+            delete: (uuid) => ipcRenderer.invoke(
+                'conversations', ['delete', uuid]
             ),
-            updateMessageStatus: (uuid, status) => ipcRenderer.invoke(
-                'messages', ['updateMessageStatus', uuid, status]
+            deleteMessage: (uuid, messageId) => ipcRenderer.invoke(
+                'conversations', ['deleteMessage', uuid, messageId]
+            ),
+            updateMessage: (uuid, messageId, data) => ipcRenderer.invoke(
+                'conversations', ['updateMessage', uuid, messageId, data]
+            ),
+            updateStatus: (uuid, status) => ipcRenderer.invoke(
+                'conversations', ['updateStatus', uuid, status]
             ),
         },
         tuning: {
@@ -160,5 +169,10 @@ contextBridge.exposeInMainWorld(
                 'addons', ['readAddon', path]
             )
         },
+        email: {
+            redirectToAuth: () => ipcRenderer.invoke(
+                'email', ['redirectToAuth']
+            )
+        }
     }
 );

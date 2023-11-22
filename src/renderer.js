@@ -36,12 +36,10 @@ import '@mdi/font/css/materialdesignicons.css'
 import { createVuetify } from 'vuetify'
 
 import { createRouter, createWebHashHistory } from 'vue-router';
-import { VInfiniteScroll } from 'vuetify/labs/VInfiniteScroll';
 import Editor from './renderer/components/Editor';
 
 const vuetify = createVuetify({
   components: {
-    VInfiniteScroll,
     Editor
   },
  // directives,
@@ -64,8 +62,8 @@ const routes = [
     children: [
       {
         path: '',
-        name: 'Messages',
-        component: () => import('@/views/Messages.vue'),
+        name: 'Conversations',
+        component: () => import('@/views/Conversations.vue'),
       },
     ],
   },
@@ -123,7 +121,18 @@ const routes = [
         component: () => import('@/views/Settings.vue'),
       },
     ],
-  }
+  },
+  {
+    path: '/authorize',
+    component: () => import('@/layouts/default/Default.vue'),
+    children: [
+      {
+        path: '',
+        name: 'Authorize',
+        component: () => import('@/views/Authorize.vue'),
+      },
+    ],
+  },
 ];
 
 const router = createRouter({

@@ -1,8 +1,6 @@
-const Fs             = require('fs');
-const Path           = require('path');
-const { app }        = require('electron');
-const { v4: uuidv4 } = require('uuid');
-const _              = require('lodash');
+const Fs      = require('fs');
+const Path    = require('path');
+const { app } = require('electron');
 
 import Settings from './settings';
 

@@ -7,6 +7,14 @@ import Settings from './settings';
 
 const Hooks = {};
 
+function AddHook(hook, func) {
+    if (_.isUndefined(Hooks[hook])) {
+        Hooks[hook] = [];
+    }
+
+    Hooks[hook].push(func);
+}
+
 const Bridge = {
 
     /**
@@ -14,17 +22,12 @@ const Bridge = {
      * @param {*} hook
      * @param {*} func
      */
-    addHook: (hook, func) => {
-        if (_.isUndefined(Hooks[hook])) {
-            Hooks[hook] = [];
-        }
-
-        Hooks[hook].push(func);
-    },
+    addHook: AddHook,
 
     api: {
         settings: Settings
     }
+
 }
 
 function LoadAddOns() {
@@ -59,6 +62,11 @@ export default {
     init: () => {
         LoadAddOns();
     },
+
+    /**
+     *
+     */
+    addHook: AddHook,
 
     /**
      *

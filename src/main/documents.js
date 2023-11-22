@@ -282,6 +282,7 @@ const Methods = {
         Fs.writeFileSync(GetDocumentsPath(response.uuid), JSON.stringify({
             name,
             text: '',
+            origin: {},
             questions: []
         }));
 

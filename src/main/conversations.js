@@ -13,14 +13,14 @@ import Settings from './settings';
 import Bridge from './bridge';
 
 /**
- * Get the base path to the messages directory
+ * Get the base path to the conversations directory
  *
  * @returns {String}
  */
-function GetMessagesBasePath(append = null) {
+function GetConversationsBasePath(append = null) {
     const basePath = Path.join(
         Settings.getAppSetting('appDataFolder', app.getPath('userData')),
-        'store/messages'
+        'store/conversations'
     );
 
     if (!Fs.existsSync(basePath)) {
@@ -34,9 +34,9 @@ function GetMessagesBasePath(append = null) {
 }
 
 /**
- * Message index
+ * Conversation index
  */
-const MessageIndex = (() => {
+const ConversationIndex = (() => {
 
     let index = null;
 
@@ -46,7 +46,7 @@ const MessageIndex = (() => {
      */
     function Read(reload = false) {
         if (_.isNull(index) || reload) {
-            const filePath = GetMessagesBasePath('.index');
+            const filePath = GetConversationsBasePath('.index');
 
             if (Fs.existsSync(filePath)) {
                 index = JSON.parse(Fs.readFileSync(filePath).toString());
@@ -71,7 +71,7 @@ const MessageIndex = (() => {
      *
      */
     function Save() {
-        Fs.writeFileSync(GetMessagesBasePath('.index'), JSON.stringify(index));
+        Fs.writeFileSync(GetConversationsBasePath('.index'), JSON.stringify(index));
     }
 
     /**
@@ -111,11 +111,11 @@ const MessageIndex = (() => {
 
     /**
      *
-     * @param {*} checksum
+     * @param {*} id
      * @returns
      */
-    function Has(checksum) {
-        return Read().filter(m => m.checksum === checksum).length > 0;
+    function Has(id) {
+        return Read().filter(m => [m.uuid, m.externalId].includes(id)).length > 0;
     }
 
     /**
@@ -195,9 +195,9 @@ const Methods = {
      * @param {*} page
      * @param {*} limit
      */
-    getMessages: (page = 0, limit = 500) => {
+    getList: (page = 0, limit = 500) => {
         // Cloning the array to avoid issue with reverse
-        const index = _.clone(MessageIndex.getAll(true));
+        const index = _.clone(ConversationIndex.getAll(true));
         const start = page * limit;
 
         return index.reverse().slice(start, start + limit);
@@ -206,37 +206,18 @@ const Methods = {
     /**
      *
      */
-    pullMessages: async () => {
+    pull: async () => {
         const response = [];
         const results  = await Bridge.triggerHook('pq-pull-messages');
 
         // Store only new messages/conversations
         if (_.isArray(results)) {
             _.forEach(results, (row) => {
-                const message = {
-                    uuid: uuidv4(),
-                };
-
-                if (_.isString(row.checksum) && row.checksum.length === 32) {
-                    message.checksum = row.checksum;
-                } else {
-                    message.checksum = Crypto
-                        .createHash('md5')
-                        .update(JSON.stringify(row))
-                        .digest('hex');
-                }
-
-                if (_.isString(row.text)) {
-                    message.text = row.text;
-                }
-
-                if (_.isObject(row.metadata)) {
-                    message.metadata = row.metadata;
-                }
+                const conversation = Object.assign({}, row);
 
                 // Do not allow creating duplicates
-                if (!MessageIndex.has(message.checksum)) {
-                    response.push(Methods.createMessage(message, message.checksum));
+                if (!ConversationIndex.has(conversation.externalId)) {
+                    response.push(Methods.create(conversation));
                 }
             });
         }
@@ -247,22 +228,21 @@ const Methods = {
     /**
      *
      * @param {*} data
-     * @param {*} checksum
      *
      * @returns
      */
-    createMessage: (data, checksum = null) => {
-        const uuid     = uuidv4();
-        const fullPath = GetMessagesBasePath(uuid);
-        const message  = Object.assign({}, data, { questions: [] });
+    create: (data) => {
+        const uuid         = uuidv4();
+        const fullPath     = GetConversationsBasePath(uuid);
+        const conversation = Object.assign({ uuid }, data, { questions: [] });
 
-        Fs.writeFileSync(fullPath, JSON.stringify(message));
+        Fs.writeFileSync(fullPath, JSON.stringify(conversation));
 
-        return MessageIndex.add({
+        return ConversationIndex.add({
             uuid,
+            externalId: data.externalId,
             createdAt: (new Date()).getTime(),
-            excerpt: PrepareExcerpt(message.text),
-            checksum: checksum || Crypto.createHash('md5').update(message.text).digest('hex'),
+            excerpt: PrepareExcerpt(conversation.messages[0].content),
             status: 'new'
         });
     },
@@ -272,9 +252,9 @@ const Methods = {
      * @param {*} uuid
      * @returns
      */
-    readMessage: async (uuid) => {
+    read: async (uuid) => {
         const message = JSON.parse(
-            Fs.readFileSync(GetMessagesBasePath(uuid)).toString()
+            Fs.readFileSync(GetConversationsBasePath(uuid)).toString()
         );
         const similarity = Settings.getAppSetting('similarityDistance', 25) / 100;
         const questions  = [];
@@ -297,10 +277,10 @@ const Methods = {
         message.questions = questions;
 
         // Update the message status to "read" if it is still "new"
-        const index = MessageIndex.get(uuid);
+        const index = ConversationIndex.get(uuid);
 
         if (index.status === 'new') {
-            MessageIndex.update(uuid, { status: 'read' });
+            ConversationIndex.update(uuid, { status: 'read' });
 
             message.status = 'read';
         } else {
@@ -315,10 +295,10 @@ const Methods = {
      * @param {*} uuid
      * @returns
      */
-    indexMessageIdentifiedQuestion: async (uuid) => {
-        const message = await Methods.readMessage(uuid);
+    getTopicList: async (uuid) => {
+        const conversation = await Methods.read(uuid);
 
-        return message.questions;
+        return conversation.questions;
     },
 
     /**
@@ -327,15 +307,17 @@ const Methods = {
      * @param {*} questionUuid
      * @returns
      */
-    deleteQuestionFromMessage: async (uuid, questionUuid) => {
-        const message = JSON.parse(
-            Fs.readFileSync(GetMessagesBasePath(uuid)).toString()
+    deleteTopic: async (uuid, questionUuid) => {
+        const conversation = JSON.parse(
+            Fs.readFileSync(GetConversationsBasePath(uuid)).toString()
         );
 
         // Remove the question from the list
-        message.questions = _.filter(message.questions, (q => q !== questionUuid));
+        conversation.questions = _.filter(
+            conversation.questions, (q => q !== questionUuid)
+        );
 
-        Methods.updateMessage(uuid, { questions: message.questions });
+        Methods.update(uuid, { questions: conversation.questions });
 
         // Now delete the actual question
         await Questions.deleteQuestion(questionUuid);
@@ -349,9 +331,9 @@ const Methods = {
      * @param {*} data
      * @returns
      */
-    addQuestionToMessage: async (uuid, data) => {
-        const message = JSON.parse(
-            Fs.readFileSync(GetMessagesBasePath(uuid)).toString()
+    addTopic: async (uuid, data) => {
+        const conversation = JSON.parse(
+            Fs.readFileSync(GetConversationsBasePath(uuid)).toString()
         );
 
         // Embed the message
@@ -364,8 +346,8 @@ const Methods = {
             usage: [ res1.usage ]
         });
 
-        message.questions.push(question.uuid);
-        Methods.updateMessage(uuid, { questions: message.questions });
+        conversation.questions.push(question.uuid);
+        Methods.update(uuid, { questions: conversation.questions });
 
         return true;
     },
@@ -375,18 +357,17 @@ const Methods = {
      * @param {*} uuid
      * @returns
      */
-    updateMessage: (uuid, data) => {
-        const fullPath   = GetMessagesBasePath(uuid);
-        const content    = JSON.parse(Fs.readFileSync(fullPath).toString());
-        const newContent = Object.assign({}, content, data);
+    update: (uuid, data) => {
+        const fullPath     = GetConversationsBasePath(uuid);
+        const current      = JSON.parse(Fs.readFileSync(fullPath).toString());
+        const conversation = Object.assign({}, current, data);
 
-        Fs.writeFileSync(fullPath, JSON.stringify(newContent));
+        Fs.writeFileSync(fullPath, JSON.stringify(conversation));
 
         // Index file data
-        return MessageIndex.update(uuid, {
+        return ConversationIndex.update(uuid, {
             updatedAt: (new Date()).getTime(),
-            excerpt: PrepareExcerpt(newContent.text),
-            checksum: Crypto.createHash('md5').update(newContent.text).digest('hex')
+            excerpt: PrepareExcerpt(conversation.messages[0].content)
         });
     },
 
@@ -395,7 +376,7 @@ const Methods = {
      * @param {*} uuid
      * @returns
      */
-    updateMessageStatus: (uuid, status) => MessageIndex.update(uuid, {
+    updateStatus: (uuid, status) => ConversationIndex.update(uuid, {
         status,
         updatedAt: (new Date()).getTime()
     }),
@@ -405,10 +386,10 @@ const Methods = {
      * @param {*} uuid
      * @returns
      */
-    deleteMessage: async (uuid) => {
+    delete: async (uuid) => {
          // Delete all indexed questions first
          const message = JSON.parse(
-            Fs.readFileSync(GetMessagesBasePath(uuid)).toString()
+            Fs.readFileSync(GetConversationsBasePath(uuid)).toString()
         );
 
         // Delete all the questions associated with the document
@@ -417,14 +398,57 @@ const Methods = {
         }
 
         // Delete the message from index
-        MessageIndex.remove(uuid);
+        ConversationIndex.remove(uuid);
 
         // Delete the message file
-        const fullPath = GetMessagesBasePath(uuid);
+        const fullPath = GetConversationsBasePath(uuid);
 
         if (Fs.existsSync(fullPath)) {
             Fs.unlinkSync(fullPath);
         }
+
+        return true;
+    },
+
+    /**
+     *
+     * @param {*} uuid
+     * @param {*} messageId
+     * @returns
+     */
+    deleteMessage: async (uuid, messageId) => {
+        const fullPath     = GetConversationsBasePath(uuid);
+        const conversation = JSON.parse(Fs.readFileSync(fullPath).toString());
+
+        conversation.messages = _.filter(
+            conversation.messages, (m) => m.id !== messageId
+        );
+
+        Fs.writeFileSync(fullPath, JSON.stringify(conversation));
+
+        return true;
+    },
+
+    /**
+     *
+     * @param {*} uuid
+     * @param {*} messageId
+     * @param {*} data
+     * @returns
+     */
+    updateMessage: async (uuid, messageId, data) => {
+        const fullPath     = GetConversationsBasePath(uuid);
+        const conversation = JSON.parse(Fs.readFileSync(fullPath).toString());
+
+        _.forEach(conversation.messages, (message, i) => {
+            if (message.id === messageId) {
+                conversation.messages[i] = Object.assign(
+                    {}, conversation.messages[i], data
+                );
+            }
+        });
+
+        Fs.writeFileSync(fullPath, JSON.stringify(conversation));
 
         return true;
     }

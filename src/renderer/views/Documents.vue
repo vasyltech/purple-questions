@@ -295,10 +295,8 @@
         <div class="text-overline pb-2">Document Name</div>
         <v-text-field v-model="currentDocumentData.name" bg-color="white" variant="outlined"></v-text-field>
 
-        <div v-if="currentDocumentData && currentDocumentData.origin && currentDocumentData.origin.type === 'link'">
-          <div class="text-overline pb-2">Document Origin</div>
-          <v-text-field v-model="currentDocumentData.origin.link" bg-color="white" variant="outlined"></v-text-field>
-        </div>
+        <div class="text-overline pb-2">Document Origin</div>
+        <v-text-field v-model="currentDocumentData.origin.link" bg-color="white" variant="outlined"></v-text-field>
 
         <div class="text-overline pb-2">Content</div>
         <editor v-model="currentDocumentData.text"></editor>

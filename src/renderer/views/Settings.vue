@@ -24,6 +24,7 @@
                     <v-tab value="openai">OpenAI</v-tab>
                     <v-tab v-if="settings.apiKey" value="persona">Personas</v-tab>
                     <v-tab v-if="settings.apiKey" value="application">Application</v-tab>
+                    <v-tab v-if="settings.apiKey" value="email">Email Connector</v-tab>
                 </v-tabs>
                 <v-window v-model="tab">
                     <v-window-item value="openai" class="pt-6">
@@ -111,9 +112,7 @@
                         </v-sheet>
                     </v-window-item>
                     <v-window-item value="application" class="pt-6">
-                        <div>
-                            <span class="text-caption">Similarity Distance</span>
-                        </div>
+                        <span class="text-caption">Similarity Distance</span>
                         <v-slider
                             v-model="settings.similarityDistance"
                             :thumb-size="24"
@@ -131,6 +130,11 @@
                             persistent-hint
                             hint="The location were all application data is stored."
                         ></v-text-field>
+                    </v-window-item>
+                    <v-window-item value="email" class="pt-6">
+                        <span class="text-caption">Email Provider</span>
+                        <v-select :items="['Gmail']"></v-select>
+                            <v-btn variant="tonal" size="large" @click="redirectToAuth" prepend-icon="mdi-gmail" class="my-2" >Connect Gmail Account</v-btn>
                     </v-window-item>
                 </v-window>
             </v-container>
@@ -207,6 +211,9 @@ export default {
                     _this.reload();
                 });
         },
+        redirectToAuth() {
+            this.$api.email.redirectToAuth();
+        },
         reload() {
             const _this = this;
 
@@ -226,6 +233,12 @@ export default {
             _this.settings = response;
 
             _this.reload();
+        }).catch((error) => {
+            console.log(error);
+        });
+
+        this.$api.settings.getAppSetting('gmail-auth-token').then((response) => {
+            console.log(response);
         }).catch((error) => {
             console.log(error);
         });

@@ -1,6 +1,12 @@
 module.exports = {
   packagerConfig: {
-    icon: './assets/icon'
+    icon: './assets/icon',
+    protocols: [
+      {
+        name: 'Purple Questions',
+        schemes: ['pq']
+      }
+    ]
   },
   rebuildConfig: {},
   makers: [
@@ -9,7 +15,8 @@ module.exports = {
       config: {
         background: './assets/dmg-background.png',
         icon: './assets/icon.icns',
-        format: 'ULFO'
+        format: 'ULFO',
+        mimeType: ['x-scheme-handler/pq']
       }
     }
   ],
@@ -37,6 +44,6 @@ module.exports = {
           },
         ],
       },
-    },
-  ],
+    }
+  ]
 };

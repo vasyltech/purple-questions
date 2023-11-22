@@ -6,9 +6,10 @@ import Documents from './main/documents';
 import Questions from './main/questions';
 import Settings from './main/settings';
 import Ai from './main/ai';
-import Messages from './main/messages';
+import Conversations from './main/conversations';
 import Tuning from './main/tuning';
 import Bridge from './main/bridge';
+import Email from './main/email';
 import Addons from './main/addons';
 import Debug from './main/libs/debug';
 
@@ -85,9 +86,10 @@ const createWindow = () => {
   RegisterHandler('questions', Questions);
   RegisterHandler('settings', Settings);
   RegisterHandler('ai', Ai);
-  RegisterHandler('messages', Messages);
+  RegisterHandler('conversations', Conversations);
   RegisterHandler('tuning', Tuning);
   RegisterHandler('addons', Addons);
+  RegisterHandler('email', Email);
 
   // Finally load add-ons
   Bridge.init();
@@ -116,4 +118,16 @@ app.on('activate', () => {
 });
 
 // Set the app protocol pq://
-app.setAsDefaultProtocolClient('pg');
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient(
+      'pq',
+      process.execPath,
+      [path.resolve(process.argv[1])]
+    );
+  }
+} else {
+  app.setAsDefaultProtocolClient('pq')
+}
+
+app.on('open-url', async (event, url) => Email.processCallback(url))

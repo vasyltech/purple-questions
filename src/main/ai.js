@@ -6,7 +6,7 @@ import OpenAiRepository from './repository/openai';
 import DbRepository from './repository/db';
 import Documents from './documents';
 import Questions from './questions';
-import Messages from './messages';
+import Conversations from './conversations';
 import Tuning from './tuning';
 
 export default {
@@ -83,10 +83,12 @@ export default {
     },
 
     /**
+     * Prepare the answer to the question based on document's material
      *
-     * @param {*} questionUuid
-     * @param {*} documentUuid
-     * @returns
+     * @param {String} questionUuid
+     * @param {String} documentUuid
+     *
+     * @returns {Promise<String>}
      */
     prepareAnswerFromDocument: async (questionUuid, documentUuid) => {
         // Step #1. Read the question & document data
@@ -119,71 +121,100 @@ export default {
     },
 
     /**
+     * Prepare the conversation context
      *
-     * @param {*} uuid
-     * @returns
+     * Analyze the first message in the conversation and prepare the context as
+     * following:
+     *  - Rewrite the initial message to remove unnecessary information, grammar
+     *    mistakes and if necessary, translate to English
+     *  - Identify the list of questions user is asking to better understand what
+     *    is the context/purpose for the conversation
+     *
+     * @param {String} uuid
+     *
+     * @returns {Promise<Message>}
      */
-    analyzeMessageContent: async (uuid) => {
-        // Step #1. Read the message data
-        const message = await Messages.readMessage(uuid);
+    prepareConversationContext: async (uuid) => {
+        // Step #1. Read the conversation data
+        const conversation = await Conversations.read(uuid);
 
-        if (!_.isArray(message.questions) || message.questions.length === 0) {
-            // Step #2. Preparing the list of questions that come from the message
-            const res1 = await OpenAiRepository.prepareQuestionListFromMessage(
-                message.text
-            );
+        // Step #2. Analyze the first message only as this sets the conversation's
+        //          context
+        const res1 = await OpenAiRepository.prepareQuestionListFromMessage(
+            _.get(conversation, 'messages[0].content')
+        );
 
-            message.usage = [res1.usage];  // Cost?
-
-            // Capture rewrite & list of questions
-            message.rewrite = _.get(res1, 'output.rewrite');
-            const questions = _.get(res1, 'output.questions', []);
-
-            if (questions.length > 0) {
-                // Prepare the list of embeddings for each question
-                const res2 = await OpenAiRepository.prepareQuestionListEmbedding(
-                    questions
-                );
-
-                // Updating usage
-                message.usage.push(res2.usage);
-
-                // Resetting list of questions for the message
-                message.questions = [];
-
-                // Create list of all questions
-                for(let i = 0; i < res2.output.length; i++) {
-                    const q = await Questions.createQuestion({
-                        text: res2.output[i].text,
-                        origin: `/messages/${uuid}`,
-                        embedding: res2.output[i].embedding
-                    });
-
-                    message.questions.push(q.uuid);
-                }
-            }
-
-            // Save what we have so far
-            Messages.updateMessage(uuid, message);
+        if (!_.isArray(conversation.usage)) {
+            conversation.usage = [];
         }
 
-        // Read the message again so we can analyze the potential candidates
-        return Messages.readMessage(uuid);
+        conversation.usage.push(res1.usage);  // Cost?
+
+        // The initial message is rewritten so we can work with clean, grammatically
+        // correct message to build the conversation's context
+        const rewrite = _.get(res1, 'output.rewrite');
+
+        // Capture rewrite & list of questions
+        _.set(conversation, 'messages[0].rewrite', rewrite);
+
+        // Make the rewrite also as part of the associated curriculums
+        const questions = [
+            rewrite,
+            ..._.get(res1, 'output.questions', [])
+        ];
+
+        if (questions.length > 0) {
+            // Prepare the list of embeddings for each question
+            const res2 = await OpenAiRepository.prepareQuestionListEmbedding(
+                questions
+            );
+
+            // Updating usage
+            conversation.usage.push(res2.usage);
+
+            // Resetting list of questions for the message
+            conversation.questions = [];
+
+            // Create list of all questions
+            for(let i = 0; i < res2.output.length; i++) {
+                const q = await Questions.createQuestion({
+                    text: res2.output[i].text,
+                    origin: `/conversations/${uuid}`,
+                    embedding: res2.output[i].embedding
+                });
+
+                conversation.questions.push(q.uuid);
+            }
+        }
+
+        // Mark the conversation as analyzed
+        conversation.isAnalyzed = true;
+
+        // Save what we have so far
+        Conversations.update(uuid, conversation);
+
+        // Read the conversation again so we can analyze the potential candidates
+        return Conversations.read(uuid);
     },
 
     /**
+     * Compose conversation's answer
      *
-     * @param {*} uuid
-     * @returns
+     * Take into consideration the entire history of the messages and generate the
+     * best possible answer based on the conversation's context
+     *
+     * @param {String} uuid
+     *
+     * @returns {Promise<String>}
      */
     generateMessageAnswer: async (uuid) => {
-        // Step #1. Read the message data
-        const message = await Messages.readMessage(uuid);
+        // Step #1. Read the conversation data
+        const conversation = await Conversations.read(uuid);
 
         // Compile all the necessary information for answer generation
         const material = [];
 
-        _.forEach(message.questions, (question) => {
+        _.forEach(conversation.questions, (question) => {
             material.push(..._.map(question.candidates, (c) => ({
                 uuid: c.uuid,
                 name: c.name,
@@ -211,7 +242,7 @@ export default {
             message.usage.push(res1.usage);  // Cost?
 
             // Save what we have so far
-            Messages.updateMessage(uuid, {
+            Conversations.update(uuid, {
                 answer: message.answer,
                 usage: message.usage
             });

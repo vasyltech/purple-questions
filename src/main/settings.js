@@ -1,7 +1,7 @@
-const Fs      = require('fs');
-const Path    = require('path');
-const { app } = require('electron');
-const _       = require('lodash');
+const Fs                   = require('fs');
+const Path                 = require('path');
+const { app, safeStorage } = require('electron');
+const _                    = require('lodash');
 
 /**
  * Get the full path to the settings
@@ -105,11 +105,60 @@ const Methods = {
      * @returns {Mixed}
      */
     getAppSetting: (setting, def = null) => {
-        const value = _.get(Methods.getAppSettings(true), setting);
+        let response;
 
-        return _.isUndefined(value)
-                || _.isNull(value)
-                || (_.isString(value) && value.length === 0) ? def : value;
+        const raw = _.get(Methods.getAppSettings(true), setting);
+        response  = _.isUndefined(raw)
+                        || _.isNull(raw)
+                        || (_.isString(raw) && raw.length === 0) ? def : raw;
+
+        // Is encrypted than decrypt
+        if (_.isObject(response)) {
+            const encrypted  = response.isEncrypted;
+            const serialized = response.isSerialized;
+
+            if (encrypted) {
+                try {
+                    response = safeStorage.decryptString(
+                        Buffer.from(response.value, 'base64')
+                    );
+                } catch (e) {
+                    console.log(e);
+                }
+            }
+
+            if (serialized) {
+                response = JSON.parse(response);
+            }
+        }
+
+        return response;
+    },
+
+    /**
+     *
+     * @param {*} setting
+     * @param {*} value
+     * @param {*} encrypt
+     */
+    setAppSetting: (setting, value, encrypt = false) => {
+        const settings = Methods.getAppSettings(true);
+
+        if (encrypt && safeStorage.isEncryptionAvailable()) {
+            settings[setting] = {
+                isEncrypted: true,
+                isSerialized: !_.isString(value),
+                value: safeStorage.encryptString(
+                    _.isString(value) ? value : JSON.stringify(value)
+                ).toString('base64')
+            };
+        } else {
+            settings[setting] = value;
+        }
+
+        Methods.saveAppSettings(settings);
+
+        return true;
     },
 
     /**
@@ -139,7 +188,7 @@ const Methods = {
         SaveSettings(original);
 
         return true;
-    },
+    }
 
 }
 
