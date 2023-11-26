@@ -26,8 +26,9 @@
     "@electron-forge/maker-zip": "^7.1.0",
     "@electron-forge/plugin-auto-unpack-natives": "^7.1.0",
     "@electron-forge/plugin-vite": "^7.1.0",
-    "electron": "^27.1.0",
+    "@mdi/font": "^7.3.67",
     "@vitejs/plugin-vue": "^4.3.3",
+    "electron": "^27.1.0",
     "sass": "^1.69.5",
     "vite-plugin-vuetify": "^1.0.2",
     "vue": "^3.3.4",
@@ -36,9 +37,9 @@
     "vuetify": "^3.4.2"
   },
   "dependencies": {
-    "electron-squirrel-startup": "^1.0.0",
     "cheerio": "^1.0.0-rc.12",
     "csv-parse": "^5.5.1",
+    "electron-squirrel-startup": "^1.0.0",
     "entities": "^4.5.0",
     "googleapis": "^105.0.0",
     "highlight.js": "^11.9.0",
@@ -46,9 +47,9 @@
     "html-to-text": "^9.0.5",
     "lodash": "^4.17.21",
     "marked": "^9.1.2",
-    "openai": "^4.2.0",
+    "openai": "^4.20.0",
     "superagent": "^8.1.2",
     "uuid": "^9.0.0",
-    "vectordb": "^0.2.4"
+    "vectordb": "^0.3.8"
   }
 }

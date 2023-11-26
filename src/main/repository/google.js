@@ -2,7 +2,6 @@ const { google } = require('googleapis');
 const { shell }  = require('electron');
 
 import Settings from './../settings';
-import Debug    from './../libs/debug';
 
 const REDIRECT_URL = 'http://localhost:5173/authorize';
 
@@ -21,6 +20,8 @@ function GetAuthClient() {
         );
 
         const credentials = Settings.getAppSetting('gmail-auth-token');
+
+        console.log(credentials);
 
         AuthClient.on('tokens', (tokens) => {
             // We should never receive the refresh token here because we set it

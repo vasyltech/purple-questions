@@ -9,7 +9,7 @@ const Path           = require('path');
 import Document2QuestionsTool from'./openai-tools/document-to-questions';
 import Question2AnswerTool from './openai-tools/question-to-answer';
 import Message2QuestionsTool from'./openai-tools/message-to-questions';
-import Message2AnswerTool  from './openai-tools/message-to-answer';
+import InitialMessage2AnswerTool  from './openai-tools/initial-message-to-answer';
 import Settings from '../settings';
 
 let Client         = null;
@@ -21,15 +21,14 @@ let ModelListCache = null;
  * @returns
  */
 function ConvertToJsonl(questions) {
-    const list    = [];
-    const persona = _.get(Settings.getAppSetting('persona', []), '[0]');
+    const list = [];
 
     _.forEach(questions, (question) => {
         list.push(JSON.stringify({
             messages: [
                 {
                     role: 'system',
-                    content: _.get(persona, 'description') || 'You are an invaluable virtual customer support representative.'
+                    content: Settings.getAppSetting('persona.description')
                 },
                 {
                     role: 'user',
@@ -157,7 +156,7 @@ const Methods = {
     prepareQuestionListFromDocument: async (document) => {
         const corpus = Document2QuestionsTool.getCorpus(
             document,
-            _.get(Settings.getAppSetting('persona', []), '[0]')
+            Settings.getAppSetting('persona')
         );
 
         const result = await GetClient().chat.completions.create(Object.assign(
@@ -185,11 +184,10 @@ const Methods = {
      * @returns {Promise<Object>}
      */
     prepareAnswerFromDocument: async (question, document) => {
-        const persona = _.get(Settings.getAppSetting('persona', []), '[0]');
-        const corpus  = Question2AnswerTool.getCorpus({
+        const corpus = Question2AnswerTool.getCorpus({
             question,
             document,
-        }, persona);
+        }, Settings.getAppSetting('persona'));
 
         const result = await GetClient().chat.completions.create(Object.assign(
             { model: Settings.getAppSetting('llmModel', 'gpt-3.5-turbo') },
@@ -203,7 +201,8 @@ const Methods = {
 
         return {
             output: _.get(result, 'choices[0].message.content', ''),
-            usage
+            usage,
+            corpus
         }
     },
 
@@ -217,7 +216,7 @@ const Methods = {
     prepareQuestionListFromMessage: async (message) => {
         const corpus = Message2QuestionsTool.getCorpus(
             message,
-            _.get(Settings.getAppSetting('persona', []), '[0]')
+            Settings.getAppSetting('persona')
         );
 
         const result = await GetClient().chat.completions.create(Object.assign(
@@ -232,7 +231,8 @@ const Methods = {
 
         return {
             output: JSON.parse(_.get(result, 'choices[0].message.content', '{}')),
-            usage
+            usage,
+            corpus
         }
     },
 
@@ -301,12 +301,12 @@ const Methods = {
      *
      * @returns {Promise<Object>}
      */
-    prepareAnswerForMessage: async (message, material) => {
-        const corpus = Message2AnswerTool.getCorpus({
+    composeInitialAnswerForMessage: async (message, material) => {
+        const corpus = InitialMessage2AnswerTool.getCorpus({
             message,
             material,
             constraint: Settings.getAppSetting('answerConstraints', '')
-        }, _.get(Settings.getAppSetting('persona', []), '[0]'));
+        }, Settings.getAppSetting('persona'));
 
         const result = await GetClient().chat.completions.create(Object.assign(
             {
@@ -323,7 +323,34 @@ const Methods = {
 
         return {
             output: _.get(result, 'choices[0].message.content', ''),
-            usage
+            usage,
+            corpus
+        }
+    },
+
+    /**
+     *
+     * @param {*} messages
+     * @returns
+     */
+    prepareAnswerFromHistory: async (messages) => {
+        const result = await GetClient().chat.completions.create(Object.assign(
+            {
+                model: Settings.getAppSetting('llmModel', 'gpt-3.5-turbo'),
+                temperature: 0
+            },
+            messages
+        ));
+
+        // Extract the list of questions and usage data
+        const usage = Object.assign({}, _.get(result, 'usage'), {
+            'purpose': 'MessageHistory2Answer'
+        });
+
+        return {
+            output: _.get(result, 'choices[0].message.content', ''),
+            usage,
+            corpus: messages
         }
     },
 

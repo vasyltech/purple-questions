@@ -1,18 +1,28 @@
 const { URL } = require('url');
+const _       = require('lodash');
 
 import Settings from './settings';
 import GoogleRepository from './repository/google';
 import Bridge from './bridge';
 
-// If there is an established connection (stored token) - register hook
-Bridge.addHook('pq-pull-messages', async () => {
-    let response = [];
+// Bridge.addHook('pq-pull-messages', async () => {
+//     let response = [];
+
+//     if (Settings.getAppSetting('gmail-auth-token', false)) {
+//         await GoogleRepository.fetchNewThreads();
+//     }
+
+//     return response;
+// });
+
+Bridge.addHook('pq-message-send', async (email, content) => {
+    let result = false;
 
     if (Settings.getAppSetting('gmail-auth-token', false)) {
-        await GoogleRepository.fetchNewThreads();
+        result = await GoogleRepository.sendEmail();
     }
 
-    return response;
+    return result;
 });
 
 const Methods = {

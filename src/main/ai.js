@@ -8,6 +8,7 @@ import Documents from './documents';
 import Questions from './questions';
 import Conversations from './conversations';
 import Tuning from './tuning';
+import Settings from './settings';
 
 export default {
 
@@ -141,7 +142,13 @@ export default {
         // Step #2. Analyze the first message only as this sets the conversation's
         //          context
         const res1 = await OpenAiRepository.prepareQuestionListFromMessage(
-            _.get(conversation, 'messages[0].content')
+            // Take into consideration the scenario when user sends multiple message
+            // before we have a chance to analyze and response to them
+            _.reduce(conversation.messages, (content, message) => {
+                content.push(HtmlConvertor(message.content));
+
+                return content;
+            }, []).join('\n\n')
         );
 
         if (!_.isArray(conversation.usage)) {
@@ -150,14 +157,11 @@ export default {
 
         conversation.usage.push(res1.usage);  // Cost?
 
-        // The initial message is rewritten so we can work with clean, grammatically
+        // The initial messages are rewritten so we can work with clean, grammatically
         // correct message to build the conversation's context
         const rewrite = _.get(res1, 'output.rewrite');
 
-        // Capture rewrite & list of questions
-        _.set(conversation, 'messages[0].rewrite', rewrite);
-
-        // Make the rewrite also as part of the associated curriculums
+        // Make the rewrite also as part of the conversation's topic list
         const questions = [
             rewrite,
             ..._.get(res1, 'output.questions', [])
@@ -207,48 +211,103 @@ export default {
      *
      * @returns {Promise<String>}
      */
-    generateMessageAnswer: async (uuid) => {
+    composeResponse: async (uuid) => {
         // Step #1. Read the conversation data
         const conversation = await Conversations.read(uuid);
 
-        // Compile all the necessary information for answer generation
-        const material = [];
+        // Calculate the total number of assistant responses
+        const answers = _.filter(
+            conversation.messages, (m) => m.role === 'assistant'
+        );
 
-        _.forEach(conversation.questions, (question) => {
-            material.push(..._.map(question.candidates, (c) => ({
-                uuid: c.uuid,
-                name: c.name,
-                text: HtmlConvertor(c.text),
-                // Duplicating this, so the question can be included in the
-                // QUESTIONS TO ANSWER section inside the prompt
-                question: question.name
-            })));
-        });
+        // If this is the first answer, then prepare whole context in request
+        // Otherwise, just continue the conversation as user maybe asks for
+        // clarifications
+        if (answers.length === 0) {
+            // Compile all the necessary information for answer generation
+            const material = [];
 
-        // Verify that we have all the necessary information to prepare the answer
-        if (material.length > 0) {
-            const res1 = await OpenAiRepository.prepareAnswerForMessage(
-                message.text,
-                _.unionBy(material, 'uuid')
-            );
-
-            // Covert the answer to HTML
-            message.answer = MdConvertor.parse(res1.output).replace(/\n/g, '')
-
-            if (!_.isArray(message.usage)) {
-                message.usage = [];
-            }
-
-            message.usage.push(res1.usage);  // Cost?
-
-            // Save what we have so far
-            Conversations.update(uuid, {
-                answer: message.answer,
-                usage: message.usage
+            _.forEach(conversation.questions, (question) => {
+                material.push(..._.map(question.candidates, (c) => ({
+                    uuid: c.uuid,
+                    name: c.name,
+                    text: HtmlConvertor(c.text),
+                    // Duplicating this, so the question can be included in the
+                    // QUESTIONS TO ANSWER section inside the prompt
+                    question: question.name
+                })));
             });
+
+            // Verify that we have all the necessary information to prepare the answer
+            if (material.length > 0) {
+                const res1 = await OpenAiRepository.composeInitialAnswerForMessage(
+                    // Take into consideration the scenario when user sends multiple
+                    // message before we have a chance to analyze and response to them
+                    _.reduce(conversation.messages, (content, message) => {
+                        content.push(HtmlConvertor(message.content));
+
+                        return content;
+                    }, []).join('\n\n'),
+                    _.unionBy(material, 'uuid')
+                );
+
+                if (!_.isArray(conversation.usage)) {
+                    conversation.usage = [];
+                }
+
+                conversation.usage.push(res1.usage);  // Cost?
+
+                // Add corpus to the all initial messages, so we can build the
+                // conversation history
+                _.map(conversation.messages, (m) => {
+                    m.corpus = [];
+                });
+
+                // However, add the corpus only to the last one to ensure that
+                // we do not duplicate the conversation's history if there are more
+                // then one user message before we had a chance to answer
+                _.last(conversation.messages).corpus = res1.corpus;
+
+                // Adding response as the draft answer to the conversation
+                conversation.draftAnswer = MdConvertor
+                    .parse(res1.output)
+                    .replace(/\n/g, '');
+            }
+        } else {
+            // Compile the conversation history and send it to LLM to compile the
+            // answer
+            const history = [];
+
+            _.forEach(conversation.messages, (message) => {
+                if (!_.isUndefined(message.corpus)) {
+                    history.push(...message.corpus);
+                } else {
+                    history.push({
+                        content: message.content,
+                        role: message.role,
+                        name: _.isString(message.name) ? message.name : undefined
+                    });
+                }
+            });
+
+            const res1 = await OpenAiRepository.prepareAnswerFromHistory(history);
+
+            conversation.usage.push(res1.usage);  // Cost?
+
+            // Adding response as the draft answer to the conversation
+            conversation.draftAnswer = MdConvertor
+                .parse(res1.output)
+                .replace(/\n/g, '');
         }
 
-        return message;
+        // Save what we have so far
+        Conversations.update(uuid, {
+            messages: conversation.messages,
+            usage: conversation.usage,
+            draftAnswer: conversation.draftAnswer
+        });
+
+        return conversation.draftAnswer;
     },
 
     /**

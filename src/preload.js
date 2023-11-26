@@ -81,8 +81,8 @@ contextBridge.exposeInMainWorld(
             prepareConversationContext: (uuid) => ipcRenderer.invoke(
                 'ai', ['prepareConversationContext', uuid]
             ),
-            generateMessageAnswer: (uuid) => ipcRenderer.invoke(
-                'ai', ['generateMessageAnswer', uuid]
+            composeResponse: (uuid) => ipcRenderer.invoke(
+                'ai', ['composeResponse', uuid]
             ),
             prepareAnswerFromDocument: (question, uuid) => ipcRenderer.invoke(
                 'ai', ['prepareAnswerFromDocument', question, uuid]
@@ -118,6 +118,9 @@ contextBridge.exposeInMainWorld(
             ),
             delete: (uuid) => ipcRenderer.invoke(
                 'conversations', ['delete', uuid]
+            ),
+            addMessage: (uuid, data) => ipcRenderer.invoke(
+                'conversations', ['addMessage', uuid, data]
             ),
             deleteMessage: (uuid, messageId) => ipcRenderer.invoke(
                 'conversations', ['deleteMessage', uuid, messageId]

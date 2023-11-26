@@ -23,28 +23,20 @@
                 </template>
             </v-tooltip>
 
-            <v-tooltip v-if="currentConversation && ['new', 'read'].includes(currentConversation.status)" text="Mark as Done"
+            <v-tooltip v-if="currentConversation && ['new', 'read'].includes(currentConversation.status)" text="Close Conversation"
                 location="bottom">
                 <template v-slot:activator="{ props }">
-                    <v-btn icon v-bind="props" @click="markAsDone">
+                    <v-btn icon v-bind="props" @click="changeConversationStatus('done')">
                         <v-icon>mdi-check-circle</v-icon>
                     </v-btn>
                 </template>
             </v-tooltip>
 
-            <v-tooltip v-else-if="currentConversation && currentConversation.status === 'done'" text="Mark as UnDone"
+            <v-tooltip v-else-if="currentConversation && currentConversation.status === 'done'" text="Re-Open Conversation"
                 location="bottom">
                 <template v-slot:activator="{ props }">
-                    <v-btn icon v-bind="props" @click="markAsUnDone">
-                        <v-icon>mdi-bell-circle</v-icon>
-                    </v-btn>
-                </template>
-            </v-tooltip>
-
-            <v-tooltip v-if="currentConversation" text="Save Changes" location="bottom">
-                <template v-slot:activator="{ props }">
-                    <v-btn icon v-bind="props" @click="saveChanges">
-                        <v-icon>mdi-content-save</v-icon>
+                    <v-btn icon v-bind="props" @click="changeConversationStatus('read')">
+                        <v-icon>mdi-help-circle</v-icon>
                     </v-btn>
                 </template>
             </v-tooltip>
@@ -111,6 +103,7 @@
                                 :key="message"
                                 :dot-color="getMessageIconColor(message)"
                                 size="x-small"
+                                min-width="100%"
                             >
                                 <v-alert
                                     :value="true"
@@ -176,10 +169,13 @@
                             </v-timeline-item>
                         </v-timeline>
 
-                        <editor v-model="currentConversationData.stagedAnswer"></editor>
+                        <editor v-model="currentConversationData.draftAnswer"></editor>
 
                         <div class="d-flex justify-end mt-4">
-                            <v-btn v-if="currentConversationData.stagedAnswer" variant="text" @click="showSendAnswerModal = true">
+                            <v-btn variant="text" @click="saveDraftAnswer">
+                                Save Draft
+                            </v-btn>
+                            <v-btn v-if="currentConversationData.draftAnswer" variant="text" @click="showSendAnswerModal = true">
                                 Send Response
                             </v-btn>
                         </div>
@@ -189,13 +185,6 @@
                                 <v-toolbar-title class="text-overline">Conversation Topics</v-toolbar-title>
                                 <v-spacer></v-spacer>
 
-                                <v-tooltip v-if="currentConversationData.rewrite" text="Provide Direct Answer" location="bottom">
-                                    <template v-slot:activator="{ props }">
-                                        <v-btn icon v-bind="props" @click="prepareDirectAnswerModal">
-                                            <v-icon>mdi-feather</v-icon>
-                                        </v-btn>
-                                    </template>
-                                </v-tooltip>
                                 <v-tooltip text="Add New Topic" location="bottom">
                                     <template v-slot:activator="{ props }">
                                         <v-btn icon v-bind="props" @click="showAddTopicModal = true">
@@ -506,8 +495,6 @@
                     <v-alert type="info" prominent variant="outlined">
                         You are about to send the response. Please confirm.
                     </v-alert>
-
-                    <v-checkbox hide-details v-model="markAsDone" label="Also mark conversation as done." />
                 </v-card-text>
                 <v-card-actions class="justify-end">
                     <v-btn variant="text" @click="sendAnswerForSelectedConversation">Send</v-btn>
@@ -561,7 +548,6 @@ export default {
             showSendAnswerModal: false,
             showDeleteMessageModal: false,
             search: null,
-           // markAsDone: true,
             inputValidationRules: {
                 required: value => !!value || 'Required.'
             }
@@ -599,11 +585,11 @@ export default {
         filterConversations(status = null) {
             this.currentStatus = status;
         },
-        markAsDone() {
+        changeConversationStatus(status) {
             const _this = this;
 
             this.$api.conversations
-                .updateStatus(this.currentConversation.uuid, 'done')
+                .updateStatus(this.currentConversation.uuid, status)
                 .then((response) => {
                     for (let i = 0; i < _this.conversations.length; i++) {
                         if (_this.conversations[i].uuid === response.uuid) {
@@ -616,35 +602,16 @@ export default {
                     _this.showSuccessMessage = true;
                 });
         },
-        markAsUnDone() {
-            const _this = this;
-
-            this.$api.conversations
-                .updateStatus(this.currentConversation.uuid, 'new')
-                .then((response) => {
-                    for (let i = 0; i < _this.conversations.length; i++) {
-                        if (_this.conversations[i].uuid === response.uuid) {
-                            _this.conversations[i] = response;
-                            _this.currentConversation = response;
-                        }
-                    }
-
-                    _this.successMessage     = 'Changes saved!';
-                    _this.showSuccessMessage = true;
-                });
-        },
         analyzeMessage() {
-            this.saveChanges(true, function () {
-                const _this = this;
-                this.analyzingMessage = true;
+            const _this          = this;
+            this.analyzingMessage = true;
 
-                this.$api.ai
-                    .prepareConversationContext(this.currentConversation.uuid)
-                    .then((data) => {
-                        _this.currentConversationData = data;
-                        _this.analyzingMessage        = false;
-                    });
-            });
+            this.$api.ai
+                .prepareConversationContext(this.currentConversation.uuid)
+                .then((data) => {
+                    _this.currentConversationData = data;
+                    _this.analyzingMessage        = false;
+                });
         },
         showGenerateBtn(message) {
             // Determine if the message is the last message on the list and it belongs
@@ -666,17 +633,40 @@ export default {
         saveMessageChanges(message) {
             const _this = this;
 
-            this.$api.conversations
-                .updateMessage(this.currentConversation.uuid, message.id, {
-                    content: message.draft
-                })
-                .then(() => {
+            if (message.id) {
+                this.$api.conversations
+                    .updateMessage(this.currentConversation.uuid, message.id, {
+                    content: message.draft || message.content
+                }).then(() => {
                     _this.successMessage     = 'Message Updated!';
                     _this.showSuccessMessage = true;
 
-                    message.content   = message.draft;
-                    message.draft     = undefined;
-                    message.isEditing = false;
+                    if (message.draft) {
+                        message.content   = message.draft;
+                        message.draft     = undefined;
+                        message.isEditing = false;
+                    }
+                });
+            } else {
+                this.$api.conversations
+                    .addMessage(this.currentConversation.uuid, {
+                        role: message.role,
+                        content: message.content
+                }).then((res) => {
+                    _this.successMessage     = 'Draft Saved!';
+                    _this.showSuccessMessage = true;
+
+                    message.id = res.id;
+                });
+            }
+        },
+        saveDraftAnswer() {
+            this.$api.conversations
+                    .update(this.currentConversation.uuid, {
+                        draftAnswer: this.currentConversationData.draftAnswer
+                }).then(() => {
+                    this.successMessage     = 'Draft Saved!';
+                    this.showSuccessMessage = true;
                 });
         },
         cancelMessageChanges(message) {
@@ -693,7 +683,7 @@ export default {
                     _this.showSuccessMessage = true;
 
                     // Update current list of messages;
-                    _this.currentConversation.messages = _this.currentConversation.messages.filter(
+                    _this.currentConversationData.messages = _this.currentConversationData.messages.filter(
                         m => m.id !==  _this.selectedMessage.id
                     );
 
@@ -709,33 +699,11 @@ export default {
             this.generatingAnswer = true;
 
             this.$api.ai
-                .generateMessageAnswer(this.currentConversation.uuid)
-                .then((data) => {
-                    _this.currentConversationData = data;
-                    _this.showGenerateAnswerModal = false;
-                    _this.generatingAnswer        = false;
-                });
-        },
-        saveChanges(silent = false, cb = null) {
-            const _this = this;
-
-            this.$api.conversations
-                .update(this.currentConversation.uuid, {
-                    text: this.currentConversationData.text,
-                    answer: this.currentConversationData.answer
-                })
-                .then((response) => {
-                    if (silent !== true) {
-                        _this.successMessage     = 'Changes saved!';
-                        _this.showSuccessMessage = true;
-
-                        // Update current message attributes
-                        this.currentConversation.excerpt = response.excerpt;
-                    }
-
-                    if (cb) {
-                        cb.call(_this);
-                    }
+                .composeResponse(this.currentConversation.uuid)
+                .then((answer) => {
+                    _this.currentConversationData.draftAnswer = answer;
+                    _this.showGenerateAnswerModal             = false;
+                    _this.generatingAnswer                    = false;
                 });
         },
         createConversation() {

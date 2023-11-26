@@ -22,7 +22,7 @@
                     align-tabs="left"
                 >
                     <v-tab value="openai">OpenAI</v-tab>
-                    <v-tab v-if="settings.apiKey" value="persona">Personas</v-tab>
+                    <v-tab v-if="settings.apiKey" value="persona">Persona</v-tab>
                     <v-tab v-if="settings.apiKey" value="application">Application</v-tab>
                     <v-tab v-if="settings.apiKey" value="email">Email Connector</v-tab>
                 </v-tabs>
@@ -49,67 +49,34 @@
                         ></v-select>
                     </v-window-item>
                     <v-window-item value="persona" class="pt-6">
-                        <div v-if="settings.persona && settings.persona.length > 0">
-                            <v-expansion-panels class="pb-4 pr-2 pl-2">
-                                <v-expansion-panel
-                                    v-for="(persona, i) in settings.persona"
-                                    :key="i"
-                                >
-                                    <v-expansion-panel-title>{{ persona.name || 'New Persona' }}</v-expansion-panel-title>
-                                    <v-expansion-panel-text>
-                                        <v-text-field
-                                            v-model="persona.name"
-                                            class="mt-4"
-                                            label="Persona Name"
-                                            variant="outlined"
-                                            persistent-hint
-                                            hint="How should we call this persona?"
-                                        ></v-text-field>
+                        <v-text-field
+                            v-model="settings.persona.name"
+                            class="mt-4"
+                            label="Persona Name"
+                            variant="outlined"
+                            persistent-hint
+                            hint="How should we call this persona?"
+                        ></v-text-field>
 
-                                        <v-textarea
-                                            class="mt-4"
-                                            label="Persona Description"
-                                            v-model="persona.description"
-                                            auto-grow
-                                            variant="outlined"
-                                            persistent-hint
-                                            hint="How would you describe "
-                                        ></v-textarea>
+                        <v-textarea
+                            class="mt-4"
+                            label="Persona Description"
+                            v-model="settings.persona.description"
+                            auto-grow
+                            variant="outlined"
+                            persistent-hint
+                            hint="How would you describe "
+                        ></v-textarea>
 
-                                        <v-textarea
-                                            class="mt-4"
-                                            label="Answer Constraint"
-                                            v-model="persona.constraint"
-                                            auto-grow
-                                            variant="outlined"
-                                            persistent-hint
-                                            hint="Limit what LLM model can use in the message response (e.g. allow referring only to specific WordPress plugins)"
-                                        ></v-textarea>
-
-                                        <div class="d-flex justify-end mt-6">
-                                            <v-btn variant="text" @click="deletePersona(persona)">Delete</v-btn>
-                                        </div>
-                                    </v-expansion-panel-text>
-                                </v-expansion-panel>
-                            </v-expansion-panels>
-                            <div class="d-flex justify-end">
-                                <v-btn variant="text" @click="createNewPersona">Add New Persona</v-btn>
-                            </div>
-                        </div>
-
-                        <v-sheet
-                            v-else
-                            class="text-center mx-auto py-6"
-                            elevation="1"
-                            rounded
-                            width="100%"
-                            color="grey-lighten-3"
-                        >
-                            <p class="text-body-2 mb-4">
-                                You haven't defined any personas yet.
-                            </p>
-                            <v-btn @click="createNewPersona">Create First Persona</v-btn>
-                        </v-sheet>
+                        <v-textarea
+                            class="mt-4"
+                            label="Answer Constraint"
+                            v-model="settings.persona.constraint"
+                            auto-grow
+                            variant="outlined"
+                            persistent-hint
+                            hint="Limit what LLM model can use in the message response (e.g. allow referring only to specific WordPress plugins)"
+                        ></v-textarea>
                     </v-window-item>
                     <v-window-item value="application" class="pt-6">
                         <span class="text-caption">Similarity Distance</span>
@@ -134,7 +101,7 @@
                     <v-window-item value="email" class="pt-6">
                         <span class="text-caption">Email Provider</span>
                         <v-select :items="['Gmail']"></v-select>
-                            <v-btn variant="tonal" size="large" @click="redirectToAuth" prepend-icon="mdi-gmail" class="my-2" >Connect Gmail Account</v-btn>
+                        <v-btn variant="tonal" size="large" @click="redirectToAuth" prepend-icon="mdi-gmail" class="my-2" >Connect Gmail Account</v-btn>
                     </v-window-item>
                 </v-window>
             </v-container>
@@ -162,22 +129,6 @@ export default {
         showSuccessMessage: false
     }),
     methods: {
-        createNewPersona() {
-            if (!Array.isArray(this.settings.persona)) {
-                this.settings.persona = [];
-            }
-
-            this.settings.persona.push({
-                name: '',
-                description: '',
-                constraint: ''
-            });
-        },
-        deletePersona(persona) {
-            this.settings.persona = this.settings.persona.filter(
-                p => p !== persona
-            );
-        },
         saveSettings() {
             const _this = this;
 

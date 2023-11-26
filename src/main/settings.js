@@ -76,6 +76,14 @@ const Methods = {
             settings.similarityDistance = 25;
         }
 
+        if (!_.isObject(settings.persona)) {
+            settings.persona = {
+                name: 'Virtual Assistant',
+                description: 'You are the invaluable virtual customer support assistant.',
+                constraint: ''
+            }
+        }
+
         return raw ? settings : PrepareSettings(settings);
     },
 

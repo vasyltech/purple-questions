@@ -24,12 +24,18 @@ const Bridge = {
      */
     addHook: AddHook,
 
+    /**
+     *
+     */
     api: {
         settings: Settings
     }
 
 }
 
+/**
+ *
+ */
 function LoadAddOns() {
     const basepath = Path.join(
         Settings.getAppSetting('appDataFolder', app.getPath('userData')),
@@ -77,9 +83,12 @@ export default {
         const results = [];
 
         if (!_.isUndefined(Hooks[hook])) {
+            // Passing all the additional arguments
+            const args = [...arguments];
+
             for(let i = 0; i < Hooks[hook].length; i++) {
                 const cb = Hooks[hook][i];
-                let res  = await cb();
+                let res  = await cb(...args.slice(1));
 
                 if (_.isArray(res)) {
                     results.push(...res);
