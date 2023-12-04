@@ -9,6 +9,7 @@ import DbRepository from './repository/db';
 import OpenAiRepository from './repository/openai';
 import Questions from './questions';
 import Settings from './settings';
+import Ai from './ai';
 import Bridge from './bridge';
 
 /**
@@ -203,7 +204,9 @@ const Methods = {
     },
 
     /**
+     * Pull new conversations from external sources
      *
+     * @return {Promise<Array>}
      */
     pull: async () => {
         const response = [];
@@ -213,6 +216,11 @@ const Methods = {
         if (_.isArray(results)) {
             _.forEach(results, (row) => {
                 const conversation = Object.assign({}, row);
+
+                // Making sure that we have UUID attached to each message
+                _.forEach(conversation.messages, (message) => {
+                    message.id = uuidv4();
+                });
 
                 // Do not allow creating duplicates
                 if (!ConversationIndex.has(conversation.externalId)) {
@@ -255,11 +263,15 @@ const Methods = {
                 Questions.updateQuestion(conversation.questions[0], {
                     answer
                 });
+
+                // Fine-tune the question as well
+                await Ai.fineTuneQuestion(conversation.questions[0]);
             }
         }
 
         // Convert the answer into the message and delete the draftAnswer
-        conversation.messages({
+        conversation.messages.push({
+            id: uuidv4(),
             content: answer,
             role: 'assistant',
             name: Settings.getAppSetting('persona.name')
@@ -272,12 +284,29 @@ const Methods = {
 
         await Bridge.triggerHook(
             'pq-message-send',
-            _.get(conversation, 'metadata.userEmail'),
-            answer,
-            _.get(conversation, 'metadata.emailAttributes')
+            {
+                email: _.get(conversation, 'metadata.userEmail'),
+                content: answer
+            }
         );
 
         return Methods.read(uuid);
+    },
+
+    /**
+     *
+     * @param {*} text
+     * @returns
+     */
+    createFromText: (text) => {
+        return Methods.create({
+            messages: [{
+                content: text,
+                role: 'user',
+                name: 'You',
+                id: uuidv4()
+            }]
+        })
     },
 
     /**

@@ -1,11 +1,34 @@
 const { google } = require('googleapis');
 const { shell }  = require('electron');
+const Fs         = require('fs');
 
 import Settings from './../settings';
+import Template from './tmpl/email';
 
 const REDIRECT_URL = 'http://localhost:5173/authorize';
 
 let AuthClient = null;
+
+/**
+ *
+ * @param {*} to
+ * @param {*} from
+ * @param {*} subject
+ * @param {*} message
+ * @returns
+ */
+function makeEmailBody(to, from, subject, message) {
+    const str = ["Content-Type: text/html; charset=\"UTF-8\"\n",
+        "MIME-Version: 1.0\n",
+        "Content-Transfer-Encoding: 7bit\n",
+        "to: ", to, "\n",
+        "from: ", from, "\n",
+        "subject: ", subject, "\n\n",
+        message
+    ].join('');
+
+    return Buffer.from(str).toString("base64").replace(/\+/g, '-').replace(/\//g, '_');
+}
 
 /**
  *
@@ -20,8 +43,6 @@ function GetAuthClient() {
         );
 
         const credentials = Settings.getAppSetting('gmail-auth-token');
-
-        console.log(credentials);
 
         AuthClient.on('tokens', (tokens) => {
             // We should never receive the refresh token here because we set it
@@ -71,5 +92,33 @@ export default {
         });
 
         console.log(res.data.messages);
+    },
+
+    /**
+     *
+     * @param {*} email
+     * @param {*} snippet
+     * @param {*} content
+     */
+    sendEmail: async (email, snippet, content) => {
+        const auth  = GetAuthClient();
+        const gmail = google.gmail({ version: 'v1', auth });
+
+       await gmail.users.messages.send({
+            userId: 'me',
+            requestBody: {
+                raw: makeEmailBody(
+                    //email,
+                    'vasyl@vasyltech.com',
+                    'support@aamplugin.com',
+                    'AAM Support',
+                    Template.replace('{{ snippet }}', snippet)
+                        .replace('{{ content }}', content)
+                ),
+                snippet
+            }
+        });
+
+        return true;
     }
 }

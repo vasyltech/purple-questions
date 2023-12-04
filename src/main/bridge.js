@@ -79,16 +79,14 @@ export default {
      * @param {*} hook
      * @returns
      */
-    triggerHook: async (hook) => {
+    triggerHook: async (hook, data) => {
         const results = [];
 
         if (!_.isUndefined(Hooks[hook])) {
-            // Passing all the additional arguments
-            const args = [...arguments];
-
             for(let i = 0; i < Hooks[hook].length; i++) {
                 const cb = Hooks[hook][i];
-                let res  = await cb(...args.slice(1));
+
+                let res = await cb(data);
 
                 if (_.isArray(res)) {
                     results.push(...res);

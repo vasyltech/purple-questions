@@ -209,6 +209,11 @@ const Methods = {
             if (!copy.answer) {
                 await Ai.prepareAnswerFromDocument(q.uuid, documents[i]);
             }
+
+            // Last, but not least - fine-tune the question
+            if (_.isUndefined(question.ft_method)) {
+                await Ai.fineTuneQuestion(q.uuid);
+            }
         }
     },
 

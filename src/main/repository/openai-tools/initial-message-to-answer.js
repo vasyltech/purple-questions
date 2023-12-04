@@ -12,7 +12,6 @@ const USER_PROMPT = `Use the best customer support guidances to answer user mess
 - Provide as detailed answer as possible with an example, if applicable.
 - Output only answer without references to external sources.
 - Avoid rendering nested lists.
-- Always finish with sentence "Keep me posted if anything".
 - {constraint}
 
 USER MESSAGE:

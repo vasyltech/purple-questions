@@ -136,7 +136,7 @@
                                             v-if="showGenerateBtn(message)"
                                             variant="text"
                                             :disabled="generatingAnswer"
-                                            @click="generateAnswer"
+                                            @click="processComposeAnswerRequest"
                                         >
                                             {{ generatingAnswer ? 'Composing' : 'Compose Response' }}
                                         </v-btn>
@@ -172,6 +172,9 @@
                         <editor v-model="currentConversationData.draftAnswer"></editor>
 
                         <div class="d-flex justify-end mt-4">
+                            <v-btn v-if="currentConversationData.draftAnswer" variant="text" color="red-darken-4" @click="showResetAnswerModal = true">
+                                Reset
+                            </v-btn>
                             <v-btn variant="text" @click="saveDraftAnswer">
                                 Save Draft
                             </v-btn>
@@ -257,17 +260,31 @@
 
         <v-dialog v-model="showGenerateAnswerModal" transition="dialog-bottom-transition" width="450">
             <v-card>
-                <v-toolbar color="grey-darken-4" title="Re-Generate Answer"></v-toolbar>
+                <v-toolbar color="grey-darken-4" title="Compose New Answer"></v-toolbar>
                 <v-card-text>
                     <v-alert type="warning" prominent variant="outlined">
-                        You are about to generate a new answer to the user message. The previous answer will be lost. Please
-                        confirm.
+                        You are about to compose a new answer. The previous answer will be lost. Please confirm.
                     </v-alert>
                 </v-card-text>
                 <v-card-actions class="justify-end">
                     <v-btn variant="text" :disabled="generatingAnswer" @click="generateAnswer">{{ generatingAnswer ?
-                        'Generating...' : 'Generate' }}</v-btn>
+                        'Composing...' : 'Compose' }}</v-btn>
                     <v-btn variant="text" @click="showGenerateAnswerModal = false">Close</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <v-dialog v-model="showResetAnswerModal" transition="dialog-bottom-transition" width="450">
+            <v-card>
+                <v-toolbar color="red-darken-4" title="Compose New Answer"></v-toolbar>
+                <v-card-text>
+                    <v-alert type="warning" prominent variant="outlined" color="red-darken-4">
+                        You are about to reset current answer. Please confirm.
+                    </v-alert>
+                </v-card-text>
+                <v-card-actions class="justify-end">
+                    <v-btn variant="text" @click="resetDraftAnswer">Reset</v-btn>
+                    <v-btn variant="text" @click="showResetAnswerModal = false">Close</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -544,6 +561,7 @@ export default {
             showEditQuestionModal: false,
             showLinkQuestionModal: false,
             showGenerateAnswerModal: false,
+            showResetAnswerModal: false,
             showSearchInput: false,
             showSendAnswerModal: false,
             showDeleteMessageModal: false,
@@ -626,6 +644,13 @@ export default {
             this.selectedMessage        = message;
             this.showDeleteMessageModal = true;
         },
+        processComposeAnswerRequest() {
+            if (this.currentConversationData.draftAnswer) {
+                this.showGenerateAnswerModal = true;
+            } else {
+                this.generateAnswer()
+            }
+        },
         selectMessageForEditing(message) {
             message.isEditing = true;
             message.draft     = message.content;
@@ -669,6 +694,27 @@ export default {
                     this.showSuccessMessage = true;
                 });
         },
+        resetDraftAnswer() {
+            this.$api.conversations
+                    .update(this.currentConversation.uuid, {
+                        draftAnswer: ''
+                }).then(() => {
+                    this.currentConversationData.draftAnswer = '';
+                    this.showResetAnswerModal                = false;
+                    this.successMessage                      = 'Done!';
+                    this.showSuccessMessage                  = true;
+                });
+        },
+        sendAnswerForSelectedConversation() {
+            this.$api.conversations
+                    .reply(
+                        this.currentConversation.uuid,
+                        this.currentConversationData.draftAnswer
+                    ).then((conversation) => {
+                        this.currentConversationData = conversation;
+                        this.showSendAnswerModal     = false;
+                });
+        },
         cancelMessageChanges(message) {
             message.isEditing = false;
             message.draft     = undefined;
@@ -695,7 +741,7 @@ export default {
             return message.role === 'user' ? 'blue-darken-4' : 'deep-purple-lighten-1';
         },
         generateAnswer() {
-            const _this = this;
+            const _this           = this;
             this.generatingAnswer = true;
 
             this.$api.ai
@@ -710,7 +756,7 @@ export default {
             const _this = this;
 
             this.$api.conversations
-                .create({ text: this.newConversation })
+                .createFromText(this.newConversation)
                 .then((conversation) => {
                     _this.conversations.unshift(conversation);
 
@@ -1051,6 +1097,10 @@ export default {
 
 :deep(.v-timeline .v-timeline-item .v-timeline-item__opposite) {
     padding-inline-end: 0px !important;
+}
+
+:deep(.v-timeline--vertical.v-timeline--justify-auto) {
+    grid-template-columns: 0 min-content auto;
 }
 
 .dynamic-title {

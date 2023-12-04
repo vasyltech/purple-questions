@@ -6,11 +6,11 @@ const _              = require('lodash');
 const Crypto         = require('crypto');
 const Cheerio        = require('cheerio');
 const Superagent     = require('superagent');
-const Html2Md        = require('html-to-md')
 
 import Parsers from './parser';
 import Questions from './questions';
 import Settings from './settings';
+import Convertor from './libs/convertor';
 
 /**
  * Get the path to the documents directory or subdirectory
@@ -347,7 +347,7 @@ const Methods = {
 
             // Convert to markdown
             const title   = $('head > title').text();
-            const content = Html2Md($(selector || 'body').html());
+            const content = Convertor.toMd($(selector || 'body').html());
 
             // Cleaning up the content
             const clean = await Parsers.md.parse(content);

@@ -98,8 +98,11 @@ contextBridge.exposeInMainWorld(
             pull: () => ipcRenderer.invoke(
                 'conversations', ['pull']
             ),
-            create: (data) => ipcRenderer.invoke(
-                'conversations', ['create', data]
+            reply: (uuid, answer) => ipcRenderer.invoke(
+                'conversations', ['reply', uuid, answer]
+            ),
+            createFromText: (text) => ipcRenderer.invoke(
+                'conversations', ['createFromText', text]
             ),
             read: (uuid) => ipcRenderer.invoke(
                 'conversations', ['read', uuid]

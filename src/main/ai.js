@@ -1,6 +1,4 @@
-const _             = require('lodash');
-const HtmlConvertor = require('html-to-md');
-const MdConvertor   = require('marked');
+const _ = require('lodash');
 
 import OpenAiRepository from './repository/openai';
 import DbRepository from './repository/db';
@@ -8,7 +6,7 @@ import Documents from './documents';
 import Questions from './questions';
 import Conversations from './conversations';
 import Tuning from './tuning';
-import Settings from './settings';
+import Convertor from './libs/convertor';
 
 export default {
 
@@ -110,7 +108,7 @@ export default {
         question.usage.push(res1.usage);  // Cost?
 
         // Convert answer to HTML
-        const answer = MdConvertor.parse(res1.output).replace(/\n/g, '');
+        const answer = Convertor.toHtml(res1.output);
 
         // Now, we got the answer. Let's store it in the db
         Questions.updateQuestion(questionUuid, {
@@ -145,7 +143,7 @@ export default {
             // Take into consideration the scenario when user sends multiple message
             // before we have a chance to analyze and response to them
             _.reduce(conversation.messages, (content, message) => {
-                content.push(HtmlConvertor(message.content));
+                content.push(Convertor.toMd(message.content));
 
                 return content;
             }, []).join('\n\n')
@@ -231,7 +229,7 @@ export default {
                 material.push(..._.map(question.candidates, (c) => ({
                     uuid: c.uuid,
                     name: c.name,
-                    text: HtmlConvertor(c.text),
+                    text: Convertor.toMd(c.text),
                     // Duplicating this, so the question can be included in the
                     // QUESTIONS TO ANSWER section inside the prompt
                     question: question.name
@@ -244,7 +242,7 @@ export default {
                     // Take into consideration the scenario when user sends multiple
                     // message before we have a chance to analyze and response to them
                     _.reduce(conversation.messages, (content, message) => {
-                        content.push(HtmlConvertor(message.content));
+                        content.push(Convertor.toMd(message.content));
 
                         return content;
                     }, []).join('\n\n'),
@@ -269,9 +267,7 @@ export default {
                 _.last(conversation.messages).corpus = res1.corpus;
 
                 // Adding response as the draft answer to the conversation
-                conversation.draftAnswer = MdConvertor
-                    .parse(res1.output)
-                    .replace(/\n/g, '');
+                conversation.draftAnswer = Convertor.toHtml(res1.output);
             }
         } else {
             // Compile the conversation history and send it to LLM to compile the
@@ -295,9 +291,7 @@ export default {
             conversation.usage.push(res1.usage);  // Cost?
 
             // Adding response as the draft answer to the conversation
-            conversation.draftAnswer = MdConvertor
-                .parse(res1.output)
-                .replace(/\n/g, '');
+            conversation.draftAnswer = Convertor.toHtml(res1.output);
         }
 
         // Save what we have so far
@@ -341,6 +335,8 @@ export default {
         // model fine-tuning
         if (question.ft_method === 'deep') {
             question.ft_batch_uuid = await Tuning.queue(uuid);
+        } else if (!question.ft_method) { // Make sure that there is FT method
+            question.ft_method = 'shallow';
         }
 
         // Step #4. Finally store all the changes to the question
