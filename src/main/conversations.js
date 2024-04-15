@@ -5,12 +5,12 @@ const { v4: uuidv4 } = require('uuid');
 const _              = require('lodash');
 const TextConvertor  = require('html-to-text');
 
-import DbRepository from './repository/db';
-import OpenAiRepository from './repository/openai';
-import Questions from './questions';
-import Settings from './settings';
-import Ai from './ai';
-import Bridge from './bridge';
+const DbRepository     = require(Path.resolve(__dirname, 'repository/db'));
+const OpenAiRepository = require(Path.resolve(__dirname, 'repository/openai'));
+const Questions        = require(Path.resolve(__dirname, 'questions'));
+const Settings         = require(Path.resolve(__dirname, 'settings'));
+const Ai               = require(Path.resolve(__dirname, 'ai'));
+const Bridge           = require(Path.resolve(__dirname, 'bridge'));
 
 /**
  * Get the base path to the conversations directory
@@ -282,13 +282,13 @@ const Methods = {
             draftAnswer: undefined
         });
 
-        await Bridge.triggerHook(
-            'pq-message-send',
-            {
-                email: _.get(conversation, 'metadata.userEmail'),
-                content: answer
-            }
-        );
+        // await Bridge.triggerHook(
+        //     'pq-message-send',
+        //     {
+        //         email: _.get(conversation, 'metadata.userEmail'),
+        //         content: answer
+        //     }
+        // );
 
         return Methods.read(uuid);
     },
@@ -559,4 +559,4 @@ const Methods = {
 
 }
 
-export default Methods;
+module.exports = Methods;

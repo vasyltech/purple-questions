@@ -4,7 +4,7 @@ const LanceDb        = require('vectordb');
 const { app }        = require('electron');
 const Path           = require('path');
 
-import Settings from '../settings';
+const Settings = require(Path.resolve(__dirname, '../settings'));
 
 /**
  * Get the base path to the db directory
@@ -50,7 +50,7 @@ async function GetTable(tableName) {
     return DbTables[tableName];
 }
 
-export default {
+module.exports = {
 
     /**
      *

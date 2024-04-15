@@ -3,7 +3,7 @@ const Fs      = require('fs');
 const Path    = require('path');
 const _       = require('lodash');
 
-import Settings from '../settings';
+const Settings = require(Path.resolve(__dirname, '../settings'));
 
 /**
  * Get the base path to the logs directory
@@ -23,7 +23,26 @@ function GetLogsBasePath(suffix = null) {
     return suffix ? Path.join(basePath, suffix) : basePath;
 }
 
-export default {
+/**
+ *
+ * @returns
+ */
+function GetTimestamp() {
+    return (new Date()).toLocaleDateString(
+        'en-us',
+        {
+            weekday:"long",
+            year:"numeric",
+            month:"short",
+            day:"numeric",
+            hour: "numeric",
+            minute: "numeric",
+            second: "numeric"
+        }
+    );
+}
+
+module.exports = {
 
     /**
      *
@@ -33,18 +52,7 @@ export default {
      * @param {*} error
      */
     error: (channel, method, args, error) => {
-        const ts = (new Date()).toLocaleDateString(
-            'en-us',
-            {
-                weekday:"long",
-                year:"numeric",
-                month:"short",
-                day:"numeric",
-                hour: "numeric",
-                minute: "numeric",
-                second: "numeric"
-            }
-        );
+        const ts = GetTimestamp();
 
         // Prepare the error data
         const errorData = {
@@ -66,7 +74,7 @@ export default {
     log: (anything, namespace = 'default') => {
         Fs.appendFileSync(
             Path.join(GetLogsBasePath(), `${namespace}.log`),
-            (_.isString(anything) ? anything : JSON.stringify(anything)) + '\n'
+            `[${GetTimestamp()}]: ${(_.isString(anything) ? anything : JSON.stringify(anything))}\n`
         )
     }
 

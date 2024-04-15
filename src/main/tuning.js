@@ -5,9 +5,9 @@ const { v4: uuidv4 } = require('uuid');
 const { parse }      = require('csv-parse');
 const _              = require('lodash');
 
-import OpenAiRepository from './repository/openai';
-import Settings from './settings';
-import Questions from './questions';
+const OpenAiRepository = require(Path.resolve(__dirname, 'repository/openai'));
+const Settings         = require(Path.resolve(__dirname, 'settings'));
+const Questions        = require(Path.resolve(__dirname, 'questions'));
 
 /**
  * Get the base path to the tuning directory
@@ -250,7 +250,7 @@ const Methods = {
             tuning.queue = UuidListToQuestions(tuning.queue, uuid);
 
             // Determining if batch can be offloaded
-            const max         = Settings.getAppSetting('fineTuningBatchSize', 10);
+            const max         = Settings.getAppSetting('fineTuningBatchSize', 500);
             tuning.canOffload = tuning.queue.length >= max;
 
             // If we already have the fine tuning job, then it is pointless to modify
@@ -429,7 +429,7 @@ const Methods = {
             queue: tuning.queue
         });
 
-        return q;
+        return Object.assign({}, q, { answer: curriculum.answer });
     },
 
     /**
@@ -460,7 +460,7 @@ const Methods = {
      */
     queue: async (uuid) => {
         const batches   = await Methods.getTuningList(0, 1);
-        const maxSize   = Settings.getAppSetting('fineTuningBatchSize', 10);
+        const maxSize   = Settings.getAppSetting('fineTuningBatchSize', 500);
         let latestBatch = _.first(batches);
 
         if (!_.isObject(latestBatch) || latestBatch.queued >= maxSize) {
@@ -502,4 +502,4 @@ const Methods = {
 
 }
 
-export default Methods;
+module.exports = Methods;

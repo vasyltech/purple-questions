@@ -7,10 +7,10 @@ const Crypto         = require('crypto');
 const Cheerio        = require('cheerio');
 const Superagent     = require('superagent');
 
-import Parsers from './parser';
-import Questions from './questions';
-import Settings from './settings';
-import Convertor from './libs/convertor';
+const Parsers   = require(Path.resolve(__dirname, 'parser'));
+const Questions = require(Path.resolve(__dirname, 'questions'));
+const Settings  = require(Path.resolve(__dirname, 'settings'));
+const Convertor = require(Path.resolve(__dirname, 'libs/convertor'));
 
 /**
  * Get the path to the documents directory or subdirectory
@@ -548,4 +548,4 @@ const Methods = {
 
 }
 
-export default Methods;
+module.exports = Methods;

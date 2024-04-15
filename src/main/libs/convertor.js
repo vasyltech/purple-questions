@@ -9,7 +9,7 @@ Marked.use({
     }
 });
 
-export default {
+module.exports = {
 
     /**
      * Converting MD to HTML
@@ -23,10 +23,16 @@ export default {
     ).replace(/\n/g, ''),
 
     /**
+     * Convert HTML string to MD string
      *
-     * @param {*} content
-     * @returns
+     * There are some known issues with MD convertor. For example, the function name
+     * like get_users, will be converted to get\\_users. This is probably due to the
+     * fact that it is not an italic annotation.
+     *
+     * @param {String} content
+     *
+     * @returns {String}
      */
-    toMd: (content) => Html2Md(content)
+    toMd: (content) => Html2Md(content).replace(/\\_/g, '_')
 
 }

@@ -1,14 +1,15 @@
-const _ = require('lodash');
+const _    = require('lodash');
+const Path = require('path');
 
-import OpenAiRepository from './repository/openai';
-import DbRepository from './repository/db';
-import Documents from './documents';
-import Questions from './questions';
-import Conversations from './conversations';
-import Tuning from './tuning';
-import Convertor from './libs/convertor';
+const OpenAiRepository = require(Path.resolve(__dirname, 'repository/openai'));
+const DbRepository     = require(Path.resolve(__dirname, 'repository/db'));
+const Documents        = require(Path.resolve(__dirname, 'documents'));
+const Questions        = require(Path.resolve(__dirname, 'questions'));
+const Conversations    = require(Path.resolve(__dirname, 'conversations'));
+const Tuning           = require(Path.resolve(__dirname, 'tuning'));
+const Convertor        = require(Path.resolve(__dirname, 'libs/convertor'));
 
-export default {
+module.exports = {
 
     /**
      * Return list of all allowed models
@@ -159,11 +160,13 @@ export default {
         // correct message to build the conversation's context
         const rewrite = _.get(res1, 'output.rewrite');
 
-        // Make the rewrite also as part of the conversation's topic list
-        const questions = [
+        // Make the rewrite also as part of the conversation's topic list and make
+        // sure that the list of questions are unique. We've seen multiple times when
+        // rewrite is equal to one of the identified questions.
+        const questions = _.uniq([
             rewrite,
             ..._.get(res1, 'output.questions', [])
-        ];
+        ]);
 
         if (questions.length > 0) {
             // Prepare the list of embeddings for each question

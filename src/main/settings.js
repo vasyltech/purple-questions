@@ -200,4 +200,4 @@ const Methods = {
 
 }
 
-export default Methods;
+module.exports = Methods;

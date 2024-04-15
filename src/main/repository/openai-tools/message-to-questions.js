@@ -32,7 +32,7 @@ function GetCorpus(message, persona) {
     }
 }
 
-export default {
+module.exports = {
 
     getCorpus: GetCorpus
 

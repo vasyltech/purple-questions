@@ -36,7 +36,7 @@ function GetCorpus(document, persona = null) {
     };
 }
 
-export default {
+module.exports = {
 
     /**
      * Get payload that we will send to LLM

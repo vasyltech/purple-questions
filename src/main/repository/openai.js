@@ -6,11 +6,12 @@ const { app }        = require('electron');
 const { v4: uuidv4 } = require('uuid');
 const Path           = require('path');
 
-import Document2QuestionsTool from'./openai-tools/document-to-questions';
-import Question2AnswerTool from './openai-tools/question-to-answer';
-import Message2QuestionsTool from'./openai-tools/message-to-questions';
-import InitialMessage2AnswerTool  from './openai-tools/initial-message-to-answer';
-import Settings from '../settings';
+const Document2QuestionsTool    = require(Path.resolve(__dirname, 'openai-tools/document-to-questions'));
+const Question2AnswerTool       = require(Path.resolve(__dirname, 'openai-tools/question-to-answer'));
+const Message2QuestionsTool     = require(Path.resolve(__dirname, 'openai-tools/message-to-questions'));
+const InitialMessage2AnswerTool = require(Path.resolve(__dirname, 'openai-tools/initial-message-to-answer'));
+const Settings                  = require(Path.resolve(__dirname, '../settings'));
+const Debug                     = require(Path.resolve(__dirname, '../libs/debug'));
 
 let Client         = null;
 let ModelListCache = null;
@@ -95,6 +96,23 @@ async function FetchModelList() {
     return ModelListCache;
 }
 
+/**
+ *
+ * @param {*} result
+ * @returns
+ */
+function ParseResponseMessage(result, expectJson = false) {
+    // Sometimes OpenAI returns valid JSON wrapped into ```json ```. In this
+    // case remove that
+    let response = _.get(result, 'choices[0].message.content', expectJson ? '{}' : '');
+
+    if (expectJson && (response.indexOf('```json') === 0)) {
+        response = response.substring(7, response.length - 3).trim();
+    }
+
+    return response;
+}
+
 const Methods = {
 
     /**
@@ -117,8 +135,8 @@ const Methods = {
         // Based on the documentation
         // https://platform.openai.com/docs/guides/fine-tuning/what-models-can-be-fine-tuned
         const response = [
+            'gpt-3.5-turbo-1106',
             'gpt-3.5-turbo-0613',
-            'babbage-002',
             'davinci-002'
         ];
 
@@ -164,13 +182,19 @@ const Methods = {
             corpus
         ));
 
+        Debug.log({
+            method: 'prepareQuestionListFromDocument',
+            corpus,
+            result
+        });
+
         // Extract the list of questions and usage data
         const usage = Object.assign({}, _.get(result, 'usage'), {
             'purpose': 'Document2Questions'
         });
 
         return {
-            output: JSON.parse(_.get(result, 'choices[0].message.content', '{}')),
+            output: JSON.parse(ParseResponseMessage(result, true)),
             usage
         }
     },
@@ -194,13 +218,19 @@ const Methods = {
             corpus
         ));
 
+        Debug.log({
+            method: 'prepareAnswerFromDocument',
+            corpus,
+            result
+        });
+
         // Extract the list of questions and usage data
         const usage = Object.assign({}, _.get(result, 'usage'), {
             'purpose': 'Question2Answer'
         });
 
         return {
-            output: _.get(result, 'choices[0].message.content', ''),
+            output: ParseResponseMessage(result),
             usage,
             corpus
         }
@@ -224,13 +254,19 @@ const Methods = {
             corpus
         ));
 
+        Debug.log({
+            method: 'prepareQuestionListFromMessage',
+            corpus,
+            result
+        });
+
         // Extract the list of questions and usage data
         const usage = Object.assign({}, _.get(result, 'usage'), {
             'purpose': 'Message2Questions'
         });
 
         return {
-            output: JSON.parse(_.get(result, 'choices[0].message.content', '{}')),
+            output: JSON.parse(ParseResponseMessage(result, true)),
             usage,
             corpus
         }
@@ -245,7 +281,7 @@ const Methods = {
      */
     prepareTextEmbedding: async (text) => {
         const result = await GetClient().embeddings.create({
-            model: 'text-embedding-ada-002',
+            model: 'text-embedding-3-small',
             input: text
         });
 
@@ -269,7 +305,7 @@ const Methods = {
      */
     prepareQuestionListEmbedding: async (questions) => {
         const result = await GetClient().embeddings.create({
-            model: 'text-embedding-ada-002',
+            model: 'text-embedding-3-small',
             input: questions
         });
 
@@ -316,13 +352,19 @@ const Methods = {
             corpus
         ));
 
+        Debug.log({
+            method: 'composeInitialAnswerForMessage',
+            corpus,
+            result
+        });
+
         // Extract the list of questions and usage data
         const usage = Object.assign({}, _.get(result, 'usage'), {
             'purpose': 'Message2Answer'
         });
 
         return {
-            output: _.get(result, 'choices[0].message.content', ''),
+            output: ParseResponseMessage(result),
             usage,
             corpus
         }
@@ -342,13 +384,19 @@ const Methods = {
             messages
         ));
 
+        Debug.log({
+            method: 'prepareAnswerFromHistory',
+            messages,
+            result
+        });
+
         // Extract the list of questions and usage data
         const usage = Object.assign({}, _.get(result, 'usage'), {
             'purpose': 'MessageHistory2Answer'
         });
 
         return {
-            output: _.get(result, 'choices[0].message.content', ''),
+            output: ParseResponseMessage(result),
             usage,
             corpus: messages
         }
@@ -406,4 +454,4 @@ const Methods = {
 
 }
 
-export default Methods;
+module.exports = Methods;

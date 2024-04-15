@@ -24,7 +24,7 @@
                     <v-tab value="openai">OpenAI</v-tab>
                     <v-tab v-if="settings.apiKey" value="persona">Persona</v-tab>
                     <v-tab v-if="settings.apiKey" value="application">Application</v-tab>
-                    <v-tab v-if="settings.apiKey" value="email">Email Connector</v-tab>
+                    <!-- <v-tab v-if="settings.apiKey" value="email">Email Connector</v-tab> -->
                 </v-tabs>
                 <v-window v-model="tab">
                     <v-window-item value="openai" class="pt-6">
@@ -98,11 +98,11 @@
                             hint="The location were all application data is stored."
                         ></v-text-field>
                     </v-window-item>
-                    <v-window-item value="email" class="pt-6">
+                    <!-- <v-window-item value="email" class="pt-6">
                         <span class="text-caption">Email Provider</span>
                         <v-select :items="['Gmail']"></v-select>
                         <v-btn variant="tonal" size="large" @click="redirectToAuth" prepend-icon="mdi-gmail" class="my-2" >Connect Gmail Account</v-btn>
-                    </v-window-item>
+                    </v-window-item> -->
                 </v-window>
             </v-container>
 
@@ -141,12 +141,8 @@ export default {
                     if (/^sk-[a-zA-Z\d]+$/.test(value) || value === '') {
                         settings[property] = value;
                     }
-                } else if (property === 'persona') {
-                    settings[property] = value.map(p => ({
-                        name: p.name,
-                        description: p.description,
-                        constraint: p.constraint
-                    }));
+                } else if (typeof value === 'object') {
+                    settings[property] = Object.assign({}, value);
                 } else {
                     settings[property] = value;
                 }
@@ -184,12 +180,6 @@ export default {
             _this.settings = response;
 
             _this.reload();
-        }).catch((error) => {
-            console.log(error);
-        });
-
-        this.$api.settings.getAppSetting('gmail-auth-token').then((response) => {
-            console.log(response);
         }).catch((error) => {
             console.log(error);
         });

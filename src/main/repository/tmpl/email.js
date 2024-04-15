@@ -1,4 +1,4 @@
-export default `<!doctype html>
+module.exports = `<!doctype html>
 <html>
 
 <head>

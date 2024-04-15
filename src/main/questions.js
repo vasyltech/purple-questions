@@ -4,10 +4,8 @@ const { app }        = require('electron');
 const { v4: uuidv4 } = require('uuid');
 const _              = require('lodash');
 
-import DbRepository from './repository/db';
-import Settings from './settings';
-import Documents from './documents';
-import Ai from './ai';
+const DbRepository = require(Path.resolve(__dirname, 'repository/db'));
+const Settings     = require(Path.resolve(__dirname, 'settings'));
 
 /**
  * Get the base path to the questions directory
@@ -117,6 +115,9 @@ const QuestionIndex = (() => {
     }
 })();
 
+/**
+ *
+ */
 const Methods = {
 
     /**
@@ -199,20 +200,22 @@ const Methods = {
      */
     linkQuestion: async (uuid, documents) => {
         const copy = Methods.readQuestion(uuid);
+        const docs = require(Path.resolve(__dirname, 'documents'));
+        const ai   = require(Path.resolve(__dirname, 'ai'));
 
         // Adding the question to the document
         for (let i = 0; i < documents.length; i++) {
-            const q = await Documents.addQuestionToDocument(documents[i], copy);
+            const q = await docs.addQuestionToDocument(documents[i], copy);
 
             // If there are no direct answer provided, then generate a new answer
             // from the document
             if (!copy.answer) {
-                await Ai.prepareAnswerFromDocument(q.uuid, documents[i]);
+                await ai.prepareAnswerFromDocument(q.uuid, documents[i]);
             }
 
             // Last, but not least - fine-tune the question
-            if (_.isUndefined(question.ft_method)) {
-                await Ai.fineTuneQuestion(q.uuid);
+            if (_.isUndefined(q.ft_method)) {
+                await ai.fineTuneQuestion(q.uuid);
             }
         }
     },
@@ -252,4 +255,4 @@ const Methods = {
 
 }
 
-export default Methods;
+module.exports = Methods;

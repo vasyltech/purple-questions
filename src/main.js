@@ -2,16 +2,16 @@ const { app, BrowserWindow, screen, ipcMain } = require('electron');
 const path                                    = require('path');
 const _                                       = require('lodash');
 
-import Documents from './main/documents';
-import Questions from './main/questions';
-import Settings from './main/settings';
-import Ai from './main/ai';
-import Conversations from './main/conversations';
-import Tuning from './main/tuning';
-import Bridge from './main/bridge';
-import Email from './main/email';
-import Addons from './main/addons';
-import Debug from './main/libs/debug';
+const Documents     = require('./../../src/main/documents');
+const Questions     = require('./../../src/main/questions');
+const Settings      = require('./../../src/main/settings');
+const Ai            = require('./../../src/main/ai');
+const Conversations = require('./../../src/main/conversations');
+const Tuning        = require('./../../src/main/tuning');
+const Bridge        = require('./../../src/main/bridge');
+const Email         = require('./../../src/main/email');
+const Addons        = require('./../../src/main/addons');
+const Debug         = require('./../../src/main/libs/debug');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {

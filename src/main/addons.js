@@ -2,7 +2,7 @@ const Fs      = require('fs');
 const Path    = require('path');
 const { app } = require('electron');
 
-import Settings from './settings';
+const Settings = require(Path.resolve(__dirname, 'settings'));
 
 /**
  * Get the base path to the addons directory
@@ -69,4 +69,4 @@ const Methods = {
 
 }
 
-export default Methods;
+module.exports = Methods;

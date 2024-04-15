@@ -1,10 +1,11 @@
 const { URL }       = require('url');
 const _             = require('lodash');
 const TextConvertor = require('html-to-text');
+const Path          = require('path');
 
-import Settings from './settings';
-import GoogleRepository from './repository/google';
-import Bridge from './bridge';
+const Settings         = require(Path.resolve(__dirname, 'settings'));
+const GoogleRepository = require(Path.resolve(__dirname, 'repository/google'));
+const Bridge           = require(Path.resolve(__dirname, 'bridge'));
 
 /**
  *
@@ -65,4 +66,4 @@ const Methods = {
 
 }
 
-export default Methods;
+module.exports = Methods;

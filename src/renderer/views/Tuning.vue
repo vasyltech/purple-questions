@@ -252,14 +252,8 @@
                             :rules="[inputValidationRules.required]"
                         ></v-text-field>
 
-                        <v-textarea
-                            class="mt-4"
-                            label="Answer"
-                            v-model="stagedCurriculum.answer"
-                            auto-grow
-                            variant="outlined"
-                            :rules="[inputValidationRules.required]"
-                        ></v-textarea>
+                        <div class="text-overline mt-2">Answer</div>
+                        <editor v-model="stagedCurriculum.answer"></editor>
                     </v-card-text>
                     <v-card-actions class="justify-end">
                         <v-btn
@@ -273,7 +267,7 @@
                 </v-card>
             </v-dialog>
 
-            <v-dialog v-if="currentTuning" v-model="showEditCurriculumModal" transition="dialog-bottom-transition" width="800">
+            <v-dialog v-if="currentTuning" v-model="showEditCurriculumModal" transition="dialog-bottom-transition" persistent width="800">
                 <v-card>
                     <v-toolbar color="grey-darken-4" title="Edit Curriculum"></v-toolbar>
                     <v-card-text>
@@ -285,15 +279,8 @@
                             :rules="[inputValidationRules.required]"
                         ></v-text-field>
 
-                        <v-textarea
-                            class="mt-4"
-                            label="Answer"
-                            :readonly="currentTuningData.isReadOnly"
-                            v-model="stagedCurriculum.answer"
-                            auto-grow
-                            variant="outlined"
-                            :rules="[inputValidationRules.required]"
-                        ></v-textarea>
+                        <div class="text-overline mt-2">Answer{{ currentTuningData.isReadOnly ? ' (read-only)': '' }}</div>
+                        <editor v-model="stagedCurriculum.answer" :readonly="currentTuningData.isReadOnly"></editor>
                     </v-card-text>
                     <v-card-actions class="justify-end">
                         <v-btn
@@ -302,7 +289,7 @@
                             :disabled="updatingCurriculum"
                             @click="updateSelectedCurriculum"
                         >{{ updatingCurriculum ? 'Updating...' : 'Update' }}</v-btn>
-                        <v-btn variant="text" @click="showEditCurriculumModal = false">Close</v-btn>
+                        <v-btn variant="text" @click="closeCurriculum">Close</v-btn>
                     </v-card-actions>
                 </v-card>
             </v-dialog>
@@ -447,6 +434,7 @@ export default {
             this.$api.tuning.readTuning(tuning.uuid).then((response) => {
                 _this.currentTuning     = tuning;
                 _this.currentTuningData = response;
+                _this.stagedCurriculum  = {};
 
                 this.$api.tuning.readTuningEvents(tuning.uuid).then((response) => {
                     _this.currentTuningData.fine_tuning_events = response;
@@ -539,6 +527,11 @@ export default {
             this.selectedCurriculum      = curriculum;
             this.stagedCurriculum        = curriculum;
             this.showEditCurriculumModal = true;
+        },
+        closeCurriculum() {
+            this.selectedCurriculum      = {};
+            this.stagedCurriculum        = {};
+            this.showEditCurriculumModal = false;
         },
         updateSelectedCurriculum() {
             const _this             = this;

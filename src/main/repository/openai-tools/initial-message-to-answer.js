@@ -57,7 +57,7 @@ function GetCorpus(data, persona) {
     }
 }
 
-export default {
+module.exports = {
 
     getCorpus: GetCorpus
 

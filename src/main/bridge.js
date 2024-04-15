@@ -3,9 +3,8 @@ const Path    = require('path');
 const { app } = require('electron');
 const _       = require('lodash');
 
-import Settings from './settings';
-
-const Hooks = {};
+const Settings = require(Path.resolve(__dirname, 'settings'));
+const Hooks    = {};
 
 function AddHook(hook, func) {
     if (_.isUndefined(Hooks[hook])) {
@@ -60,7 +59,7 @@ function LoadAddOns() {
     }
 }
 
-export default {
+module.exports = {
 
     /**
      *

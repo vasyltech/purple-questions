@@ -1,9 +1,9 @@
 const { google } = require('googleapis');
 const { shell }  = require('electron');
-const Fs         = require('fs');
+const Path       = require('path');
 
-import Settings from './../settings';
-import Template from './tmpl/email';
+const Settings = require(Path.resolve(__dirname, '../settings'));
+// const Template = require( './../../../../src/main/repository/tmpl/email');
 
 const REDIRECT_URL = 'http://localhost:5173/authorize';
 
@@ -68,7 +68,7 @@ function GetAuthClient() {
     return AuthClient;
 }
 
-export default {
+module.exports = {
 
     redirectToAuth: () => {
         shell.openExternal(REDIRECT_URL);
@@ -104,20 +104,20 @@ export default {
         const auth  = GetAuthClient();
         const gmail = google.gmail({ version: 'v1', auth });
 
-       await gmail.users.messages.send({
-            userId: 'me',
-            requestBody: {
-                raw: makeEmailBody(
-                    //email,
-                    'vasyl@vasyltech.com',
-                    'support@aamplugin.com',
-                    'AAM Support',
-                    Template.replace('{{ snippet }}', snippet)
-                        .replace('{{ content }}', content)
-                ),
-                snippet
-            }
-        });
+    //    await gmail.users.messages.send({
+    //         userId: 'me',
+    //         requestBody: {
+    //             raw: makeEmailBody(
+    //                 //email,
+    //                 'vasyl@vasyltech.com',
+    //                 'support@aamplugin.com',
+    //                 'AAM Support',
+    //                 Template.replace('{{ snippet }}', snippet)
+    //                     .replace('{{ content }}', content)
+    //             ),
+    //             snippet
+    //         }
+    //     });
 
         return true;
     }

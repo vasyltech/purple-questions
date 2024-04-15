@@ -128,7 +128,7 @@ const Normalizer = {
 
 };
 
-export default {
+module.exports = {
 
     /**
      *
