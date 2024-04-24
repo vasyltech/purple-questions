@@ -6,7 +6,6 @@ const DEFAULT_SYSTEM_PROMPT = 'You are a polite customer support assistant.';
 // The actual prompt that converts text into the list of questions
 const USER_PROMPT = `Use the best customer support guidances to answer user message. Follow these instructions:
 
-- Translate the output to the same language as in the USER MESSAGE.
 - Use "MY KNOWLEDGE BASE" as the additional material to generate response to the "USER MESSAGE".
 - Only answer questions listed in the "QUESTIONS TO ANSWER" section.
 - Provide as detailed answer as possible with an example, if applicable.

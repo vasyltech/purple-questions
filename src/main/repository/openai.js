@@ -16,6 +16,9 @@ const Debug                     = require(Path.resolve(__dirname, '../libs/debug
 let Client         = null;
 let ModelListCache = null;
 
+// Default model
+const DEFAULT_MODEL = 'gpt-3.5-turbo-0125';
+
 /**
  *
  * @param {*} questions
@@ -135,14 +138,17 @@ const Methods = {
         // Based on the documentation
         // https://platform.openai.com/docs/guides/fine-tuning/what-models-can-be-fine-tuned
         const response = [
+            DEFAULT_MODEL,
             'gpt-3.5-turbo-1106',
             'gpt-3.5-turbo-0613',
-            'davinci-002'
+            'babbage-002',
+            'davinci-002',
+            'gpt-4-0613'
         ];
 
         // Also appending all that are allowed for fine-tuning
         _.forEach(list, (m) => {
-            if (_.get(m, 'permission[0].allow_fine_tuning') === true) {
+            if (!response.includes(m.id)) {
                 response.push(m.id);
             }
         });
@@ -162,7 +168,9 @@ const Methods = {
      * @param {*} id
      * @returns
      */
-    getFineTuningJobEvents: async (id, limit = 99) => GetClient().fineTuning.jobs.listEvents(id, limit),
+    getFineTuningJobEvents: async (id, limit = 99) => GetClient().fineTuning.jobs.listEvents(
+        id, limit
+    ),
 
     /**
      * Preparing the list of questions from the provided document
@@ -178,7 +186,7 @@ const Methods = {
         );
 
         const result = await GetClient().chat.completions.create(Object.assign(
-            { model: Settings.getAppSetting('llmModel', 'gpt-3.5-turbo') },
+            { model: Settings.getAppSetting('llmModel', DEFAULT_MODEL) },
             corpus
         ));
 
@@ -214,7 +222,7 @@ const Methods = {
         }, Settings.getAppSetting('persona'));
 
         const result = await GetClient().chat.completions.create(Object.assign(
-            { model: Settings.getAppSetting('llmModel', 'gpt-3.5-turbo') },
+            { model: Settings.getAppSetting('llmModel', DEFAULT_MODEL) },
             corpus
         ));
 
@@ -250,7 +258,7 @@ const Methods = {
         );
 
         const result = await GetClient().chat.completions.create(Object.assign(
-            { model: Settings.getAppSetting('llmModel', 'gpt-3.5-turbo') },
+            { model: Settings.getAppSetting('llmModel', DEFAULT_MODEL) },
             corpus
         ));
 
@@ -346,7 +354,7 @@ const Methods = {
 
         const result = await GetClient().chat.completions.create(Object.assign(
             {
-                model: Settings.getAppSetting('llmModel', 'gpt-3.5-turbo'),
+                model: Settings.getAppSetting('llmModel', DEFAULT_MODEL),
                 temperature: 0
             },
             corpus
@@ -378,7 +386,7 @@ const Methods = {
     prepareAnswerFromHistory: async (messages) => {
         const result = await GetClient().chat.completions.create(Object.assign(
             {
-                model: Settings.getAppSetting('llmModel', 'gpt-3.5-turbo'),
+                model: Settings.getAppSetting('llmModel', DEFAULT_MODEL),
                 temperature: 0
             },
             messages
@@ -424,14 +432,14 @@ const Methods = {
             result: res1
         });
 
-        if (_.get(res1, 'status') === 'uploaded') {
+        if (_.get(res1, 'id') !== undefined) {
             response.file_id = res1.id;
             response.status  = 'uploaded';
 
             // Step #2. Creating a fine tuning job
             const res2 = await client.fineTuning.jobs.create({
                 training_file: res1.id,
-                model: settings.base_model || 'gpt-3.5-turbo-0613',
+                model: settings.base_model || DEFAULT_MODEL,
                 hyperparameters: {
                     n_epochs: parseInt(settings.n_epochs, 10) || 'auto'
                 },

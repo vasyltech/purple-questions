@@ -1,5 +1,6 @@
 <template>
     <vue-editor
+        :id="id"
         :editorToolbar="editorToolbar"
         :disabled="readonly"
         :editorOptions="editorSettings"
@@ -28,6 +29,7 @@ export default {
     data: function() {
         return {
             documents: [],
+            observer: null,
             editorToolbar: [
               [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
               ['bold', 'italic', 'underline', 'strike', 'code'],
@@ -57,6 +59,11 @@ export default {
             }
         }
     },
+    setup(){
+        return {
+            id: 'e' + (Math.random() + 1).toString(36).substring(7)
+        }
+    },
     mounted() {
         const _this = this;
 
@@ -66,6 +73,19 @@ export default {
                 id: i.uuid
             }));
         });
+
+        // this.observer = new IntersectionObserver((entries) => {
+        //     // If intersectionRatio is 0, the target is out of view
+        //     // and we do not need to do anything.
+        //     if (entries[0].intersectionRatio > 0) {
+        //         document.getElementById(_this.id).classList.remove('sticky-toolbar');
+        //     } else {
+        //         document.getElementById(_this.id).classList.add('sticky-toolbar')
+        //     }
+        // });
+
+        // // start observing
+        // this.observer.observe(document.getElementById(_this.id));
     }
 }
 </script>
@@ -77,6 +97,15 @@ export default {
 
 .ql-editor p {
     margin-bottom: 1rem !important;
+}
+
+.sticky-toolbar {
+    position: fixed;
+    top: 64px;
+    left: 288px;
+    background: white;
+    width: calc(100% - 320px);
+    z-index: 1000;
 }
 
 .ql-editor ol, .ql-editor ul {

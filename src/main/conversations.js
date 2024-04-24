@@ -9,7 +9,6 @@ const DbRepository     = require(Path.resolve(__dirname, 'repository/db'));
 const OpenAiRepository = require(Path.resolve(__dirname, 'repository/openai'));
 const Questions        = require(Path.resolve(__dirname, 'questions'));
 const Settings         = require(Path.resolve(__dirname, 'settings'));
-const Ai               = require(Path.resolve(__dirname, 'ai'));
 const Bridge           = require(Path.resolve(__dirname, 'bridge'));
 
 /**
@@ -265,7 +264,9 @@ const Methods = {
                 });
 
                 // Fine-tune the question as well
-                await Ai.fineTuneQuestion(conversation.questions[0]);
+                await require(Path.resolve(__dirname, 'ai')).fineTuneQuestion(
+                    conversation.questions[0]
+                );
             }
         }
 

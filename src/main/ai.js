@@ -86,11 +86,12 @@ module.exports = {
      * Prepare the answer to the question based on document's material
      *
      * @param {String} questionUuid
+     * @param {String} questionText
      * @param {String} documentUuid
      *
      * @returns {Promise<String>}
      */
-    prepareAnswerFromDocument: async (questionUuid, documentUuid) => {
+    prepareAnswerFromDocument: async (questionUuid, questionText, documentUuid) => {
         // Step #1. Read the question & document data
         const document = Documents.readDocument(documentUuid);
         const question = Questions.readQuestion(questionUuid);
@@ -98,7 +99,7 @@ module.exports = {
         // Step #2. Going to LLM and generating the answer
 
         const res1 = await OpenAiRepository.prepareAnswerFromDocument(
-            question.text,
+            questionText,
             document
         );
 
@@ -114,6 +115,7 @@ module.exports = {
         // Now, we got the answer. Let's store it in the db
         Questions.updateQuestion(questionUuid, {
             usage: question.usage,
+            text: questionText,
             answer
         });
 

@@ -250,8 +250,7 @@ const Methods = {
             tuning.queue = UuidListToQuestions(tuning.queue, uuid);
 
             // Determining if batch can be offloaded
-            const max         = Settings.getAppSetting('fineTuningBatchSize', 500);
-            tuning.canOffload = tuning.queue.length >= max;
+            tuning.canOffload = !tuning.fine_tuning_job_id;
 
             // If we already have the fine tuning job, then it is pointless to modify
             // the batch
@@ -496,7 +495,7 @@ const Methods = {
         if (_.get(result, 'status') !== 'failed') {
             Methods.updateTuning(uuid, result);
         } else {
-            console.log(result);
+            console.log(JSON.stringify(result));
         }
     }
 

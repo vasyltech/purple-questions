@@ -84,8 +84,8 @@ contextBridge.exposeInMainWorld(
             composeResponse: (uuid) => ipcRenderer.invoke(
                 'ai', ['composeResponse', uuid]
             ),
-            prepareAnswerFromDocument: (question, uuid) => ipcRenderer.invoke(
-                'ai', ['prepareAnswerFromDocument', question, uuid]
+            prepareAnswerFromDocument: (questionUuid, questionText, documentUuid) => ipcRenderer.invoke(
+                'ai', ['prepareAnswerFromDocument', questionUuid, questionText, documentUuid]
             ),
             fineTuneQuestion: (uuid, data) => ipcRenderer.invoke(
                 'ai', ['fineTuneQuestion', uuid, data]

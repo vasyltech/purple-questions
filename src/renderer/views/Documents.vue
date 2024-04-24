@@ -290,7 +290,7 @@
       </v-dialog>
     </v-responsive>
 
-    <v-responsive v-else class="align-left fill-height">
+    <v-responsive v-else-if="currentDocumentData" class="align-left fill-height">
       <v-container>
         <div class="text-overline pb-2">Document Name</div>
         <v-text-field v-model="currentDocumentData.name" bg-color="white" variant="outlined"></v-text-field>
@@ -374,7 +374,7 @@
           <v-toolbar color="red-darken-4" title="Delete Curriculum"></v-toolbar>
           <v-card-text>
             <v-alert type="warning" prominent variant="outlined" color="red-darken-4">
-              You are about to delete the <strong>"{{ selectedQuestion.text }}"</strong> curriculum.
+              You are about to delete the <strong>"{{ selectedQuestion ? selectedQuestion.text : 'unknown' }}"</strong> curriculum.
               Please confirm.
             </v-alert>
           </v-card-text>
@@ -593,7 +593,7 @@ export default {
     openFolder(folder) {
       this.currentFolder       = folder;
       this.currentDocument     = null;
-      this.currentDocumentData = {};
+      this.currentDocumentData = null;
     },
     openDocument(document) {
       const _this            = this;
@@ -701,6 +701,7 @@ export default {
       this.$api.ai
         .prepareAnswerFromDocument(
           this.selectedQuestion.uuid,
+          this.stagedQuestionData.text,
           this.currentDocument.uuid
         ).then((response) => {
           _this.selectedQuestion.answer   = response;
@@ -728,17 +729,17 @@ export default {
       this.$api.documents
         .deleteQuestionFromDocument(this.currentDocument.uuid, this.selectedQuestion.uuid)
         .then(() => {
+          // Question can be deleted from the show modal as well
+          _this.showDeleteQuestionModal = false;
+          _this.showEditQuestionModal   = false;
+
           // Remove the question from the list of document questions
           _this.currentDocumentData.questions = _this.currentDocumentData.questions.filter(
             q => q !== _this.selectedQuestion
           );
 
-          _this.showDeleteQuestionModal = false;
-
-          // Question can be deleted from the show modal as well
-          _this.showEditQuestionModal = false;
-          _this.selectedQuestion      = null;
-        });
+          _this.selectedQuestion = null;
+        }).catch((e) => console.log(e));
     },
     updateSelectedQuestion() {
       const _this = this;
