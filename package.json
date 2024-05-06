@@ -53,6 +53,6 @@
     "openai": "^4.38.3",
     "superagent": "^8.1.2",
     "uuid": "^9.0.0",
-    "vectordb": "^0.4.16"
+    "vectordb": "^0.4.18"
   }
 }

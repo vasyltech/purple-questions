@@ -4,7 +4,7 @@ const _ = require('lodash');
 const DEFAULT_SYSTEM_PROMPT = 'You are a helpful assistant.';
 
 // The actual prompt that converts text into the list of questions
-const USER_PROMPT = `Answer the provided question with few examples, if applicable. Do not fabricate the answer.
+const USER_PROMPT = `Answer the provided question with few examples, if applicable. Do not fabricate the answer. Avoid formatting answer as lists or nested lists.
 
 QUESTION:
 """
@@ -32,7 +32,7 @@ function GetCorpus(data, persona) {
             {
                 role: 'user',
                 content: USER_PROMPT
-                    .replace('{material}', data.document.text)
+                    .replace('{material}', data.material)
                     .replace('{question}', data.question)
             }
         ]

@@ -152,35 +152,36 @@ function PrepareExcerpt(html, wCount = 30) {
 }
 
 /**
+ * Get list of most closest candidates
  *
  * @param {Question} question
- * @param {Number}   similarity
+ * @param {Number}   quantity
  *
- * @returns
+ * @returns {Promise<Array>}
  */
-async function PrepareCandidates(question, similarity) {
-    const matches = await DbRepository.searchQuestions(question.embedding, 3);
+async function PrepareCandidates(question, quantity) {
+    const matches = await DbRepository.searchQuestions(question.embedding, quantity);
 
     // Prepare the collection of candidates
     const candidates = [];
 
     _.forEach(matches, (match) => {
-        if (match._distance <= similarity) {
-            // Reading the similar question and getting the data
-            const similar = Questions.readQuestion(match.uuid);
+        // Reading the similar question and getting the data
+        const similar = Questions.readQuestion(match.uuid);
 
-            // But only get the data if there is an actual answer provided.
-            // Note! Question itself can be indexed even if there are no answers.
-            // The scenario when question is indexed is when user analyzes the
-            // conversation and questions get embedded and indexed automatically
-            if (_.isString(similar.answer) && similar.answer.length > 0) {
-                candidates.push({
-                    uuid: match.uuid,
-                    name: similar.text,
-                    text: similar.answer,
-                    similarity: Math.round(match._distance * 100)
-                });
-            }
+        // But only get the data if there is an actual answer provided.
+        // Note! Question itself can be indexed even if there are no answers.
+        // The scenario when question is indexed is when user analyzes the
+        // conversation and questions get embedded and indexed automatically
+        if (_.isString(similar.answer) && similar.answer.length > 0) {
+            const distance = Math.round(match._distance * 100);
+
+            candidates.push({
+                uuid: match.uuid,
+                name: similar.text,
+                text: similar.answer,
+                distance: distance > 100 ? 100 : distance
+            });
         }
     });
 
@@ -341,14 +342,14 @@ const Methods = {
         const conversation = JSON.parse(
             Fs.readFileSync(GetConversationsBasePath(uuid)).toString()
         );
-        const similarity = Settings.getAppSetting('similarityDistance', 25) / 100;
-        const questions  = [];
+        const quantity  = Settings.getAppSetting('similarityCandidates', 5);
+        const questions = [];
 
         // Dynamically find the best answer candidates
         for (let i = 0; i < conversation.questions.length; i++) {
             // Get question data & preparing the list of potential candidates
             const question   = Questions.readQuestion(conversation.questions[i]);
-            const candidates = await PrepareCandidates(question, similarity);
+            const candidates = await PrepareCandidates(question, quantity);
 
             questions.push({
                 uuid: conversation.questions[i],

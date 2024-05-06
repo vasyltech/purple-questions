@@ -436,8 +436,8 @@
                 </v-toolbar>
                 <v-card-text>
                     <v-container>
+                        <div class="text-overline">Question</div>
                         <v-textarea
-                            label="Question (read-only)"
                             v-model="stagedQuestionData.text"
                             variant="outlined"
                             auto-grow
@@ -445,29 +445,8 @@
                             :rules="[inputValidationRules.required]"
                         ></v-textarea>
 
-                        <v-tabs
-                            v-model="questionTab"
-                            align-tabs="start"
-                        >
-                            <v-tab value="direct">Direct Answer</v-tab>
-                            <v-tab value="similar" v-if="prepareQuestionCandidateList(stagedQuestionData).length > 0">Similar Questions ({{ prepareQuestionCandidateList(stagedQuestionData).length }})</v-tab>
-                        </v-tabs>
-
-                        <v-window v-model="questionTab" class="mt-4">
-                            <v-window-item value="direct">
-                                <editor v-model="stagedQuestionData.answer"></editor>
-                            </v-window-item>
-                            <v-window-item value="similar">
-                                <v-list class="candidates">
-                                    <v-list-item v-for="(item, index) in prepareQuestionCandidateList(stagedQuestionData)" :key="index">
-                                        <v-list-item-title class="candidate-title">
-                                            <span class="font-weight-bold text-uppercase text-deep-purple">{{ item.similarity === 0 ? 'exact match' : `Distance ${item.similarity}` }}:</span>&nbsp;&nbsp;{{ item.name }}
-                                        </v-list-item-title>
-                                        <div class="dynamic-text" v-html="item.text"></div>
-                                    </v-list-item>
-                                </v-list>
-                            </v-window-item>
-                        </v-window>
+                        <div class="text-overline">Answer</div>
+                        <editor v-model="stagedQuestionData.answer"></editor>
 
                         <v-radio-group v-if="stagedQuestionData.answer" class="mt-6" v-model="stagedQuestionData.ft_method"
                             inline label="Fine-Tuning Method" persistent-hint
@@ -475,14 +454,60 @@
                             <v-radio label="Factual Learning" value="shallow"></v-radio>
                             <v-radio label="New Skill" value="deep"></v-radio>
                         </v-radio-group>
+
+                        <div class="text-overline mt-4">Similar Questions <small>(with % confidence level)</small></div>
+                        <v-expansion-panels>
+                            <v-expansion-panel v-for="(item, index) in prepareQuestionCandidateList(stagedQuestionData)" :key="index">
+                                <v-expansion-panel-title>
+                                    <span class="text-overline text-deep-purple-lighten-1 similarity-indicator">({{ item.distance === 0 ? 'exact match' : `${100 - item.distance}%` }})</span>{{ item.name }}
+                                    <template v-slot:actions="{ expanded }">
+                                        <v-icon :icon="getCandidateIcon(expanded, item)"></v-icon>
+                                    </template>
+                                </v-expansion-panel-title>
+                                <v-expansion-panel-text>
+                                    <div v-html="item.text"></div>
+
+                                    <div class="d-flex justify-end mt-4">
+                                        <v-btn
+                                            v-if="isSelectedCandidate(item)"
+                                            variant="text"
+                                            @click="unselectCandidate(item)"
+                                        >
+                                            Unselect
+                                        </v-btn>
+
+                                        <v-btn
+                                            v-else
+                                            @click="selectCandidate(item)"
+                                            variant="text"
+                                        >
+                                            Select
+                                        </v-btn>
+                                    </div>
+                                </v-expansion-panel-text>
+                            </v-expansion-panel>
+                        </v-expansion-panels>
                     </v-container>
                 </v-card-text>
                 <v-card-actions class="justify-end">
                     <v-btn color="red-darken-4" variant="text" @click="showDeleteQuestionModal = true">Delete</v-btn>
+                    <v-btn
+                        v-if="selectedCandidates.length > 0"
+                        :disabled="generatingAnswer"
+                        variant="text"
+                        @click="generateAnswerForCurrentQuestion"
+                    >
+                        {{ generatingAnswer ? 'Generating...' : 'Generate Answer' }}
+                    </v-btn>
                     <v-btn variant="text" @click="showLinkQuestionModal = true">Link</v-btn>
-                    <v-btn v-if="stagedQuestionData.answer && stagedQuestionData.ft_method" variant="text"
-                        :disabled="isFineTuningQuestion" @click="fineTuneSelectedQuestion">{{ isFineTuningQuestion ?
-                            'Fine-Tuning...' : 'Fine-Tune' }}</v-btn>
+                    <v-btn
+                        v-if="stagedQuestionData.answer && stagedQuestionData.ft_method"
+                        variant="text"
+                        :disabled="isFineTuningQuestion"
+                        @click="fineTuneSelectedQuestion"
+                    >
+                        {{ isFineTuningQuestion ? 'Fine-Tuning...' : 'Fine-Tune' }}
+                    </v-btn>
                     <v-btn variant="text" @click="updateSelectedQuestion">Update</v-btn>
                     <v-btn variant="text" @click="showEditQuestionModal = false">Close</v-btn>
                 </v-card-actions>
@@ -539,6 +564,7 @@ export default {
             createConversationModal: false,
             deleteConversationModal: false,
             selectedConversation: null,
+            selectedCandidates: [],
             selectedQuestion: {},
             selectedMessage: null,
             page: 0,
@@ -752,6 +778,20 @@ export default {
                     _this.generatingAnswer                    = false;
                 });
         },
+        generateAnswerForCurrentQuestion() {
+            const _this           = this;
+            this.generatingAnswer = true;
+
+            this.$api.ai
+                .prepareAnswerFromCandidates({
+                    uuid: this.selectedQuestion.uuid,
+                    text: this.stagedQuestionData.text
+                }, this.selectedCandidates.map(c => c.uuid))
+                .then((answer) => {
+                    _this.stagedQuestionData.answer = answer;
+                    _this.generatingAnswer          = false;
+                });
+        },
         createConversation() {
             const _this = this;
 
@@ -801,11 +841,27 @@ export default {
                 response = 'mdi-memory';
             } else if (question.ft_method === 'deep') {
                 response = 'mdi-tune-variant';
-            } else if (question.candidates.length > 0) {
-                response = 'mdi-check';
             }
 
             return response;
+        },
+        isSelectedCandidate(item) {
+            return this.selectedCandidates.includes(item);
+        },
+        getCandidateIcon(expanded, item) {
+            let icon = 'mdi-menu-up';
+
+            if (!expanded) {
+                icon = this.isSelectedCandidate(item) ? 'mdi-check' : 'mdi-menu-down';
+            }
+
+            return icon;
+        },
+        unselectCandidate(item) {
+            this.selectedCandidates = this.selectedCandidates.filter(c => c !== item);
+        },
+        selectCandidate(item) {
+            this.selectedCandidates.push(item);
         },
         getConversationDate(conversation) {
             return (new Date(conversation.createdAt)).toLocaleDateString(
@@ -857,6 +913,7 @@ export default {
         },
         selectQuestionForEditing(question) {
             this.selectedQuestion      = question;
+            this.selectedCandidates    = [];
             this.stagedQuestionData    = Object.assign({}, question);
             this.showEditQuestionModal = true;
             this.linkedDocuments       = [];
@@ -1073,18 +1130,9 @@ export default {
     overflow-y: scroll;
 }
 
-.candidates {
-    padding: 0;
-
-    .v-list-item--density-default:not(.v-list-item--nav).v-list-item--one-line {
-        padding-inline-start: 0;
-        padding-inline-end: 0
-    }
-
-    .v-list-item-title {
-        white-space: normal;
-        font-weight: 500;
-    }
+.similarity-indicator {
+    font-weight: 700;
+    margin-right: 10px;
 }
 
 .v-timeline {
@@ -1115,6 +1163,10 @@ export default {
 
 :deep(.dynamic-text p) {
     margin-bottom: 1.25rem !important;
+}
+
+:deep(.v-expansion-panel-title) {
+    line-height: 1.25rem;
 }
 
 :deep(.dynamic-text ul) {

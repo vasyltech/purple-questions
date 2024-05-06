@@ -180,6 +180,7 @@ const Methods = {
         Fs.writeFileSync(GetQuestionsPath(uuid), JSON.stringify(newContent));
 
         QuestionIndex.update(uuid, {
+            text: data.text,
             updatedAt: (new Date()).getTime()
         });
 

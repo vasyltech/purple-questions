@@ -49,7 +49,7 @@ function GetCorpus(data, persona) {
                     .replace('{questions}', data.material.map(
                         (m) => m.question).join('\n')
                     ).replace('{material}', data.material.map(
-                        (m) => `${m.name}\n${m.text}`).join('\n\n')
+                        (m) => `${m.question}\n${m.answer}`).join('\n\n')
                     )
             }
         ]

@@ -5,6 +5,9 @@ Marked.use({
     renderer: {
         link(href, title, text) {
             return `<a href="${href}" target="_blank" title="${title}">${text}</a>`;
+        },
+        listitem(text) {
+            return '<li>' + text.replace('<p>', '').replace('</p>', '') + '</li>';
         }
     }
 });
@@ -18,9 +21,7 @@ module.exports = {
      *
      * @returns {String}
      */
-    toHtml: (content) => Marked.parse(
-        content.replace(/\n{2,}/g, '\n')
-    ).replace(/\n/g, ''),
+    toHtml: (content) => Marked.parse(content).replace(/\n/g, ''),
 
     /**
      * Convert HTML string to MD string

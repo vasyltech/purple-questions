@@ -92,15 +92,23 @@
 
             <v-container v-else>
                 <v-container>
-                    <div class="text-overline pb-2">Question</div>
+                    <div class="text-overline pb-2">Question/Prompt</div>
 
-                    <v-text-field :value="currentQuestionData.text" readonly variant="outlined"></v-text-field>
+                    <v-textarea v-model="currentQuestionData.text" auto-grow rows="3" variant="outlined"></v-textarea>
                 </v-container>
 
                 <v-container>
-                    <div class="text-overline pb-2">Best Answer</div>
+                    <div class="text-overline pb-2">Best Answer {{ currentQuestionData.answer ? '' : '(Not Yet Provided)' }}</div>
+                    <editor v-model="currentQuestionData.answer"></editor>
 
-                    <v-textarea v-model="currentQuestionData.answer" auto-grow variant="outlined"></v-textarea>
+                    <div class="d-flex justify-end mt-4">
+                        <v-btn v-if="hasPrev" variant="text" @click="goToPrevQuestion">
+                            Prev Question
+                        </v-btn>
+                        <v-btn v-if="hasNext" variant="text" @click="goToNextQuestion">
+                            Next Question
+                        </v-btn>
+                    </div>
                 </v-container>
 
                 <v-snackbar v-model="showSuccessMessage" :timeout="2000">
@@ -164,6 +172,20 @@ export default {
         },
         navigateTo(node) {
             this.currentQuestion = node;
+        },
+        goToNextQuestion() {
+            // Get the current index of the question
+            const next = this.questions.indexOf(this.currentQuestion) + 1;
+
+            this.navigateTo(this.questions[next]);
+            this.openQuestion(this.questions[next]);
+        },
+        goToPrevQuestion() {
+            // Get the current index of the question
+            const prev = this.questions.indexOf(this.currentQuestion) - 1;
+
+            this.navigateTo(this.questions[prev]);
+            this.openQuestion(this.questions[prev]);
         },
         openQuestion(question) {
             const _this = this;
@@ -234,6 +256,18 @@ export default {
                     _this.showSuccessMessage = true;
                 });
         },
+    },
+    computed: {
+        hasNext() {
+            const next = this.questions.indexOf(this.currentQuestion) + 1;
+
+            return this.questions[next] !== undefined;
+        },
+        hasPrev() {
+            const prev = this.questions.indexOf(this.currentQuestion) - 1;
+
+            return this.questions[prev] !== undefined;
+        }
     },
     watch: {
         currentQuestion() {

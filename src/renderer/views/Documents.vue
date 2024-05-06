@@ -302,7 +302,7 @@
         <editor v-model="currentDocumentData.text"></editor>
       </v-container>
 
-      <v-container v-if="hasAssociatedQuestions">
+      <v-container>
         <v-toolbar density="compact">
           <v-toolbar-title class="text-overline">Curriculum</v-toolbar-title>
           <v-spacer></v-spacer>
@@ -316,7 +316,7 @@
           </v-tooltip>
         </v-toolbar>
 
-        <v-list lines="false">
+        <v-list lines="false" v-if="hasAssociatedQuestions">
           <v-list-item
             v-for="(question, index) in currentDocumentData.questions"
             :key="index"
@@ -348,7 +348,7 @@
           </v-list-item>
         </v-list>
       </v-container>
-      <v-container v-else>
+      <v-container v-if="!hasAssociatedQuestions">
         <v-sheet class="d-flex align-center justify-center flex-wrap text-center mx-auto px-4" elevation="0"
           height="150" rounded width="100%" color="grey-lighten-3">
           <div v-if="!analyzingContent">

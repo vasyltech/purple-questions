@@ -105,12 +105,14 @@ async function FetchModelList() {
  * @returns
  */
 function ParseResponseMessage(result, expectJson = false) {
+    let response = _.trim(
+        _.get(result, 'choices[0].message.content', expectJson ? '{}' : '')
+    );
+
     // Sometimes OpenAI returns valid JSON wrapped into ```json ```. In this
     // case remove that
-    let response = _.get(result, 'choices[0].message.content', expectJson ? '{}' : '');
-
-    if (expectJson && (response.indexOf('```json') === 0)) {
-        response = response.substring(7, response.length - 3).trim();
+    if (expectJson) {
+        response = response.replace('```json', '').replace('```', '');
     }
 
     return response;
@@ -218,7 +220,7 @@ const Methods = {
     prepareAnswerFromDocument: async (question, document) => {
         const corpus = Question2AnswerTool.getCorpus({
             question,
-            document,
+            material: document,
         }, Settings.getAppSetting('persona'));
 
         const result = await GetClient().chat.completions.create(Object.assign(
@@ -228,6 +230,44 @@ const Methods = {
 
         Debug.log({
             method: 'prepareAnswerFromDocument',
+            corpus,
+            result
+        });
+
+        // Extract the list of questions and usage data
+        const usage = Object.assign({}, _.get(result, 'usage'), {
+            'purpose': 'Question2Answer'
+        });
+
+        return {
+            output: ParseResponseMessage(result),
+            usage,
+            corpus
+        }
+    },
+
+    /**
+     * Prepare answer to the questions with provided candidates
+     *
+     * @param {String} question
+     * @param {Array}  candidates
+     *
+     * @returns {Promise<Object>}
+     */
+    prepareAnswerFromCandidates: async (question, candidates) => {
+        const corpus = Question2AnswerTool.getCorpus({
+            question,
+            material: candidates.map(
+                (m) => `${m.text}\n${m.answer}`).join('\n\n'),
+        }, Settings.getAppSetting('persona'));
+
+        const result = await GetClient().chat.completions.create(Object.assign(
+            { model: Settings.getAppSetting('llmModel', DEFAULT_MODEL) },
+            corpus
+        ));
+
+        Debug.log({
+            method: 'prepareAnswerFromCandidates',
             corpus,
             result
         });

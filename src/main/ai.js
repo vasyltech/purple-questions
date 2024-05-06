@@ -37,9 +37,10 @@ module.exports = {
         const document = Documents.readDocument(uuid, true);
 
         // Step #2. Generate the list of questions from the document
-        const res1 = await OpenAiRepository.prepareQuestionListFromDocument(
-            document
-        );
+        const res1 = await OpenAiRepository.prepareQuestionListFromDocument({
+            name: document.name,
+            text: Convertor.toMd(document.text)
+        });
 
         // Prepare the list of new questions
         const newQuestions = [];
@@ -97,10 +98,9 @@ module.exports = {
         const question = Questions.readQuestion(questionUuid);
 
         // Step #2. Going to LLM and generating the answer
-
         const res1 = await OpenAiRepository.prepareAnswerFromDocument(
             questionText,
-            document
+            Convertor.toMd(document.text)
         );
 
         if (!_.isArray(question.usage)) {
@@ -116,6 +116,48 @@ module.exports = {
         Questions.updateQuestion(questionUuid, {
             usage: question.usage,
             text: questionText,
+            answer
+        });
+
+        return answer;
+    },
+
+    /**
+     * Prepare answer from selected candidates
+     *
+     * @param {Object} question
+     * @param {Array}  candidates
+     *
+     * @returns {Promise<String>}
+     */
+    prepareAnswerFromCandidates: async (question, candidates) => {
+        // Step #1. Preparing all the necessary information
+        const q    = Questions.readQuestion(question.uuid);
+        const list = candidates.map(uuid => Questions.readQuestion(uuid));
+
+        // Step #2. Going to LLM and generating the answer
+        const res1 = await OpenAiRepository.prepareAnswerFromCandidates(
+            question.text,
+            list.map(c => ({
+                text: c.text,
+                answer: Convertor.toMd(c.answer)
+            }))
+        );
+
+        if (!_.isArray(q.usage)) {
+            q.usage = [];
+        }
+
+        q.usage.push(res1.usage);  // Cost?
+
+        // Convert answer to HTML
+        const answer = Convertor.toHtml(res1.output);
+
+        // Now, we got the answer. Let's store it in the db
+        Questions.updateQuestion(question.uuid, {
+            usage: question.usage,
+            text: question.text,
+            similar_questions: candidates,
             answer
         });
 
@@ -231,14 +273,14 @@ module.exports = {
             const material = [];
 
             _.forEach(conversation.questions, (question) => {
-                material.push(..._.map(question.candidates, (c) => ({
-                    uuid: c.uuid,
-                    name: c.name,
-                    text: Convertor.toMd(c.text),
-                    // Duplicating this, so the question can be included in the
-                    // QUESTIONS TO ANSWER section inside the prompt
-                    question: question.name
-                })));
+                // Now, if question has an answer, include it. Otherwise, can't do :(
+                if (!_.isEmpty(question.answer)) {
+                    material.push({
+                       uuid: question.uuid,
+                       question: question.text,
+                       answer: Convertor.toMd(question.answer)
+                    });
+                }
             });
 
             // Verify that we have all the necessary information to prepare the answer
