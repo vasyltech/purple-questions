@@ -2,6 +2,7 @@ const Fs             = require('fs');
 const Path           = require('path');
 const { app }        = require('electron');
 const { v4: uuidv4 } = require('uuid');
+const { URL }        = require('node:url');
 const _              = require('lodash');
 const Crypto         = require('crypto');
 const Cheerio        = require('cheerio');
@@ -341,29 +342,32 @@ const Methods = {
         try {
             // Fetching page content from provided URL
             const page = await Superagent.get(url);
+            const base = new URL(url);
 
             // Loading the raw HTML for parsing
             const $ = Cheerio.load(page.text);
 
             // Convert to markdown
             const title   = $('head > title').text();
-            const content = Convertor.toMd($(selector || 'body').html());
+            const content = Convertor.toMd($(selector || 'body').html(), {
+                baseUrl: base.origin
+            });
 
-            // Cleaning up the content
-            const clean = await Parsers.md.parse(content);
+            // Prepare the clean HTML version
+            const clean = Convertor.toHtml(content);
 
             response = DocumentIndex.add(parentFolder, {
                 uuid: uuidv4(),
                 name: title || 'New Document',
                 createdAt: (new Date()).getTime(),
                 type: 'document',
-                checksum: Crypto.createHash('md5').update(clean.text).digest('hex')
+                checksum: Crypto.createHash('md5').update(clean).digest('hex')
             });
 
             // Write a physical file
             Fs.writeFileSync(GetDocumentsPath(response.uuid), JSON.stringify({
                 name: response.name,
-                text: clean.text,
+                text: clean,
                 origin: {
                     type: 'link',
                     link: url

@@ -455,38 +455,40 @@
                             <v-radio label="New Skill" value="deep"></v-radio>
                         </v-radio-group>
 
-                        <div class="text-overline mt-4">Similar Questions <small>(with % confidence level)</small></div>
-                        <v-expansion-panels>
-                            <v-expansion-panel v-for="(item, index) in prepareQuestionCandidateList(stagedQuestionData)" :key="index">
-                                <v-expansion-panel-title>
-                                    <span class="text-overline text-deep-purple-lighten-1 similarity-indicator">({{ item.distance === 0 ? 'exact match' : `${100 - item.distance}%` }})</span>{{ item.name }}
-                                    <template v-slot:actions="{ expanded }">
-                                        <v-icon :icon="getCandidateIcon(expanded, item)"></v-icon>
-                                    </template>
-                                </v-expansion-panel-title>
-                                <v-expansion-panel-text>
-                                    <div v-html="item.text"></div>
+                        <div class="similar-questions-container">
+                            <div class="text-overline mt-4">Similar Questions <small>(with % confidence level)</small></div>
+                            <v-expansion-panels>
+                                <v-expansion-panel v-for="(item, index) in prepareQuestionCandidateList(stagedQuestionData)" :key="index">
+                                    <v-expansion-panel-title>
+                                        <span class="text-overline text-deep-purple-lighten-1 similarity-indicator">({{ item.distance === 0 ? 'exact match' : `${100 - item.distance}%` }})</span>{{ item.name }}
+                                        <template v-slot:actions="{ expanded }">
+                                            <v-icon :icon="getCandidateIcon(expanded, item)"></v-icon>
+                                        </template>
+                                    </v-expansion-panel-title>
+                                    <v-expansion-panel-text>
+                                        <div v-html="item.text"></div>
 
-                                    <div class="d-flex justify-end mt-4">
-                                        <v-btn
-                                            v-if="isSelectedCandidate(item)"
-                                            variant="text"
-                                            @click="unselectCandidate(item)"
-                                        >
-                                            Unselect
-                                        </v-btn>
+                                        <div class="d-flex justify-end mt-4">
+                                            <v-btn
+                                                v-if="isSelectedCandidate(item)"
+                                                variant="text"
+                                                @click="unselectCandidate(item)"
+                                            >
+                                                Unselect
+                                            </v-btn>
 
-                                        <v-btn
-                                            v-else
-                                            @click="selectCandidate(item)"
-                                            variant="text"
-                                        >
-                                            Select
-                                        </v-btn>
-                                    </div>
-                                </v-expansion-panel-text>
-                            </v-expansion-panel>
-                        </v-expansion-panels>
+                                            <v-btn
+                                                v-else
+                                                @click="selectCandidate(item)"
+                                                variant="text"
+                                            >
+                                                Select
+                                            </v-btn>
+                                        </div>
+                                    </v-expansion-panel-text>
+                                </v-expansion-panel>
+                            </v-expansion-panels>
+                        </div>
                     </v-container>
                 </v-card-text>
                 <v-card-actions class="justify-end">
@@ -1182,5 +1184,14 @@ export default {
 :deep(.dynamic-text a) {
     color: #673ab7 !important;
     text-decoration: none;
+}
+
+:deep(.similar-questions-container p) {
+    margin-bottom: 15px;
+}
+
+:deep(.similar-questions-container img) {
+    max-width: 100%;
+    margin: 10px 0;
 }
 </style>

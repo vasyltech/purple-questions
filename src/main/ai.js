@@ -9,7 +9,7 @@ const Conversations    = require(Path.resolve(__dirname, 'conversations'));
 const Tuning           = require(Path.resolve(__dirname, 'tuning'));
 const Convertor        = require(Path.resolve(__dirname, 'libs/convertor'));
 
-module.exports = {
+const Methods = {
 
     /**
      * Return list of all allowed models
@@ -86,13 +86,16 @@ module.exports = {
     /**
      * Prepare the answer to the question based on document's material
      *
-     * @param {String} questionUuid
-     * @param {String} questionText
-     * @param {String} documentUuid
+     * @param {String}  questionUuid
+     * @param {String}  questionText
+     * @param {String}  documentUuid
+     * @param {Boolean} fineTune
      *
      * @returns {Promise<String>}
      */
-    prepareAnswerFromDocument: async (questionUuid, questionText, documentUuid) => {
+    prepareAnswerFromDocument: async (
+        questionUuid, questionText, documentUuid, fineTune = false
+    ) => {
         // Step #1. Read the question & document data
         const document = Documents.readDocument(documentUuid);
         const question = Questions.readQuestion(questionUuid);
@@ -118,6 +121,11 @@ module.exports = {
             text: questionText,
             answer
         });
+
+        // Should automatically fine-tune
+        if (fineTune) {
+            await Methods.fineTuneQuestion(questionUuid, { ft_method: 'shallow' });
+        }
 
         return answer;
     },
@@ -352,7 +360,7 @@ module.exports = {
     },
 
     /**
-     *
+     * Fine-tune selected question
      * @param {*} uuid
      * @param {*} data
      */
@@ -391,3 +399,5 @@ module.exports = {
     }
 
 }
+
+module.exports = Methods;

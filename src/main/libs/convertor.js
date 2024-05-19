@@ -1,5 +1,5 @@
 const Marked  = require('marked');
-const Html2Md = require('html-to-md');
+const Html2Md = require('node-html-markdown');
 
 Marked.use({
     renderer: {
@@ -34,6 +34,32 @@ module.exports = {
      *
      * @returns {String}
      */
-    toMd: (content) => Html2Md(content).replace(/\\_/g, '_')
+    toMd: (content, options = {}) => Html2Md.NodeHtmlMarkdown.translate(
+        content,
+        options,
+        {
+            a: ({ node, options }) => {
+                const href = node.getAttribute('href');
+                let link   = href;
+
+                if (href.indexOf('http') !== 0) {
+                    link = options.baseUrl + href;
+                }
+
+                const response = {
+                    content: ''
+                };
+
+                if (node.innerHTML !== '#') {
+                    response.content = node.innerText.replace('open in new window', '');
+                    response.prefix  = '[';
+                    response.postfix = '](' + link + ')';
+                }
+
+                return response;
+            },
+            img: () => ({ content: '' })
+        }
+    ).replace(/\\_/g, '_')
 
 }

@@ -307,6 +307,14 @@
           <v-toolbar-title class="text-overline">Curriculum</v-toolbar-title>
           <v-spacer></v-spacer>
 
+          <v-tooltip v-if="canGenerateAnswersInBulk" text="Bulk Answers Generation" location="bottom">
+            <template v-slot:activator="{ props }">
+              <v-btn icon v-bind="props" @click="showBulkGenerationModal = true">
+                <v-icon>mdi-script</v-icon>
+              </v-btn>
+            </template>
+          </v-tooltip>
+
           <v-tooltip text="Add New Curriculum" location="bottom">
             <template v-slot:activator="{ props }">
               <v-btn icon v-bind="props" @click="showAddQuestionModal = true">
@@ -381,6 +389,22 @@
           <v-card-actions class="justify-end">
             <v-btn variant="text" color="red-darken-4" @click="deleteSelectedQuestion">Delete</v-btn>
             <v-btn variant="text" @click="showDeleteQuestionModal = false">Close</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
+      <v-dialog v-model="showBulkGenerationModal" transition="dialog-bottom-transition" width="550">
+        <v-card>
+          <v-toolbar color="indigo-darken-1" title="Bulk Answers Generation"></v-toolbar>
+          <v-card-text>
+            <v-alert type="info" color="indigo-lighten-2" prominent variant="outlined">
+              You are about to trigger a sequential process that will generate automatically answers to all unanswered.
+              Please confirm.
+            </v-alert>
+          </v-card-text>
+          <v-card-actions class="justify-end">
+            <v-btn variant="text" :disabled="generatingAnswer" @click="bulkAnswersGenerator">{{ generatingAnswer ? 'Generating' : 'Generate'  }}</v-btn>
+            <v-btn variant="text" @click="showBulkGenerationModal = false">Close</v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>
@@ -539,6 +563,7 @@ export default {
     successMessage: null,
     analyzingContent: false,
     showAddQuestionModal: false,
+    showBulkGenerationModal: false,
     newQuestion: null,
     analyzeDocumentContentModal: false,
 
@@ -567,6 +592,17 @@ export default {
       return this.currentDocumentData
         && this.currentDocumentData.questions
         && this.currentDocumentData.questions.length > 0;
+    },
+    canGenerateAnswersInBulk() {
+      let response = false;
+
+      if (this.hasAssociatedQuestions) {
+        const empty = this.currentDocumentData.questions.filter(q => !q.answer);
+
+        response = empty.length > 0;
+      }
+
+      return response;
     }
   },
   methods: {
@@ -668,7 +704,6 @@ export default {
           _this.selectedDocument  = null;
         });
     },
-
     // Question methods
     addNewQuestion() {
       const _this = this;
@@ -692,6 +727,30 @@ export default {
               _this.newQuestion          = null;
             }
           });
+      }
+    },
+    bulkAnswersGenerator() {
+      const selected = this.currentDocumentData.questions.filter(q => !q.answer);
+
+      if (selected.length > 0) {
+        const _this           = this;
+        const question        = selected.shift();
+        this.generatingAnswer = true;
+
+        this.$api.ai.prepareAnswerFromDocument(
+          question.uuid,
+          question.text,
+          this.currentDocument.uuid,
+          true
+        ).then((response) => {
+          question.answer    = response;
+          question.ft_method = 'shallow';
+        }).finally(() => {
+          _this.generatingAnswer = false;
+          _this.bulkAnswersGenerator();
+        });
+      } else {
+        this.showBulkGenerationModal = false;
       }
     },
     generateAnswerForSelectedQuestion() {
