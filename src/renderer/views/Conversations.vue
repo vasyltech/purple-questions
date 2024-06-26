@@ -985,6 +985,7 @@ export default {
 
             this.$api.questions
                 .updateQuestion(this.selectedQuestion.uuid, {
+                    text: this.stagedQuestionData.text,
                     answer: this.stagedQuestionData.answer,
                     linkedDocuments: this.stagedQuestionData.linkedDocuments
                 }).then(() => {
