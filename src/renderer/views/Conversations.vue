@@ -178,7 +178,7 @@
                             <v-btn variant="text" @click="saveDraftAnswer">
                                 Save Draft
                             </v-btn>
-                            <v-btn v-if="currentConversationData.draftAnswer" variant="text" @click="showSendAnswerModal = true">
+                            <v-btn v-if="currentConversationData.draftAnswer" variant="text" @click="sendAnswerForSelectedConversation">
                                 Send Response
                             </v-btn>
                         </div>
@@ -531,21 +531,6 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
-
-        <v-dialog v-model="showSendAnswerModal" transition="dialog-bottom-transition" width="550">
-            <v-card>
-                <v-toolbar color="grey-darken-4" title="Send Response"></v-toolbar>
-                <v-card-text>
-                    <v-alert type="info" prominent variant="outlined">
-                        You are about to send the response. Please confirm.
-                    </v-alert>
-                </v-card-text>
-                <v-card-actions class="justify-end">
-                    <v-btn variant="text" @click="sendAnswerForSelectedConversation">Send</v-btn>
-                    <v-btn variant="text" @click="showSendAnswerModal = false">Close</v-btn>
-                </v-card-actions>
-            </v-card>
-        </v-dialog>
     </div>
 </template>
 
@@ -591,7 +576,6 @@ export default {
             showGenerateAnswerModal: false,
             showResetAnswerModal: false,
             showSearchInput: false,
-            showSendAnswerModal: false,
             showDeleteMessageModal: false,
             search: null,
             inputValidationRules: {
@@ -735,13 +719,12 @@ export default {
         },
         sendAnswerForSelectedConversation() {
             this.$api.conversations
-                    .reply(
-                        this.currentConversation.uuid,
-                        this.currentConversationData.draftAnswer
-                    ).then((conversation) => {
-                        this.currentConversationData = conversation;
-                        this.showSendAnswerModal     = false;
-                });
+                .reply(
+                    this.currentConversation.uuid,
+                    this.currentConversationData.draftAnswer
+                ).then((conversation) => {
+                    this.currentConversationData = conversation;
+            });
         },
         cancelMessageChanges(message) {
             message.isEditing = false;
