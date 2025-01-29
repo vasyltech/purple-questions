@@ -48,7 +48,7 @@ export default {
                 ['mdi-file-document-multiple', 'Documents', '/documents'],
                 ['mdi-progress-question', 'Questions', '/questions'],
                 ['mdi-tune-variant', 'LLM Fine-Tuning', '/tuning'],
-                ['mdi-puzzle', 'Add-Ons', '/addons'],
+                // ['mdi-puzzle', 'Add-Ons', '/addons'],
                 ['mdi-cog-outline', 'Settings', '/settings']
             ]
         }

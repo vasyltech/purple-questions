@@ -18,6 +18,10 @@ if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
+if (process.platform === 'darwin' && process.arch === 'x64') {
+	app.disableHardwareAcceleration()
+}
+
 /**
  *
  * @param {*} channel

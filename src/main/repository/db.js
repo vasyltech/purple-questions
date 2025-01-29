@@ -1,6 +1,6 @@
 const _              = require('lodash');
 const Fs             = require('fs');
-const LanceDb        = require('vectordb');
+const LanceDb        = require('@lancedb/lancedb');
 const { app }        = require('electron');
 const Path           = require('path');
 
@@ -92,7 +92,7 @@ module.exports = {
     searchQuestions: async (vector, limit = 2) => {
         const db = await GetTable('questions');
 
-        return db.search(vector).limit(limit).execute();
-    },
+        return db.vectorSearch(vector).limit(limit).toArray();
+    }
 
 }

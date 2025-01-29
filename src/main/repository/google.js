@@ -90,8 +90,6 @@ module.exports = {
             q: 'is:unread AND in:inbox',
             maxResults: 5
         });
-
-        console.log(res.data.messages);
     },
 
     /**
