@@ -1,6 +1,7 @@
 # Purple Questions
 
-![Purple Questions Logo](/assets/logo.svg)
+<img width="1435" alt="Screen Shot 2025-01-29 at 5 34 25 PM" src="https://github.com/user-attachments/assets/b769cb23-8142-40cd-b1d3-4775c486187c" />
+
 
 ## Overview
 Purple Questions is a research project focused on developing an AI-powered virtual assistant. The primary objective is to transform your business knowledge and customer support efforts into a tangible asset. By leveraging LLM technology and minimizing dependencies, this project offers a cost-effective and efficient way to automate customer interactions and support tasks.
@@ -22,7 +23,7 @@ Purple Questions is a research project focused on developing an AI-powered virtu
 ### Installation
 1. Clone the repository:
    ```sh
-   git clone https://github.com/your-repo/purple-questions.git
+   git clone git@github.com:vasyltech/purple-questions.git
    cd purple-questions
    ```
 2. Install dependencies:
