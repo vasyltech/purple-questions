@@ -3,11 +3,11 @@ const Html2Md = require('node-html-markdown');
 
 Marked.use({
     renderer: {
-        link(href, title, text) {
-            return `<a href="${href}" target="_blank" title="${title}">${text}</a>`;
+        link(item) {
+            return `<a href="${item.href}" target="_blank" title="${item.title}">${item.text}</a>`;
         },
-        listitem(text) {
-            return '<li>' + text.replace('<p>', '').replace('</p>', '') + '</li>';
+        listitem(item) {
+            return '<li>' + item.text.replace('<p>', '').replace('</p>', '') + '</li>';
         }
     }
 });
